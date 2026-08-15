@@ -146,7 +146,7 @@ export function RecadastramentoForm({
             <Input
               id="numeroCarne"
               inputMode="numeric"
-              placeholder="Ex.: 1234567"
+              placeholder="Número impresso no carnê"
               disabled={bloquearCarne}
               {...register('numeroCarne')}
             />

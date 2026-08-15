@@ -8,10 +8,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose 
 import { ROUTES } from '@/constants/routes'
 import { cn } from '@/lib/utils'
 
-const links = [
-  { label: 'Início', href: ROUTES.home },
-  { label: 'Como funciona', href: ROUTES.comoFunciona },
-]
+const links = [{ label: 'Início', href: ROUTES.home }]
 
 export function PublicHeader() {
   const [open, setOpen] = React.useState(false)
@@ -43,10 +40,10 @@ export function PublicHeader() {
 
         <div className="hidden items-center gap-2 md:flex">
           <Button asChild variant="ghost">
-            <Link to={ROUTES.entrar}>Entrar</Link>
+            <Link to={ROUTES.pastoral.entrar}>Área da Pastoral</Link>
           </Button>
           <Button asChild>
-            <Link to={ROUTES.recadastramento}>Recadastramento</Link>
+            <Link to={ROUTES.entrar}>Acompanhar meu dízimo</Link>
           </Button>
         </div>
 
@@ -77,13 +74,13 @@ export function PublicHeader() {
             </nav>
             <div className="mt-6 flex flex-col gap-2">
               <SheetClose asChild>
-                <Button asChild variant="outline" size="lg">
-                  <Link to={ROUTES.entrar}>Entrar</Link>
+                <Button asChild size="lg">
+                  <Link to={ROUTES.entrar}>Acompanhar meu dízimo</Link>
                 </Button>
               </SheetClose>
               <SheetClose asChild>
-                <Button asChild size="lg">
-                  <Link to={ROUTES.recadastramento}>Recadastramento</Link>
+                <Button asChild variant="outline" size="lg">
+                  <Link to={ROUTES.pastoral.entrar}>Área da Pastoral</Link>
                 </Button>
               </SheetClose>
             </div>

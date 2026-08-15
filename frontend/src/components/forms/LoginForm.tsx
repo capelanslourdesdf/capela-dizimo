@@ -52,7 +52,7 @@ export function LoginForm() {
 
       <div className="space-y-1.5">
         <Label htmlFor="numeroCarne">Nº do carnê</Label>
-        <Input id="numeroCarne" inputMode="numeric" placeholder="Ex.: 1234567" autoComplete="off" {...register('numeroCarne')} />
+        <Input id="numeroCarne" inputMode="numeric" placeholder="Número impresso no carnê" autoComplete="off" {...register('numeroCarne')} />
         {errors.numeroCarne && <p className="text-xs text-destructive">{errors.numeroCarne.message}</p>}
       </div>
 

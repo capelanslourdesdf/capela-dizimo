@@ -1,7 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { verifyAdminToken } from "../../backend/src/admin/session";
-import { gerarCandidatoNumeroCarne } from "../../backend/src/carne/gerarNumeroCarne";
-import { createFirestoreDocumentWithId } from "../../backend/src/firestore/rest";
+import { reservarProximoNumeroCarne } from "../../backend/src/carne/gerarNumeroCarne";
 
 type FamiliarBasico = { nomeCompleto?: string; dataNascimento?: string };
 
@@ -23,7 +22,6 @@ type CadastrarDizimistaBody = {
     filhos?: FamiliarBasico[];
 };
 
-const MAX_TENTATIVAS_CARNE = 8;
 const MAX_FILHOS = 4;
 
 function extractBearerToken(header: unknown): string | null {
@@ -85,18 +83,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         atualizadoEm: agora,
     };
 
-    for (let tentativa = 0; tentativa < MAX_TENTATIVAS_CARNE; tentativa++) {
-        const candidato = gerarCandidatoNumeroCarne();
-        const resultado = await createFirestoreDocumentWithId("dizimistas", candidato, {
-            ...dados,
-            numeroCarne: candidato,
-        });
+    const numeroCarne = await reservarProximoNumeroCarne(dados);
 
-        if (resultado.created) {
-            res.status(201).json({ ok: true, numeroCarne: candidato });
-            return;
-        }
+    if (!numeroCarne) {
+        res.status(500).json({ ok: false, error: "nao_foi_possivel_gerar_carne" });
+        return;
     }
 
-    res.status(500).json({ ok: false, error: "nao_foi_possivel_gerar_carne" });
+    res.status(201).json({ ok: true, numeroCarne });
 }

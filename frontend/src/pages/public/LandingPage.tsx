@@ -28,12 +28,6 @@ const beneficios = [
   },
 ]
 
-const passos = [
-  { numero: '01', titulo: 'Recadastre-se', descricao: 'Informe o número do seu carnê e atualize seus dados.' },
-  { numero: '02', titulo: 'Contribua via Pix', descricao: 'Gere um Pix e contribua em poucos toques.' },
-  { numero: '03', titulo: 'Acompanhe', descricao: 'Consulte seu carnê e seus pagamentos a qualquer hora.' },
-]
-
 export function LandingPage() {
   return (
     <div>
@@ -49,8 +43,8 @@ export function LandingPage() {
           </h1>
 
           <p className="max-w-xl text-balance text-base text-muted-foreground sm:text-lg">
-            O Meu Dízimo Digital é a forma simples e acolhedora de contribuir com o dízimo, acompanhar sua família e
-            fortalecer nossa comunidade.
+            O Meu Dízimo Digital é a forma simples e acolhedora de contribuir com a Capela, acompanhar suas
+            devoluções e fortalecer nossa comunidade.
           </p>
 
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
@@ -60,25 +54,7 @@ export function LandingPage() {
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
-            <Button asChild size="lg" variant="outline" className="w-full sm:w-auto">
-              <Link to={ROUTES.comoFunciona}>Como funciona</Link>
-            </Button>
           </div>
-
-          <dl className="mt-4 grid w-full max-w-lg grid-cols-3 gap-4 rounded-xl border border-border bg-background/80 p-5 text-center shadow-sm sm:p-6">
-            <div>
-              <dt className="text-xl font-semibold text-primary sm:text-2xl">52</dt>
-              <dd className="text-xs text-muted-foreground sm:text-sm">famílias dizimistas</dd>
-            </div>
-            <div>
-              <dt className="text-xl font-semibold text-primary sm:text-2xl">6</dt>
-              <dd className="text-xs text-muted-foreground sm:text-sm">anos de história</dd>
-            </div>
-            <div>
-              <dt className="text-xl font-semibold text-primary sm:text-2xl">100%</dt>
-              <dd className="text-xs text-muted-foreground sm:text-sm">transparente</dd>
-            </div>
-          </dl>
         </div>
       </section>
 
@@ -105,24 +81,6 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className="bg-secondary/40">
-        <div className="container py-14 sm:py-20">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-2xl font-semibold text-foreground sm:text-3xl">Simples como deve ser</h2>
-          </div>
-
-          <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-3">
-            {passos.map((passo) => (
-              <div key={passo.numero} className="text-center sm:text-left">
-                <span className="text-3xl font-semibold text-primary/30">{passo.numero}</span>
-                <h3 className="mt-2 font-semibold text-foreground">{passo.titulo}</h3>
-                <p className="mt-1.5 text-sm text-muted-foreground">{passo.descricao}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       <section className="container py-14 sm:py-20">
         <div className="mx-auto max-w-2xl rounded-2xl border border-primary/15 bg-primary/5 p-8 text-center sm:p-10">
           <HandCoins className="mx-auto h-8 w-8 text-primary" />
@@ -138,12 +96,12 @@ export function LandingPage() {
         <div className="flex flex-col items-center gap-5 rounded-2xl bg-primary px-6 py-10 text-center text-primary-foreground sm:px-10">
           <h2 className="text-2xl font-semibold sm:text-3xl">Faça parte dessa comunidade de gratidão</h2>
           <p className="max-w-md text-sm text-primary-foreground/90 sm:text-base">
-            Recadastre-se agora e comece a contribuir com poucos toques, com toda a organização que sua família
-            merece.
+            Acompanhe seu carnê e suas contribuições com poucos toques, com toda a organização que a nossa
+            comunidade merece.
           </p>
           <Button asChild size="lg" variant="secondary">
-            <Link to={ROUTES.recadastramento}>
-              Fazer recadastramento
+            <Link to={ROUTES.entrar}>
+              Acompanhar meu dízimo
               <ArrowRight className="h-4 w-4" />
             </Link>
           </Button>

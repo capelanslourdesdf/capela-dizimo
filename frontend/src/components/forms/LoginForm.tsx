@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useNavigate } from 'react-router-dom'
@@ -12,10 +12,14 @@ import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useDizimistaSessao } from '@/hooks/useDizimistaSessao'
 import { ROUTES } from '@/constants/routes'
+import { dataBrEhValida, dataBrParaIso, maskDataBr } from '@/utils/format'
 
 const schema = z.object({
   numeroCarne: z.string().trim().min(1, 'Informe o número do carnê.'),
-  dataNascimento: z.string().min(1, 'Informe sua data de nascimento.'),
+  dataNascimento: z
+    .string()
+    .regex(/^\d{2}\/\d{2}\/\d{4}$/, 'Use o formato dd/mm/aaaa.')
+    .refine((valor) => dataBrEhValida(valor), 'Informe uma data válida.'),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -27,6 +31,7 @@ export function LoginForm() {
 
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(schema) })
@@ -34,7 +39,7 @@ export function LoginForm() {
   async function onSubmit(values: FormValues) {
     setErro(null)
     try {
-      const dizimista = await entrar(values.numeroCarne, values.dataNascimento)
+      const dizimista = await entrar(values.numeroCarne, dataBrParaIso(values.dataNascimento))
       toast.success(`Bem-vindo(a), ${dizimista.nomeCompleto.split(' ')[0]}!`)
       navigate(ROUTES.dizimista.root)
     } catch (err) {
@@ -58,7 +63,19 @@ export function LoginForm() {
 
       <div className="space-y-1.5">
         <Label htmlFor="dataNascimento">Data de nascimento</Label>
-        <Input id="dataNascimento" type="date" {...register('dataNascimento')} />
+        <Controller
+          control={control}
+          name="dataNascimento"
+          render={({ field }) => (
+            <Input
+              id="dataNascimento"
+              inputMode="numeric"
+              placeholder="dd/mm/aaaa"
+              value={field.value ?? ''}
+              onChange={(e) => field.onChange(maskDataBr(e.target.value))}
+            />
+          )}
+        />
         {errors.dataNascimento && <p className="text-xs text-destructive">{errors.dataNascimento.message}</p>}
       </div>
 

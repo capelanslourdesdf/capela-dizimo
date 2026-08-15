@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, getDocs, setDoc } from 'firebase/firestore'
+import { collection, doc, getDoc, getDocs, setDoc, writeBatch } from 'firebase/firestore'
 
 import { db } from '@/lib/firebase'
 import type { DadosCadastraisDizimista, Dizimista } from '@/types'
@@ -48,6 +48,27 @@ export async function listarDizimistas(busca = ''): Promise<Dizimista[]> {
   return todos.filter(
     (d) => d.nomeCompleto.toLowerCase().includes(termo) || d.numeroCarne.includes(termo),
   )
+}
+
+/**
+ * Exclui o dizimista e todo o histórico vinculado (pagamentos e devoluções),
+ * já que o Firestore não apaga subcoleções automaticamente ao remover o
+ * documento pai.
+ */
+export async function excluirDizimista(numeroCarne: string): Promise<void> {
+  const carne = numeroCarne.trim()
+
+  const [pagamentosSnap, devolucoesSnap] = await Promise.all([
+    getDocs(collection(db, COLECAO, carne, 'pagamentos')),
+    getDocs(collection(db, COLECAO, carne, 'devolucoes')),
+  ])
+
+  const batch = writeBatch(db)
+  pagamentosSnap.docs.forEach((d) => batch.delete(d.ref))
+  devolucoesSnap.docs.forEach((d) => batch.delete(d.ref))
+  batch.delete(doc(db, COLECAO, carne))
+
+  await batch.commit()
 }
 
 export type CriarDizimistaAdminInput = DadosCadastraisDizimista

@@ -5,7 +5,7 @@ export function LoginPage() {
   return (
     <Card className="w-full max-w-md">
       <CardHeader>
-        <CardTitle className="text-xl">Entrar na minha conta</CardTitle>
+        <CardTitle className="text-xl">Acompanhar meu dízimo</CardTitle>
         <CardDescription>Informe o número do seu carnê e sua data de nascimento.</CardDescription>
       </CardHeader>
       <CardContent>

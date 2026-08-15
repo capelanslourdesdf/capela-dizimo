@@ -179,7 +179,7 @@ export function RecadastramentoForm({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="ios-form-zoom-fix space-y-6">
+    <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-6">
       {erro && (
         <Alert variant="destructive">
           <AlertDescription>{erro}</AlertDescription>

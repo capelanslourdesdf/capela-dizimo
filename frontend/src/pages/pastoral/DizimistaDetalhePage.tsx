@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, ArrowLeftRight, Mail, MapPin, Pencil, Phone, Receipt, UsersRound } from 'lucide-react'
+import { ArrowLeft, ArrowLeftRight, Mail, MapPin, Pencil, Phone, Receipt, Trash2, UsersRound } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { EmptyState } from '@/components/dashboard/EmptyState'
@@ -14,8 +14,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
-import { buscarDizimistaPorCarne, salvarRecadastramento } from '@/services/dizimistaService'
+import { buscarDizimistaPorCarne, excluirDizimista, salvarRecadastramento } from '@/services/dizimistaService'
 import { listarPagamentos } from '@/services/pagamentoService'
 import { lancarDevolucao, listarDevolucoes, type DadosDevolucao } from '@/services/devolucaoService'
 import type { DadosCadastraisDizimista, Devolucao, Dizimista, PagamentoPix, StatusPagamento } from '@/types'
@@ -37,6 +38,7 @@ export function DizimistaDetalhePage() {
   const [carregando, setCarregando] = React.useState(true)
   const [modalEdicao, setModalEdicao] = React.useState(false)
   const [modalDevolucao, setModalDevolucao] = React.useState(false)
+  const [modalExclusao, setModalExclusao] = React.useState(false)
 
   const carregar = React.useCallback(async () => {
     if (!numeroCarne) return
@@ -70,6 +72,17 @@ export function DizimistaDetalhePage() {
     setModalDevolucao(false)
     toast.success('Devolução lançada com sucesso.')
     carregar()
+  }
+
+  async function handleExcluir() {
+    if (!numeroCarne || !dizimista) return
+    try {
+      await excluirDizimista(numeroCarne)
+      toast.success(`${dizimista.nomeCompleto} foi excluído(a).`)
+      navigate(ROUTES.pastoral.root)
+    } catch {
+      toast.error('Não foi possível excluir o dizimista. Tente novamente.')
+    }
   }
 
   if (carregando) {
@@ -128,7 +141,7 @@ export function DizimistaDetalhePage() {
               </p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => setModalEdicao(true)}>
               <Pencil className="h-4 w-4" />
               Editar
@@ -136,6 +149,14 @@ export function DizimistaDetalhePage() {
             <Button onClick={() => setModalDevolucao(true)}>
               <ArrowLeftRight className="h-4 w-4" />
               Lançar devolução
+            </Button>
+            <Button
+              variant="outline"
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+              onClick={() => setModalExclusao(true)}
+            >
+              <Trash2 className="h-4 w-4" />
+              Excluir
             </Button>
           </div>
         </CardContent>
@@ -247,6 +268,16 @@ export function DizimistaDetalhePage() {
           <DevolucaoForm onSalvar={handleLancarDevolucao} onCancelar={() => setModalDevolucao(false)} />
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={modalExclusao}
+        onOpenChange={setModalExclusao}
+        title="Excluir dizimista"
+        description={`Tem certeza que deseja excluir ${dizimista.nomeCompleto}? O histórico de pagamentos e devoluções também será removido. Essa ação não pode ser desfeita.`}
+        confirmLabel="Excluir"
+        destructive
+        onConfirm={handleExcluir}
+      />
     </div>
   )
 }

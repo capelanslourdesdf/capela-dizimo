@@ -70,11 +70,11 @@
     font-feature-settings: 'cv11', 'ss01';
   }
 
-  /* Evita que o iOS Safari dê zoom automático ao focar campos de formulário */
+  /* Evita que o iOS Safari dê zoom automático ao focar qualquer campo do site */
   @supports (-webkit-touch-callout: none) {
-    .ios-form-zoom-fix input,
-    .ios-form-zoom-fix textarea,
-    .ios-form-zoom-fix select {
+    input,
+    textarea,
+    select {
       font-size: 16px !important;
       line-height: 1.35;
     }

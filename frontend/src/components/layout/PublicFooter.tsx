@@ -37,7 +37,7 @@ export function PublicFooter() {
             <ul className="mt-3 space-y-2 text-muted-foreground">
               <li>
                 <Link to={ROUTES.entrar} className="hover:text-foreground">
-                  Entrar na minha conta
+                  Acompanhar meu dízimo
                 </Link>
               </li>
               <li>

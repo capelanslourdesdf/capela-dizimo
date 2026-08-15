@@ -30,11 +30,6 @@ export function PublicFooter() {
                   Como funciona
                 </Link>
               </li>
-              <li>
-                <Link to={ROUTES.recadastramento} className="hover:text-foreground">
-                  Recadastramento
-                </Link>
-              </li>
             </ul>
           </div>
           <div>

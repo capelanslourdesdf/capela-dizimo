@@ -49,8 +49,8 @@ export function LandingPage() {
 
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
             <Button asChild size="lg" className="w-full sm:w-auto">
-              <Link to={ROUTES.recadastramento}>
-                Fazer recadastramento
+              <Link to={ROUTES.entrar}>
+                Acompanhar meu dízimo
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>

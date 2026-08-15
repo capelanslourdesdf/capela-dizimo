@@ -70,3 +70,38 @@ export function maskValidade(valor: string): string {
     .slice(0, 4)
     .replace(/(\d{2})(\d)/, '$1/$2')
 }
+
+export function maskDataBr(valor: string): string {
+  return valor
+    .replace(/\D/g, '')
+    .slice(0, 8)
+    .replace(/(\d{2})(\d)/, '$1/$2')
+    .replace(/(\d{2})(\d)/, '$1/$2')
+}
+
+export function dataBrEhValida(valorBr: string): boolean {
+  const match = valorBr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
+  if (!match) return false
+
+  const dia = Number(match[1])
+  const mes = Number(match[2])
+  const ano = Number(match[3])
+  if (ano < 1900 || ano > new Date().getFullYear()) return false
+
+  const data = new Date(ano, mes - 1, dia)
+  return data.getFullYear() === ano && data.getMonth() === mes - 1 && data.getDate() === dia
+}
+
+export function dataBrParaIso(valorBr: string): string {
+  const match = valorBr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
+  if (!match) return ''
+  const [, dia, mes, ano] = match
+  return `${ano}-${mes}-${dia}`
+}
+
+export function dataIsoParaBr(valorIso: string): string {
+  const match = valorIso.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!match) return ''
+  const [, ano, mes, dia] = match
+  return `${dia}/${mes}/${ano}`
+}

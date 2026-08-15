@@ -1,0 +1,24 @@
+{
+  "name": "capela-dizimo-monorepo",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "dev": "npm run dev --workspace frontend",
+    "build": "npm run build --workspace frontend",
+    "preview": "npm run preview --workspace frontend",
+    "lint": "npm run lint --workspace frontend",
+    "typecheck:backend": "npm run typecheck --workspace backend",
+    "typecheck:api": "tsc -p tsconfig.api.json"
+  },
+  "devDependencies": {
+    "@vercel/node": "^5.10.1",
+    "typescript": "^5.8.3"
+  }
+}

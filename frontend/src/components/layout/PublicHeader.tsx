@@ -1,0 +1,95 @@
+import * as React from 'react'
+import { Link, NavLink } from 'react-router-dom'
+import { Menu } from 'lucide-react'
+
+import { BrandMark } from '@/components/layout/BrandMark'
+import { Button } from '@/components/ui/button'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from '@/components/ui/sheet'
+import { ROUTES } from '@/constants/routes'
+import { cn } from '@/lib/utils'
+
+const links = [
+  { label: 'Início', href: ROUTES.home },
+  { label: 'Como funciona', href: ROUTES.comoFunciona },
+]
+
+export function PublicHeader() {
+  const [open, setOpen] = React.useState(false)
+
+  return (
+    <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur">
+      <div className="container flex h-16 items-center justify-between">
+        <Link to={ROUTES.home} className="min-w-0">
+          <BrandMark />
+        </Link>
+
+        <nav className="hidden items-center gap-1 md:flex">
+          {links.map((link) => (
+            <NavLink
+              key={link.href}
+              to={link.href}
+              end
+              className={({ isActive }) =>
+                cn(
+                  'rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground',
+                  isActive && 'text-foreground',
+                )
+              }
+            >
+              {link.label}
+            </NavLink>
+          ))}
+        </nav>
+
+        <div className="hidden items-center gap-2 md:flex">
+          <Button asChild variant="ghost">
+            <Link to={ROUTES.entrar}>Entrar</Link>
+          </Button>
+          <Button asChild>
+            <Link to={ROUTES.recadastramento}>Recadastramento</Link>
+          </Button>
+        </div>
+
+        <Sheet open={open} onOpenChange={setOpen}>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon" className="md:hidden" aria-label="Abrir menu">
+              <Menu className="h-5 w-5" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-4/5">
+            <SheetHeader>
+              <SheetTitle>
+                <BrandMark subtitle={false} />
+              </SheetTitle>
+            </SheetHeader>
+            <nav className="mt-6 flex flex-col gap-1">
+              {links.map((link) => (
+                <SheetClose asChild key={link.href}>
+                  <NavLink
+                    to={link.href}
+                    end
+                    className="rounded-md px-3 py-2.5 text-base font-medium text-foreground hover:bg-accent"
+                  >
+                    {link.label}
+                  </NavLink>
+                </SheetClose>
+              ))}
+            </nav>
+            <div className="mt-6 flex flex-col gap-2">
+              <SheetClose asChild>
+                <Button asChild variant="outline" size="lg">
+                  <Link to={ROUTES.entrar}>Entrar</Link>
+                </Button>
+              </SheetClose>
+              <SheetClose asChild>
+                <Button asChild size="lg">
+                  <Link to={ROUTES.recadastramento}>Recadastramento</Link>
+                </Button>
+              </SheetClose>
+            </div>
+          </SheetContent>
+        </Sheet>
+      </div>
+    </header>
+  )
+}

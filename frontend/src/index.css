@@ -1,0 +1,87 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Design tokens — Meu Dízimo Digital
+ * Paleta: azul-claro como cor principal, fundo branco predominante.
+ * Todas as cores em HSL (formato "H S% L%", sem hsl() — ver tailwind.config.js).
+ */
+@layer base {
+  :root {
+    --radius: 0.75rem;
+
+    --background: 0 0% 100%;
+    --foreground: 215 28% 22%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 215 28% 22%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 28% 22%;
+
+    /* Azul-claro (cor principal) */
+    --primary: 201 90% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Azul muito claro (fundos suaves, destaques) */
+    --secondary: 201 90% 95%;
+    --secondary-foreground: 201 70% 28%;
+
+    --muted: 214 25% 96%;
+    --muted-foreground: 215 16% 45%;
+
+    --accent: 201 90% 95%;
+    --accent-foreground: 201 70% 28%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 152 60% 36%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 26 40% 15%;
+
+    --border: 214 20% 90%;
+    --input: 214 20% 88%;
+    --ring: 201 90% 45%;
+
+    --chart-1: 201 90% 45%;
+    --chart-2: 152 55% 42%;
+    --chart-3: 38 92% 55%;
+    --chart-4: 262 60% 62%;
+    --chart-5: 340 70% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+}
+
+@layer utilities {
+  /* Esconde a scrollbar mantendo a rolagem funcional (usado em tabs/carrosséis mobile) */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}

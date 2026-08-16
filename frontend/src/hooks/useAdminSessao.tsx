@@ -26,6 +26,8 @@ function mensagemDeErro(codigo: string | undefined, status: number): string {
       return 'Não foi possível iniciar a sessão: falta configurar a variável ADMIN_SESSION_SECRET no servidor.'
     case 'method_not_allowed':
       return 'Não foi possível entrar (requisição rejeitada pelo servidor). Tente novamente em instantes.'
+    case 'internal_error':
+      return 'Erro inesperado no servidor ao tentar entrar. Veja os logs da função no painel da Vercel para mais detalhes.'
     default:
       return `Não foi possível entrar. Tente novamente. (erro ${status || 'de conexão'})`
   }
@@ -64,12 +66,13 @@ export function AdminSessaoProvider({ children }: { children: React.ReactNode })
     try {
       payload = JSON.parse(bruto)
     } catch {
-      // Resposta não é JSON (ex.: página de erro/404 da própria Vercel) — loga o corpo bruto
-      // para facilitar o diagnóstico via console do navegador.
-      console.error('[admin/login] resposta inesperada do servidor:', response.status, bruto.slice(0, 500))
+      payload = null
     }
 
     if (!response.ok || !payload?.ok || !payload.token || !payload.expiresAt) {
+      // Loga a resposta bruta do servidor (JSON com código não mapeado, página de erro da
+      // Vercel, etc.) para facilitar o diagnóstico via console do navegador.
+      console.error('[admin/login] falha ao entrar:', response.status, bruto.slice(0, 500))
       throw new Error(mensagemDeErro(payload?.error, response.status))
     }
 

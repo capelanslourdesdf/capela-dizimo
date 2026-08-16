@@ -28,6 +28,12 @@ export async function salvarRecadastramento(numeroCarne: string, dados: DadosCad
     ref,
     {
       ...dados,
+      // O Firestore rejeita "undefined" em qualquer campo — campos opcionais do formulário
+      // (ex.: complemento em branco) precisam virar string vazia/null antes de gravar.
+      endereco: {
+        ...dados.endereco,
+        complemento: dados.endereco.complemento || '',
+      },
       email: dados.email?.trim() || null,
       conjuge: dados.conjuge ?? null,
       filhos: dados.filhos ?? [],

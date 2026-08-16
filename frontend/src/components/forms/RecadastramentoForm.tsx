@@ -235,6 +235,7 @@ export function RecadastramentoForm({
               render={({ field }) => (
                 <Input
                   id="telefone"
+                  inputMode="numeric"
                   placeholder="(11) 98765-4321"
                   autoComplete="tel"
                   value={field.value}

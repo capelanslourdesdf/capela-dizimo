@@ -34,9 +34,11 @@ const CardDescription = React.forwardRef<HTMLParagraphElement, React.HTMLAttribu
 )
 CardDescription.displayName = 'CardDescription'
 
+// Quando o conteúdo vem logo após um CardHeader, o espaçamento do topo já foi dado pelo header
+// — daí o pt-0 nesse caso. Usado sozinho (sem header), mantém o padding completo.
 const CardContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn('p-5 pt-0 sm:p-6 sm:pt-0', className)} {...props} />
+    <div ref={ref} className={cn('p-5 sm:p-6 [&:not(:first-child)]:pt-0', className)} {...props} />
   ),
 )
 CardContent.displayName = 'CardContent'

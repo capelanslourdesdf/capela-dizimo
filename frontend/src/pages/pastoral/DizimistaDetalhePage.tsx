@@ -117,7 +117,7 @@ export function DizimistaDetalhePage() {
       </Button>
 
       <Card className="mb-6">
-        <CardContent className="flex flex-col gap-5 pt-6 sm:flex-row sm:items-center sm:justify-between">
+        <CardContent className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
             <Avatar className="h-16 w-16">
               <AvatarFallback className="text-xl">{getIniciais(dizimista.nomeCompleto)}</AvatarFallback>
@@ -178,7 +178,7 @@ export function DizimistaDetalhePage() {
                 const status = STATUS_CONFIG[p.status]
                 return (
                   <Card key={p.id}>
-                    <CardContent className="flex items-center justify-between gap-3 pt-5">
+                    <CardContent className="flex items-center justify-between gap-3">
                       <div>
                         <p className="font-medium text-foreground">{formatCurrency(p.valor)}</p>
                         <p className="text-xs text-muted-foreground">
@@ -201,7 +201,7 @@ export function DizimistaDetalhePage() {
             <div className="space-y-2.5">
               {devolucoes.map((d) => (
                 <Card key={d.id}>
-                  <CardContent className="flex items-center justify-between gap-3 pt-5">
+                  <CardContent className="flex items-center justify-between gap-3">
                     <div>
                       <p className="font-medium text-foreground">{formatCurrency(d.valor)}</p>
                       <p className="text-xs text-muted-foreground">{formatDate(d.data)}</p>

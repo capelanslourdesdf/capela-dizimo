@@ -51,10 +51,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return;
     }
 
+    // "aaaa-mm-dd" -> "dd/mm". É por esse campo que o login confere o nascimento, já que os
+    // registros importados da planilha antiga não possuem o ano.
+    const matchData = body.dataNascimento.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    const diaMesNascimento = matchData ? `${matchData[3]}/${matchData[2]}` : "";
+
     const agora = new Date().toISOString();
     const dados: Record<string, unknown> = {
         nomeCompleto: body.nomeCompleto.trim(),
         dataNascimento: body.dataNascimento,
+        diaMesNascimento,
         endereco: {
             cep: body.endereco.cep || "",
             logradouro: body.endereco.logradouro,

@@ -19,6 +19,12 @@ function competenciaAtual(): string {
   return `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`
 }
 
+/** "2026-08" -> "08/2026" */
+function competenciaMesAno(competencia: string): string {
+  const [ano, mes] = competencia.split('-')
+  return `${mes}/${ano}`
+}
+
 export function DizimistaDashboardPage() {
   const { numeroCarne, dizimista } = useDizimistaSessao()
   const [pagamentos, setPagamentos] = React.useState<PagamentoPix[]>([])
@@ -45,18 +51,22 @@ export function DizimistaDashboardPage() {
         <StatCard label="Nº do carnê" value={numeroCarne || '—'} icon={IdCard} />
         {carregando ? (
           <Card>
-            <CardContent className="pt-6">
+            <CardContent>
               <Skeleton className="h-6 w-32" />
             </CardContent>
           </Card>
         ) : (
-          <StatCard label={`Pago em ${competencia}`} value={formatCurrency(totalMesAprovado)} icon={Wallet} />
+          <StatCard
+            label={`Devolvido em ${competenciaMesAno(competencia)}`}
+            value={formatCurrency(totalMesAprovado)}
+            icon={Wallet}
+          />
         )}
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card>
-          <CardContent className="flex flex-col items-start gap-3 pt-6">
+          <CardContent className="flex flex-col items-start gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <IdCard className="h-5 w-5" />
             </div>
@@ -71,7 +81,7 @@ export function DizimistaDashboardPage() {
         </Card>
 
         <Card>
-          <CardContent className="flex flex-col items-start gap-3 pt-6">
+          <CardContent className="flex flex-col items-start gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <QrCode className="h-5 w-5" />
             </div>
@@ -86,7 +96,7 @@ export function DizimistaDashboardPage() {
         </Card>
 
         <Card>
-          <CardContent className="flex flex-col items-start gap-3 pt-6">
+          <CardContent className="flex flex-col items-start gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <Receipt className="h-5 w-5" />
             </div>

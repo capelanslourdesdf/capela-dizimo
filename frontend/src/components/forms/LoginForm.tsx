@@ -12,14 +12,14 @@ import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useDizimistaSessao } from '@/hooks/useDizimistaSessao'
 import { ROUTES } from '@/constants/routes'
-import { dataBrEhValida, dataBrParaIso, maskDataBr } from '@/utils/format'
+import { diaMesEhValido, maskDiaMes } from '@/utils/format'
 
 const schema = z.object({
   numeroCarne: z.string().trim().min(1, 'Informe o número do carnê.'),
-  dataNascimento: z
+  diaMesNascimento: z
     .string()
-    .regex(/^\d{2}\/\d{2}\/\d{4}$/, 'Use o formato dd/mm/aaaa.')
-    .refine((valor) => dataBrEhValida(valor), 'Informe uma data válida.'),
+    .regex(/^\d{2}\/\d{2}$/, 'Use o formato dd/mm.')
+    .refine((valor) => diaMesEhValido(valor), 'Informe um dia e mês válidos.'),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -39,7 +39,7 @@ export function LoginForm() {
   async function onSubmit(values: FormValues) {
     setErro(null)
     try {
-      const dizimista = await entrar(values.numeroCarne, dataBrParaIso(values.dataNascimento))
+      const dizimista = await entrar(values.numeroCarne, values.diaMesNascimento)
       toast.success(`Bem-vindo(a), ${dizimista.nomeCompleto.split(' ')[0]}!`)
       navigate(ROUTES.dizimista.root)
     } catch (err) {
@@ -62,21 +62,21 @@ export function LoginForm() {
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="dataNascimento">Data de nascimento</Label>
+        <Label htmlFor="diaMesNascimento">Dia e mês de nascimento</Label>
         <Controller
           control={control}
-          name="dataNascimento"
+          name="diaMesNascimento"
           render={({ field }) => (
             <Input
-              id="dataNascimento"
+              id="diaMesNascimento"
               inputMode="numeric"
-              placeholder="dd/mm/aaaa"
+              placeholder="dd/mm"
               value={field.value ?? ''}
-              onChange={(e) => field.onChange(maskDataBr(e.target.value))}
+              onChange={(e) => field.onChange(maskDiaMes(e.target.value))}
             />
           )}
         />
-        {errors.dataNascimento && <p className="text-xs text-destructive">{errors.dataNascimento.message}</p>}
+        {errors.diaMesNascimento && <p className="text-xs text-destructive">{errors.diaMesNascimento.message}</p>}
       </div>
 
       <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>

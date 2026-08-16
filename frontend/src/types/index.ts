@@ -11,14 +11,23 @@ export interface Endereco {
 export interface FamiliarBasico {
   nomeCompleto: string
   dataNascimento: string
+  /** Preenchido nos registros importados da planilha antiga, que não traz o ano. */
+  diaMesNascimento?: string
 }
 
-export type OrigemCadastro = 'recadastramento' | 'cadastro_admin'
+export type OrigemCadastro = 'recadastramento' | 'cadastro_admin' | 'importacao_planilha'
 
 export interface Dizimista {
   numeroCarne: string
   nomeCompleto: string
+  /** Data completa "aaaa-mm-dd". Pode vir vazia em registros importados da planilha antiga. */
   dataNascimento: string
+  /**
+   * Dia e mês de nascimento ("dd/mm"), usado no login. Sempre preenchido: nos registros
+   * importados vem direto da planilha (que não tem o ano) e, quando há data completa,
+   * é derivado dela.
+   */
+  diaMesNascimento?: string
   endereco: Endereco
   telefone: string
   email?: string | null

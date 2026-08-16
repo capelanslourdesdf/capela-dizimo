@@ -128,7 +128,7 @@ export function DizimistasPage() {
           <div className="space-y-3 lg:hidden">
             {dizimistas.map((d) => (
               <Card key={d.numeroCarne}>
-                <CardContent className="flex items-center gap-3 pt-5">
+                <CardContent className="flex items-center gap-3">
                   <Link
                     to={ROUTES.pastoral.dizimistaDetalhe(d.numeroCarne)}
                     className="flex min-w-0 flex-1 items-center gap-3"

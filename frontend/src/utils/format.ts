@@ -99,6 +99,32 @@ export function dataBrParaIso(valorBr: string): string {
   return `${ano}-${mes}-${dia}`
 }
 
+export function maskDiaMes(valor: string): string {
+  return valor
+    .replace(/\D/g, '')
+    .slice(0, 4)
+    .replace(/(\d{2})(\d)/, '$1/$2')
+}
+
+export function diaMesEhValido(valor: string): boolean {
+  const match = valor.match(/^(\d{2})\/(\d{2})$/)
+  if (!match) return false
+
+  const dia = Number(match[1])
+  const mes = Number(match[2])
+  if (mes < 1 || mes > 12 || dia < 1) return false
+
+  // Ano bissexto para permitir 29/02.
+  const diasNoMes = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+  return dia <= diasNoMes[mes - 1]
+}
+
+/** "aaaa-mm-dd" -> "dd/mm" */
+export function isoParaDiaMes(valorIso: string): string {
+  const match = valorIso.match(/^\d{4}-(\d{2})-(\d{2})$/)
+  return match ? `${match[2]}/${match[1]}` : ''
+}
+
 export function dataIsoParaBr(valorIso: string): string {
   const match = valorIso.match(/^(\d{4})-(\d{2})-(\d{2})$/)
   if (!match) return ''

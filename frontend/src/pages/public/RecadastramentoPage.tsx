@@ -11,9 +11,17 @@ import { ROUTES } from '@/constants/routes'
 export function RecadastramentoPage() {
   const navigate = useNavigate()
 
-  async function handleSalvar(dados: DadosCadastraisDizimista, numeroCarneInformado: string) {
-    await salvarRecadastramento(numeroCarneInformado, dados)
-    toast.success('Recadastramento concluído! Agora você já pode entrar com seu carnê e data de nascimento.')
+  async function handleSalvar(
+    dados: DadosCadastraisDizimista,
+    numeroCarneInformado: string,
+    opcoes?: { numeroCarneAnterior?: string },
+  ) {
+    await salvarRecadastramento(numeroCarneInformado, dados, opcoes?.numeroCarneAnterior)
+    toast.success(
+      opcoes?.numeroCarneAnterior
+        ? `Recadastramento concluído! Seu carnê agora é o nº ${numeroCarneInformado}.`
+        : 'Recadastramento concluído! Agora você já pode entrar com seu carnê e o dia/mês do seu nascimento.',
+    )
     navigate(ROUTES.entrar)
   }
 
@@ -34,7 +42,7 @@ export function RecadastramentoPage() {
           <CardTitle className="text-xl">Recadastramento</CardTitle>
           <CardDescription>Atualize seus dados usando o número do carnê que você já possui.</CardDescription>
         </CardHeader>
-        <CardContent className="sm:pt-6">
+        <CardContent>
           <RecadastramentoForm onSalvar={handleSalvar} />
         </CardContent>
       </Card>

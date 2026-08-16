@@ -23,7 +23,7 @@ export function DizimistaCadastroPage() {
       <PageHeader title="Atualização cadastral" description="Mantenha seus dados sempre atualizados." />
 
       <Card className="max-w-2xl">
-        <CardContent className="pt-6">
+        <CardContent>
           {carregando || !dizimista ? (
             <div className="space-y-3">
               {Array.from({ length: 6 }).map((_, i) => (

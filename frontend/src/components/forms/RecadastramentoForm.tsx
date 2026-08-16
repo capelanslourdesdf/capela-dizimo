@@ -8,10 +8,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Switch } from '@/components/ui/switch'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
 import type { DadosCadastraisDizimista, Dizimista } from '@/types'
 import { buscarEnderecoPorCep } from '@/services/cepService'
+import { buscarDizimistaPorCarne } from '@/services/dizimistaService'
 import { dataBrEhValida, dataBrParaIso, dataIsoParaBr, maskCep, maskDataBr, maskTelefone } from '@/utils/format'
 
 const MAX_FILHOS = 4
@@ -30,6 +32,8 @@ function createSchema(exigirCarne: boolean) {
   return z
     .object({
       numeroCarne: exigirCarne ? z.string().trim().min(1, 'Informe o número do carnê.') : z.string().optional(),
+      alterarNumeroCarne: z.boolean(),
+      novoNumeroCarne: z.string().optional(),
       nomeCompleto: z.string().min(3, 'Informe o nome completo.'),
       dataNascimento: dataNascimentoSchema,
       cep: z.union([z.string().regex(/^\d{5}-\d{3}$/, 'Informe um CEP válido.'), z.literal('')]),
@@ -54,6 +58,14 @@ function createSchema(exigirCarne: boolean) {
       message: 'Informe a data de nascimento do cônjuge no formato dd/mm/aaaa.',
       path: ['conjugeDataNascimento'],
     })
+    .refine((data) => !data.alterarNumeroCarne || !!data.novoNumeroCarne?.trim(), {
+      message: 'Informe o novo número do carnê.',
+      path: ['novoNumeroCarne'],
+    })
+    .refine((data) => !data.alterarNumeroCarne || data.novoNumeroCarne?.trim() !== data.numeroCarne?.trim(), {
+      message: 'O novo número é igual ao atual.',
+      path: ['novoNumeroCarne'],
+    })
 }
 
 type FormValues = z.infer<ReturnType<typeof createSchema>>
@@ -63,7 +75,11 @@ interface RecadastramentoFormProps {
   /** false no cadastro feito pelo admin: o nº do carnê é gerado ao salvar, não informado no form. */
   exibirCarne?: boolean
   bloquearCarne?: boolean
-  onSalvar: (dados: DadosCadastraisDizimista, numeroCarneInformado: string) => Promise<void>
+  onSalvar: (
+    dados: DadosCadastraisDizimista,
+    numeroCarneInformado: string,
+    opcoes?: { numeroCarneAnterior?: string },
+  ) => Promise<void>
 }
 
 export function RecadastramentoForm({
@@ -81,11 +97,15 @@ export function RecadastramentoForm({
     handleSubmit,
     watch,
     setValue,
+    reset,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
       numeroCarne: dizimista?.numeroCarne ?? '',
+      alterarNumeroCarne: false,
+      novoNumeroCarne: '',
       nomeCompleto: dizimista?.nomeCompleto ?? '',
       dataNascimento: dizimista?.dataNascimento ? dataIsoParaBr(dizimista.dataNascimento) : '',
       cep: dizimista?.endereco.cep ?? '',
@@ -109,8 +129,78 @@ export function RecadastramentoForm({
   const { fields, append, remove } = useFieldArray({ control, name: 'filhos' })
   const temConjuge = watch('temConjuge')
   const cep = watch('cep')
+  const numeroCarneDigitado = watch('numeroCarne')
+  const alterarNumeroCarne = watch('alterarNumeroCarne')
   const [buscandoCep, setBuscandoCep] = React.useState(false)
   const [cepNaoEncontrado, setCepNaoEncontrado] = React.useState(false)
+  const [buscandoCarne, setBuscandoCarne] = React.useState(false)
+  const [statusCarne, setStatusCarne] = React.useState<'encontrado' | 'novo' | null>(null)
+
+  // Só busca no fluxo público de recadastramento: no cadastro pelo admin o carnê ainda não
+  // existe (é gerado ao salvar) e na edição os dados já vêm prontos via prop `dizimista`.
+  const deveBuscarPorCarne = exibirCarne && !bloquearCarne
+  const ultimoCarneBuscado = React.useRef<string | null>(null)
+
+  React.useEffect(() => {
+    if (!deveBuscarPorCarne) return
+
+    const carne = (numeroCarneDigitado ?? '').trim()
+    if (!carne) {
+      setStatusCarne(null)
+      ultimoCarneBuscado.current = null
+      return
+    }
+    if (carne === ultimoCarneBuscado.current) return
+
+    let cancelado = false
+    const timer = setTimeout(async () => {
+      setBuscandoCarne(true)
+      const encontrado = await buscarDizimistaPorCarne(carne).catch(() => null)
+      if (cancelado) return
+
+      ultimoCarneBuscado.current = carne
+      setBuscandoCarne(false)
+
+      if (!encontrado) {
+        setStatusCarne('novo')
+        return
+      }
+
+      setStatusCarne('encontrado')
+      reset({
+        ...getValues(),
+        numeroCarne: carne,
+        // Nova consulta = novo contexto: não faz sentido manter uma troca digitada antes.
+        alterarNumeroCarne: false,
+        novoNumeroCarne: '',
+        nomeCompleto: encontrado.nomeCompleto,
+        dataNascimento: dataIsoParaBr(encontrado.dataNascimento),
+        cep: encontrado.endereco.cep ?? '',
+        logradouro: encontrado.endereco.logradouro ?? '',
+        numero: encontrado.endereco.numero ?? '',
+        complemento: encontrado.endereco.complemento ?? '',
+        bairro: encontrado.endereco.bairro ?? '',
+        cidade: encontrado.endereco.cidade ?? '',
+        estado: encontrado.endereco.estado ?? '',
+        telefone: encontrado.telefone ?? '',
+        email: encontrado.email ?? '',
+        temConjuge: !!encontrado.conjuge,
+        conjugeNome: encontrado.conjuge?.nomeCompleto ?? '',
+        conjugeDataNascimento: encontrado.conjuge?.dataNascimento
+          ? dataIsoParaBr(encontrado.conjuge.dataNascimento)
+          : '',
+        filhos: (encontrado.filhos ?? []).map((f) => ({
+          nomeCompleto: f.nomeCompleto,
+          dataNascimento: dataIsoParaBr(f.dataNascimento),
+        })),
+      })
+    }, 600)
+
+    return () => {
+      cancelado = true
+      clearTimeout(timer)
+    }
+  }, [numeroCarneDigitado, deveBuscarPorCarne, reset, getValues])
 
   React.useEffect(() => {
     const digitos = cep.replace(/\D/g, '')
@@ -172,7 +262,16 @@ export function RecadastramentoForm({
         })),
       }
 
-      await onSalvar(dados, (values.numeroCarne ?? '').trim())
+      const carneAtual = (values.numeroCarne ?? '').trim()
+      const carneNovo = (values.novoNumeroCarne ?? '').trim()
+      const trocouCarne =
+        values.alterarNumeroCarne && !!carneNovo && carneNovo !== carneAtual && statusCarne === 'encontrado'
+
+      await onSalvar(
+        dados,
+        trocouCarne ? carneNovo : carneAtual,
+        trocouCarne ? { numeroCarneAnterior: carneAtual } : undefined,
+      )
     } catch (err) {
       setErro(err instanceof Error ? err.message : 'Não foi possível salvar. Tente novamente.')
     }
@@ -192,14 +291,67 @@ export function RecadastramentoForm({
         {exibirCarne && (
           <div className="space-y-1.5">
             <Label htmlFor="numeroCarne">Nº do carnê</Label>
-            <Input
-              id="numeroCarne"
-              inputMode="numeric"
-              placeholder="Número impresso no carnê"
-              disabled={bloquearCarne}
-              {...register('numeroCarne')}
-            />
+            <div className="relative">
+              <Input
+                id="numeroCarne"
+                inputMode="numeric"
+                placeholder="Número impresso no carnê"
+                disabled={bloquearCarne}
+                className={buscandoCarne ? 'pr-9' : undefined}
+                {...register('numeroCarne')}
+              />
+              {buscandoCarne && (
+                <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+              )}
+            </div>
             {errors.numeroCarne && <p className="text-xs text-destructive">{errors.numeroCarne.message}</p>}
+            {!errors.numeroCarne && !buscandoCarne && statusCarne === 'encontrado' && (
+              <p className="text-xs text-success">
+                Carnê encontrado! Confira os dados abaixo e atualize o que for necessário.
+              </p>
+            )}
+            {!errors.numeroCarne && !buscandoCarne && statusCarne === 'novo' && (
+              <p className="text-xs text-muted-foreground">
+                Nenhum cadastro encontrado para este carnê — preencha os dados abaixo.
+              </p>
+            )}
+          </div>
+        )}
+
+        {exibirCarne && !bloquearCarne && statusCarne === 'encontrado' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <Label htmlFor="alterarNumeroCarne" className="font-normal">
+                Alterar número do carnê
+              </Label>
+              <Controller
+                control={control}
+                name="alterarNumeroCarne"
+                render={({ field }) => (
+                  <Switch id="alterarNumeroCarne" checked={field.value} onCheckedChange={field.onChange} />
+                )}
+              />
+            </div>
+
+            {alterarNumeroCarne && (
+              <div className="space-y-1.5">
+                <Label htmlFor="novoNumeroCarne">Novo nº do carnê</Label>
+                <Input
+                  id="novoNumeroCarne"
+                  inputMode="numeric"
+                  placeholder="Número do novo carnê"
+                  {...register('novoNumeroCarne')}
+                />
+                {errors.novoNumeroCarne ? (
+                  <p className="text-xs text-destructive">{errors.novoNumeroCarne.message}</p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Ao salvar, o cadastro passa para este número, levando junto o histórico de
+                    pagamentos e devoluções.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -338,7 +490,7 @@ export function RecadastramentoForm({
 
         {temConjuge && (
           <Card>
-            <CardContent className="grid gap-4 pt-5 sm:grid-cols-2">
+            <CardContent className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="conjugeNome">Nome completo do cônjuge</Label>
                 <Input id="conjugeNome" {...register('conjugeNome')} />
@@ -387,7 +539,7 @@ export function RecadastramentoForm({
 
         {fields.map((field, index) => (
           <Card key={field.id}>
-            <CardContent className="grid gap-4 pt-5 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+            <CardContent className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
               <div className="space-y-1.5">
                 <Label htmlFor={`filhos.${index}.nomeCompleto`}>Nome completo</Label>
                 <Input id={`filhos.${index}.nomeCompleto`} {...register(`filhos.${index}.nomeCompleto`)} />

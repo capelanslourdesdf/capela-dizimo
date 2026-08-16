@@ -15,10 +15,12 @@
     "preview": "npm run preview --workspace frontend",
     "lint": "npm run lint --workspace frontend",
     "typecheck:backend": "npm run typecheck --workspace backend",
-    "typecheck:api": "tsc -p tsconfig.api.json"
+    "typecheck:api": "tsc -p tsconfig.api.json",
+    "importar:dizimistas": "node scripts/importar-dizimistas.mjs"
   },
   "devDependencies": {
     "@vercel/node": "^5.10.1",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "xlsx": "^0.18.5"
   }
 }

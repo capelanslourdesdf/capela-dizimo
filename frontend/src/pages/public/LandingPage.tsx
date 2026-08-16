@@ -69,7 +69,7 @@ export function LandingPage() {
         <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {beneficios.map((item) => (
             <Card key={item.titulo} className="border-border/80">
-              <CardContent className="pt-6">
+              <CardContent>
                 <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary">
                   <item.icone className="h-5 w-5" />
                 </div>

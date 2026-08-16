@@ -67,7 +67,7 @@ export function DizimistaPagamentosPage() {
                 const status = STATUS_CONFIG[p.status]
                 return (
                   <Card key={p.id}>
-                    <CardContent className="flex items-center justify-between gap-3 pt-5">
+                    <CardContent className="flex items-center justify-between gap-3">
                       <div>
                         <p className="font-medium text-foreground">{formatCurrency(p.valor)}</p>
                         <p className="text-xs text-muted-foreground">
@@ -96,7 +96,7 @@ export function DizimistaPagamentosPage() {
             <div className="space-y-2.5">
               {devolucoes.map((d) => (
                 <Card key={d.id}>
-                  <CardContent className="flex items-center justify-between gap-3 pt-5">
+                  <CardContent className="flex items-center justify-between gap-3">
                     <div>
                       <p className="font-medium text-foreground">{formatCurrency(d.valor)}</p>
                       <p className="text-xs text-muted-foreground">

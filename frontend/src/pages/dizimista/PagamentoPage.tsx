@@ -80,7 +80,7 @@ export function DizimistaPagamentoPage() {
 
       {!pagamento ? (
         <Card className="max-w-md">
-          <CardContent className="pt-6">
+          <CardContent>
             <form onSubmit={handleGerar} className="space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="valor">Valor (R$)</Label>
@@ -101,7 +101,7 @@ export function DizimistaPagamentoPage() {
         </Card>
       ) : (
         <Card className="max-w-md">
-          <CardContent className="flex flex-col items-center gap-4 pt-6 text-center">
+          <CardContent className="flex flex-col items-center gap-4 text-center">
             <StatusBadge label={STATUS_CONFIG[status].label} variant={STATUS_CONFIG[status].variant} />
 
             {status === 'aprovado' ? (

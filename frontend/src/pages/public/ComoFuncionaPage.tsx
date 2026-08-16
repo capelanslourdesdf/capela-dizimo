@@ -16,7 +16,7 @@ const etapas = [
   {
     icone: QrCode,
     titulo: '2. Contribua via Pix',
-    descricao: 'Entre com seu carnê e data de nascimento e gere um Pix para contribuir a qualquer momento.',
+    descricao: 'Entre com seu carnê e o dia/mês do seu nascimento e gere um Pix para contribuir a qualquer momento.',
   },
   {
     icone: FileCheck2,
@@ -70,7 +70,7 @@ export function ComoFuncionaPage() {
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           {etapas.map((etapa) => (
             <Card key={etapa.titulo}>
-              <CardContent className="flex gap-4 pt-6">
+              <CardContent className="flex gap-4">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                   <etapa.icone className="h-5 w-5" />
                 </div>

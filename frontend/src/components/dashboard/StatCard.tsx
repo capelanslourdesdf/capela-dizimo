@@ -15,7 +15,7 @@ interface StatCardProps {
 export function StatCard({ label, value, icon: Icon, trend, helper }: StatCardProps) {
   return (
     <Card>
-      <CardContent className="flex items-start justify-between gap-3 pt-6">
+      <CardContent className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm text-muted-foreground">{label}</p>
           <p className="mt-1.5 truncate text-2xl font-semibold text-foreground">{value}</p>

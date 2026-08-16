@@ -21,6 +21,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return;
     }
 
-    const { token, expiresAt } = issueAdminToken();
-    res.status(200).json({ ok: true, token, expiresAt });
+    try {
+        const { token, expiresAt } = issueAdminToken();
+        res.status(200).json({ ok: true, token, expiresAt });
+    } catch {
+        // Credenciais corretas, mas ADMIN_SESSION_SECRET não está configurado — sem isso não é
+        // possível emitir o token de sessão. Retornamos um erro distinto para não parecer que o
+        // usuário/senha estão errados.
+        res.status(500).json({ ok: false, error: "admin_session_secret_not_configured" });
+    }
 }

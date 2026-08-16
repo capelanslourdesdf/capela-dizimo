@@ -16,6 +16,21 @@ interface AdminSessaoContextValue {
 
 const AdminSessaoContext = React.createContext<AdminSessaoContextValue | undefined>(undefined)
 
+function mensagemDeErro(codigo: string | undefined, status: number): string {
+  switch (codigo) {
+    case 'invalid_credentials':
+      return 'Usuário ou senha inválidos.'
+    case 'admin_credentials_not_configured':
+      return 'O login da Pastoral ainda não foi configurado neste ambiente (faltam as variáveis ADMIN_USERNAME/ADMIN_PASSWORD no servidor).'
+    case 'admin_session_secret_not_configured':
+      return 'Não foi possível iniciar a sessão: falta configurar a variável ADMIN_SESSION_SECRET no servidor.'
+    default:
+      return status === 0
+        ? 'Não foi possível conectar ao servidor. Verifique sua internet e tente novamente.'
+        : 'Não foi possível entrar. Tente novamente.'
+  }
+}
+
 function lerSessaoArmazenada(): string | null {
   const bruto = localStorage.getItem(STORAGE_KEYS.adminSessao)
   if (!bruto) return null
@@ -44,10 +59,15 @@ export function AdminSessaoProvider({ children }: { children: React.ReactNode })
       body: JSON.stringify({ usuario, senha }),
     })
 
-    const payload = (await response.json().catch(() => ({}))) as { ok?: boolean; token?: string; expiresAt?: number }
+    const payload = (await response.json().catch(() => null)) as {
+      ok?: boolean
+      token?: string
+      expiresAt?: number
+      error?: string
+    } | null
 
-    if (!response.ok || !payload.ok || !payload.token || !payload.expiresAt) {
-      throw new Error('Usuário ou senha inválidos.')
+    if (!response.ok || !payload?.ok || !payload.token || !payload.expiresAt) {
+      throw new Error(mensagemDeErro(payload?.error, response.status))
     }
 
     localStorage.setItem(

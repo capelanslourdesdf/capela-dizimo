@@ -12,11 +12,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import type { DadosDevolucao } from '@/services/devolucaoService'
 import type { FormaPagamentoDevolucao } from '@/types'
+import { dataBrEhValida, dataBrParaIso, dataIsoParaBr, maskDataBr } from '@/utils/format'
 
 const schema = z.object({
   valor: z.string().min(1, 'Informe o valor.'),
   formaPagamento: z.enum(['pix', 'dinheiro', 'transferencia', 'cheque']),
-  data: z.string().min(1, 'Informe a data.'),
+  data: z
+    .string()
+    .regex(/^\d{2}\/\d{2}\/\d{4}$/, 'Use o formato dd/mm/aaaa.')
+    .refine((valor) => dataBrEhValida(valor), 'Informe uma data válida.'),
   observacao: z.string().optional(),
 })
 
@@ -44,7 +48,10 @@ export function DevolucaoForm({ onSalvar, onCancelar }: DevolucaoFormProps) {
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { formaPagamento: 'pix', data: new Date().toISOString().slice(0, 10) },
+    defaultValues: {
+      formaPagamento: 'pix',
+      data: dataIsoParaBr(new Date().toISOString().slice(0, 10)),
+    },
   })
 
   async function onSubmit(values: FormValues) {
@@ -59,7 +66,8 @@ export function DevolucaoForm({ onSalvar, onCancelar }: DevolucaoFormProps) {
       await onSalvar({
         valor,
         formaPagamento: values.formaPagamento,
-        data: values.data,
+        // Persistido em ISO (aaaa-mm-dd), que é o formato lido pelas telas de histórico.
+        data: dataBrParaIso(values.data),
         observacao: values.observacao,
       })
     } catch (err) {
@@ -83,7 +91,19 @@ export function DevolucaoForm({ onSalvar, onCancelar }: DevolucaoFormProps) {
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="data">Data</Label>
-          <Input id="data" type="date" {...register('data')} />
+          <Controller
+            control={control}
+            name="data"
+            render={({ field }) => (
+              <Input
+                id="data"
+                inputMode="numeric"
+                placeholder="dd/mm/aaaa"
+                value={field.value ?? ''}
+                onChange={(e) => field.onChange(maskDataBr(e.target.value))}
+              />
+            )}
+          />
           {errors.data && <p className="text-xs text-destructive">{errors.data.message}</p>}
         </div>
       </div>

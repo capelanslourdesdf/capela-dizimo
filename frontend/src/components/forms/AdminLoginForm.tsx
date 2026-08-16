@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useNavigate } from 'react-router-dom'
-import { LogIn } from 'lucide-react'
+import { Eye, EyeOff, LogIn } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -24,6 +24,7 @@ export function AdminLoginForm() {
   const { entrar } = useAdminSessao()
   const navigate = useNavigate()
   const [erro, setErro] = React.useState<string | null>(null)
+  const [mostrarSenha, setMostrarSenha] = React.useState(false)
 
   const {
     register,
@@ -58,7 +59,23 @@ export function AdminLoginForm() {
 
       <div className="space-y-1.5">
         <Label htmlFor="senha">Senha</Label>
-        <Input id="senha" type="password" autoComplete="current-password" {...register('senha')} />
+        <div className="relative">
+          <Input
+            id="senha"
+            type={mostrarSenha ? 'text' : 'password'}
+            autoComplete="current-password"
+            className="pr-10"
+            {...register('senha')}
+          />
+          <button
+            type="button"
+            onClick={() => setMostrarSenha((v) => !v)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            aria-label={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'}
+          >
+            {mostrarSenha ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
         {errors.senha && <p className="text-xs text-destructive">{errors.senha.message}</p>}
       </div>
 

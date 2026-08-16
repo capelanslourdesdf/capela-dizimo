@@ -24,10 +24,10 @@ function mensagemDeErro(codigo: string | undefined, status: number): string {
       return 'O login da Pastoral ainda não foi configurado neste ambiente (faltam as variáveis ADMIN_USERNAME/ADMIN_PASSWORD no servidor).'
     case 'admin_session_secret_not_configured':
       return 'Não foi possível iniciar a sessão: falta configurar a variável ADMIN_SESSION_SECRET no servidor.'
+    case 'method_not_allowed':
+      return 'Não foi possível entrar (requisição rejeitada pelo servidor). Tente novamente em instantes.'
     default:
-      return status === 0
-        ? 'Não foi possível conectar ao servidor. Verifique sua internet e tente novamente.'
-        : 'Não foi possível entrar. Tente novamente.'
+      return `Não foi possível entrar. Tente novamente. (erro ${status || 'de conexão'})`
   }
 }
 
@@ -59,12 +59,15 @@ export function AdminSessaoProvider({ children }: { children: React.ReactNode })
       body: JSON.stringify({ usuario, senha }),
     })
 
-    const payload = (await response.json().catch(() => null)) as {
-      ok?: boolean
-      token?: string
-      expiresAt?: number
-      error?: string
-    } | null
+    const bruto = await response.text()
+    let payload: { ok?: boolean; token?: string; expiresAt?: number; error?: string } | null = null
+    try {
+      payload = JSON.parse(bruto)
+    } catch {
+      // Resposta não é JSON (ex.: página de erro/404 da própria Vercel) — loga o corpo bruto
+      // para facilitar o diagnóstico via console do navegador.
+      console.error('[admin/login] resposta inesperada do servidor:', response.status, bruto.slice(0, 500))
+    }
 
     if (!response.ok || !payload?.ok || !payload.token || !payload.expiresAt) {
       throw new Error(mensagemDeErro(payload?.error, response.status))

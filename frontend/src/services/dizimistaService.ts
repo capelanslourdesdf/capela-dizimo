@@ -73,13 +73,10 @@ export async function excluirDizimista(numeroCarne: string): Promise<void> {
 
 export type CriarDizimistaAdminInput = DadosCadastraisDizimista
 
-export async function criarDizimistaAdmin(dados: CriarDizimistaAdminInput, adminToken: string): Promise<string> {
+export async function criarDizimistaAdmin(dados: CriarDizimistaAdminInput): Promise<string> {
   const response = await fetch('/api/dizimistas/cadastrar', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${adminToken}`,
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(dados),
   })
 

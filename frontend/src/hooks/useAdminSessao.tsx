@@ -1,6 +1,10 @@
 import * as React from 'react'
 
 import { STORAGE_KEYS } from '@/constants/storage'
+import { ADMIN_SENHA_HASH, ADMIN_USUARIO } from '@/constants/adminAuth'
+import { sha256Hex } from '@/utils/hash'
+
+const SESSAO_TTL_MS = 12 * 60 * 60 * 1000
 
 interface SessaoAdminArmazenada {
   token: string
@@ -15,23 +19,6 @@ interface AdminSessaoContextValue {
 }
 
 const AdminSessaoContext = React.createContext<AdminSessaoContextValue | undefined>(undefined)
-
-function mensagemDeErro(codigo: string | undefined, status: number): string {
-  switch (codigo) {
-    case 'invalid_credentials':
-      return 'Usuário ou senha inválidos.'
-    case 'admin_credentials_not_configured':
-      return 'O login da Pastoral ainda não foi configurado neste ambiente (faltam as variáveis ADMIN_USERNAME/ADMIN_PASSWORD no servidor).'
-    case 'admin_session_secret_not_configured':
-      return 'Não foi possível iniciar a sessão: falta configurar a variável ADMIN_SESSION_SECRET no servidor.'
-    case 'method_not_allowed':
-      return 'Não foi possível entrar (requisição rejeitada pelo servidor). Tente novamente em instantes.'
-    case 'internal_error':
-      return 'Erro inesperado no servidor ao tentar entrar. Veja os logs da função no painel da Vercel para mais detalhes.'
-    default:
-      return `Não foi possível entrar. Tente novamente. (erro ${status || 'de conexão'})`
-  }
-}
 
 function lerSessaoArmazenada(): string | null {
   const bruto = localStorage.getItem(STORAGE_KEYS.adminSessao)
@@ -55,32 +42,17 @@ export function AdminSessaoProvider({ children }: { children: React.ReactNode })
   }, [])
 
   const entrar = React.useCallback(async (usuario: string, senha: string) => {
-    const response = await fetch('/api/admin/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ usuario, senha }),
-    })
+    const senhaHash = await sha256Hex(senha)
 
-    const bruto = await response.text()
-    let payload: { ok?: boolean; token?: string; expiresAt?: number; error?: string } | null = null
-    try {
-      payload = JSON.parse(bruto)
-    } catch {
-      payload = null
+    if (usuario.trim() !== ADMIN_USUARIO || senhaHash !== ADMIN_SENHA_HASH) {
+      throw new Error('Usuário ou senha inválidos.')
     }
 
-    if (!response.ok || !payload?.ok || !payload.token || !payload.expiresAt) {
-      // Loga a resposta bruta do servidor (JSON com código não mapeado, página de erro da
-      // Vercel, etc.) para facilitar o diagnóstico via console do navegador.
-      console.error('[admin/login] falha ao entrar:', response.status, bruto.slice(0, 500))
-      throw new Error(mensagemDeErro(payload?.error, response.status))
-    }
+    const novoToken = crypto.randomUUID()
+    const expiresAt = Date.now() + SESSAO_TTL_MS
 
-    localStorage.setItem(
-      STORAGE_KEYS.adminSessao,
-      JSON.stringify({ token: payload.token, expiresAt: payload.expiresAt }),
-    )
-    setToken(payload.token)
+    localStorage.setItem(STORAGE_KEYS.adminSessao, JSON.stringify({ token: novoToken, expiresAt }))
+    setToken(novoToken)
   }, [])
 
   const sair = React.useCallback(() => {

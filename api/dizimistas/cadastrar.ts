@@ -1,5 +1,4 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { verifyAdminToken } from "../../backend/src/admin/session";
 import { reservarProximoNumeroCarne } from "../../backend/src/carne/gerarNumeroCarne";
 
 type FamiliarBasico = { nomeCompleto?: string; dataNascimento?: string };
@@ -24,20 +23,13 @@ type CadastrarDizimistaBody = {
 
 const MAX_FILHOS = 4;
 
-function extractBearerToken(header: unknown): string | null {
-    if (typeof header !== "string") return null;
-    const match = header.match(/^Bearer\s+(.+)$/i);
-    return match ? match[1] : null;
-}
-
+// O login da Pastoral agora é verificado inteiramente no navegador (ver
+// frontend/src/hooks/useAdminSessao.tsx), sem segredo compartilhado com o backend. Como as
+// regras do Firestore já são abertas (allow read, write: if true), este endpoint só existe
+// para gerar o número sequencial do carnê — não há um token de admin para validar aqui.
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== "POST") {
         res.status(405).json({ ok: false, error: "method_not_allowed" });
-        return;
-    }
-
-    if (!verifyAdminToken(extractBearerToken(req.headers.authorization))) {
-        res.status(401).json({ ok: false, error: "unauthorized" });
         return;
     }
 

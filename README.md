@@ -16,8 +16,10 @@ metas, relatórios, pendências, outras formas de pagamento etc.) fica proposita
   exceto o nº do carnê, que é gerado automaticamente ao salvar.
 - **Área do dizimista** (login por nº do carnê + data de nascimento): consulta do carnê e dos
   pagamentos do mês, atualização cadastral e pagamento via Pix (Mercado Pago).
-- **Área da Pastoral** (login fixo via variável de ambiente): lista/busca de dizimistas, cadastro
-  de novos dizimistas e lançamento de devolução avulsa (valor, forma de pagamento e data).
+- **Área da Pastoral** (login fixo, usuário e hash da senha verificados no navegador — ver
+  `frontend/src/constants/adminAuth.ts`): lista/busca de dizimistas, exclusão de dizimista,
+  cadastro de novos dizimistas e lançamento de devolução avulsa (valor, forma de pagamento e
+  data).
 
 ## Stack
 
@@ -25,7 +27,7 @@ metas, relatórios, pendências, outras formas de pagamento etc.) fica proposita
   Router + Firebase (Firestore).
 - **Backend** (`backend/`): módulos TypeScript reutilizáveis — integração com Mercado Pago e
   Firestore REST — consumidos pelas funções serverless.
-- **API** (`api/`): Vercel Serverless Functions (login do admin, cadastro com geração de carnê,
+- **API** (`api/`): Vercel Serverless Functions (cadastro de dizimista com geração de carnê,
   criação/consulta/webhook de pagamento Pix).
 
 ## Como rodar
@@ -65,8 +67,8 @@ frontend/            # aplicação Vite (UI)
   ├── types/          # Dizimista, PagamentoPix, Devolucao
   └── constants/       # rotas, navegação, storage
 
-backend/              # módulos TS puros: mercadopago/, firestore/, carne/, admin/
-api/                   # funções serverless: admin/, dizimistas/, mercadopago/
+backend/              # módulos TS puros: mercadopago/, firestore/, carne/
+api/                   # funções serverless: dizimistas/, mercadopago/
 ```
 
 ## Firestore

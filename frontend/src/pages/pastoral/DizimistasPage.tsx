@@ -15,14 +15,12 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
-import { useAdminSessao } from '@/hooks/useAdminSessao'
 import { criarDizimistaAdmin, excluirDizimista, listarDizimistas } from '@/services/dizimistaService'
 import type { DadosCadastraisDizimista, Dizimista } from '@/types'
 import { getIniciais } from '@/utils/format'
 import { ROUTES } from '@/constants/routes'
 
 export function DizimistasPage() {
-  const { token } = useAdminSessao()
   const navigate = useNavigate()
   const [dizimistas, setDizimistas] = React.useState<Dizimista[]>([])
   const [carregando, setCarregando] = React.useState(true)
@@ -39,8 +37,7 @@ export function DizimistasPage() {
   }, [busca])
 
   async function handleCadastrar(dados: DadosCadastraisDizimista) {
-    if (!token) return
-    const numeroCarne = await criarDizimistaAdmin(dados, token)
+    const numeroCarne = await criarDizimistaAdmin(dados)
     setModalAberto(false)
     toast.success(`Dizimista cadastrado(a) com o carnê nº ${numeroCarne}.`)
     navigate(ROUTES.pastoral.dizimistaDetalhe(numeroCarne))

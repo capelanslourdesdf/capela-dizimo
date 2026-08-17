@@ -54,7 +54,6 @@ function montarPayload(dados: DadosCadastraisDizimista, agora: string) {
     responsavelRecadastramento: dados.responsavelRecadastramento?.trim() || null,
     // Data de referência do dizimista no site: a partir dela é que os meses passam a ser
     // cobrados/acompanhados. Atualizada a cada recadastramento.
-    recadastradoEm: agora,
     atualizadoEm: agora,
   }
 }
@@ -68,6 +67,10 @@ function montarPayload(dados: DadosCadastraisDizimista, agora: string) {
  * `exigirNovo` é usado quando o número foi gerado pelo próprio site ("não sei meu carnê"): nesse
  * caso a gravação roda em transação e falha se o número tiver sido ocupado nesse meio-tempo, em
  * vez de mesclar os dados por cima de outro dizimista.
+ *
+ * `recadastradoEm` marca a ENTRADA do dizimista no site e por isso só é gravado na primeira vez —
+ * edições posteriores (inclusive pela Pastoral) o preservam, senão a base de cálculo dos meses
+ * pendentes andaria para frente a cada alteração.
  */
 export async function salvarRecadastramento(
   numeroCarne: string,
@@ -85,17 +88,25 @@ export async function salvarRecadastramento(
       if (existente.exists()) {
         throw new Error(`O carnê nº ${carne} acabou de ser usado por outra pessoa. Tente salvar novamente.`)
       }
-      tx.set(ref, { ...payload, numeroCarne: carne, origem: 'recadastramento', criadoEm: agora })
+      tx.set(ref, {
+        ...payload,
+        numeroCarne: carne,
+        origem: 'recadastramento',
+        recadastradoEm: agora,
+        criadoEm: agora,
+      })
     })
     return
   }
 
   const existente = await getDoc(ref)
+  const recadastradoEmAtual = (existente.data() as Dizimista | undefined)?.recadastradoEm
 
   await setDoc(
     ref,
     {
       ...payload,
+      recadastradoEm: recadastradoEmAtual || agora,
       ...(existente.exists() ? {} : { origem: 'recadastramento', criadoEm: agora }),
     },
     { merge: true },

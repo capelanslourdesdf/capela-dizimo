@@ -1,6 +1,17 @@
 import * as React from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, ArrowLeftRight, Mail, MapPin, Pencil, Phone, Receipt, Trash2, UsersRound } from 'lucide-react'
+import {
+  ArrowLeft,
+  ArrowLeftRight,
+  Mail,
+  MapPin,
+  Pencil,
+  Phone,
+  Receipt,
+  Trash2,
+  User,
+  UsersRound,
+} from 'lucide-react'
 import { toast } from 'sonner'
 
 import { EmptyState } from '@/components/dashboard/EmptyState'
@@ -24,9 +35,27 @@ import {
   listarDevolucoes,
   type DadosDevolucao,
 } from '@/services/devolucaoService'
-import type { DadosCadastraisDizimista, Devolucao, Dizimista, PagamentoPix, StatusPagamento } from '@/types'
+import type {
+  DadosCadastraisDizimista,
+  Devolucao,
+  Dizimista,
+  Endereco,
+  PagamentoPix,
+  StatusPagamento,
+} from '@/types'
 import { formatCurrency, formatDate, formatCompetencia, getIniciais } from '@/utils/format'
 import { ROUTES } from '@/constants/routes'
+
+/** Monta o endereço em uma linha, pulando as partes que não foram preenchidas. */
+function formatarEndereco(endereco: Endereco): string {
+  const logradouroComNumero = [endereco.logradouro, endereco.numero].filter(Boolean).join(', ')
+  const cidadeUf = [endereco.cidade, endereco.estado].filter(Boolean).join('/')
+
+  const partes = [logradouroComNumero, endereco.complemento, endereco.bairro, cidadeUf, endereco.cep]
+  const texto = partes.filter((parte) => !!parte?.trim()).join(' · ')
+
+  return texto || 'Endereço não informado'
+}
 
 const STATUS_CONFIG: Record<StatusPagamento, { label: string; variant: 'success' | 'warning' | 'destructive' }> = {
   aprovado: { label: 'Pago', variant: 'success' },
@@ -140,10 +169,16 @@ export function DizimistaDetalhePage() {
                 <Phone className="h-3.5 w-3.5" />
                 {dizimista.telefone}
               </p>
-              <p className="mt-0.5 flex items-center gap-1.5 text-sm text-muted-foreground">
-                <MapPin className="h-3.5 w-3.5" />
-                {dizimista.endereco.bairro}, {dizimista.endereco.cidade}/{dizimista.endereco.estado}
+              <p className="mt-0.5 flex items-start gap-1.5 text-sm text-muted-foreground">
+                <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span>{formatarEndereco(dizimista.endereco)}</span>
               </p>
+              {dizimista.responsavelRecadastramento && (
+                <p className="mt-0.5 flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <User className="h-3.5 w-3.5" />
+                  Recadastrado por {dizimista.responsavelRecadastramento}
+                </p>
+              )}
             </div>
           </div>
           <div className="flex flex-wrap gap-2">

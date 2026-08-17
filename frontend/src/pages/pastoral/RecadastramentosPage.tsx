@@ -29,10 +29,11 @@ export function RecadastramentosPage() {
     setCarregando(true)
     listarDizimistas(busca).then((dados) => {
       // Só quem passou pelo formulário de recadastramento (importados da planilha ficam de fora
-      // até se recadastrarem).
+      // até se recadastrarem). `origem` cobre os recadastramentos feitos antes de `recadastradoEm`
+      // passar a ser gravado.
       setRecadastrados(
         dados
-          .filter((d) => !!d.recadastradoEm)
+          .filter((d) => !!d.recadastradoEm || d.origem === 'recadastramento')
           .sort((a, b) => (dataRecadastro(a) < dataRecadastro(b) ? 1 : -1)),
       )
       setCarregando(false)

@@ -13,13 +13,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import type { DadosDevolucao } from '@/services/devolucaoService'
 import { listarMembrosPastoral } from '@/services/membroPastoralService'
-import type { FormaPagamentoDevolucao, MembroPastoral } from '@/types'
-import { competenciaAtual, competenciaParaMesAno, maskMesAno, mesAnoEhValido, mesAnoParaCompetencia } from '@/utils/format'
+import type { MembroPastoral } from '@/types'
+import {
+  competenciaAtual,
+  competenciaParaMesAno,
+  maskMesAno,
+  maskMoeda,
+  mesAnoEhValido,
+  mesAnoParaCompetencia,
+  moedaParaNumero,
+} from '@/utils/format'
+import { FORMAS_PAGAMENTO_DEVOLUCAO } from '@/constants/devolucao'
 import { ROUTES } from '@/constants/routes'
 
 const schema = z.object({
   valor: z.string().min(1, 'Informe o valor.'),
-  formaPagamento: z.enum(['pix', 'dinheiro', 'transferencia', 'cheque']),
+  formaPagamento: z.enum(['pix', 'cartao', 'dinheiro']),
   competencia: z
     .string()
     .regex(/^\d{2}\/\d{4}$/, 'Use o formato mm/aaaa.')
@@ -29,13 +38,6 @@ const schema = z.object({
 })
 
 type FormValues = z.infer<typeof schema>
-
-const formaOptions: { value: FormaPagamentoDevolucao; label: string }[] = [
-  { value: 'pix', label: 'Pix' },
-  { value: 'dinheiro', label: 'Dinheiro' },
-  { value: 'transferencia', label: 'Transferência' },
-  { value: 'cheque', label: 'Cheque' },
-]
 
 interface DevolucaoFormProps {
   onSalvar: (dados: DadosDevolucao) => Promise<void>
@@ -69,8 +71,8 @@ export function DevolucaoForm({ onSalvar, onCancelar }: DevolucaoFormProps) {
 
   async function onSubmit(values: FormValues) {
     setErro(null)
-    const valor = Number(values.valor.replace(',', '.'))
-    if (!Number.isFinite(valor) || valor <= 0) {
+    const valor = moedaParaNumero(values.valor)
+    if (valor <= 0) {
       setErro('Informe um valor válido.')
       return
     }
@@ -98,8 +100,26 @@ export function DevolucaoForm({ onSalvar, onCancelar }: DevolucaoFormProps) {
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="valor">Valor (R$)</Label>
-          <Input id="valor" inputMode="decimal" placeholder="0,00" {...register('valor')} />
+          <Label htmlFor="valor">Valor</Label>
+          <div className="relative">
+            <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+              R$
+            </span>
+            <Controller
+              control={control}
+              name="valor"
+              render={({ field }) => (
+                <Input
+                  id="valor"
+                  inputMode="numeric"
+                  placeholder="0,00"
+                  className="pl-9"
+                  value={field.value ?? ''}
+                  onChange={(e) => field.onChange(maskMoeda(e.target.value))}
+                />
+              )}
+            />
+          </div>
           {errors.valor && <p className="text-xs text-destructive">{errors.valor.message}</p>}
         </div>
         <div className="space-y-1.5">
@@ -120,7 +140,7 @@ export function DevolucaoForm({ onSalvar, onCancelar }: DevolucaoFormProps) {
           {errors.competencia ? (
             <p className="text-xs text-destructive">{errors.competencia.message}</p>
           ) : (
-            <p className="text-xs text-muted-foreground">Use para lançar meses retroativos.</p>
+            <></>
           )}
         </div>
       </div>
@@ -136,7 +156,7 @@ export function DevolucaoForm({ onSalvar, onCancelar }: DevolucaoFormProps) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {formaOptions.map((op) => (
+                {FORMAS_PAGAMENTO_DEVOLUCAO.map((op) => (
                   <SelectItem key={op.value} value={op.value}>
                     {op.label}
                   </SelectItem>

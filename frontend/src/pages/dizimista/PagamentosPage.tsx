@@ -13,18 +13,12 @@ import { listarPagamentos } from '@/services/pagamentoService'
 import { competenciaDaDevolucao, listarDevolucoes } from '@/services/devolucaoService'
 import type { Devolucao, PagamentoPix, StatusPagamento } from '@/types'
 import { formatCurrency, formatDate, formatCompetencia } from '@/utils/format'
+import { formaPagamentoLabel } from '@/constants/devolucao'
 
 const STATUS_CONFIG: Record<StatusPagamento, { label: string; variant: 'success' | 'warning' | 'destructive' }> = {
   aprovado: { label: 'Pago', variant: 'success' },
   pendente: { label: 'Pendente', variant: 'warning' },
   rejeitado: { label: 'Não aprovado', variant: 'destructive' },
-}
-
-const FORMA_PAGAMENTO_LABEL: Record<Devolucao['formaPagamento'], string> = {
-  pix: 'Pix',
-  dinheiro: 'Dinheiro',
-  transferencia: 'Transferência',
-  cheque: 'Cheque',
 }
 
 export function DizimistaPagamentosPage() {
@@ -101,7 +95,7 @@ export function DizimistaPagamentosPage() {
                       <p className="font-medium text-foreground">{formatCurrency(d.valor)}</p>
                       <p className="text-xs text-muted-foreground">
                         Referente a {formatCompetencia(competenciaDaDevolucao(d))} ·{' '}
-                        {FORMA_PAGAMENTO_LABEL[d.formaPagamento]}
+                        {formaPagamentoLabel(d.formaPagamento)}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         Lançado em {formatDate(d.criadoEm.slice(0, 10))}

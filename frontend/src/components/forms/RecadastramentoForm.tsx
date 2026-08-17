@@ -354,7 +354,7 @@ export function RecadastramentoForm({
       )}
 
       <div className="space-y-4">
-        <h2 className="text-sm font-semibold text-foreground">Dados do dizimista</h2>
+        <h2 className="text-sm font-semibold text-foreground mt-4">Dados do dizimista</h2>
 
         {exibirCarne && !bloquearCarne && (
           <RadioGroup

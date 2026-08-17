@@ -44,6 +44,7 @@ import type {
   StatusPagamento,
 } from '@/types'
 import { formatCurrency, formatDate, formatCompetencia, getIniciais } from '@/utils/format'
+import { formaPagamentoLabel } from '@/constants/devolucao'
 import { ROUTES } from '@/constants/routes'
 
 /** Monta o endereço em uma linha, pulando as partes que não foram preenchidas. */
@@ -253,7 +254,7 @@ export function DizimistaDetalhePage() {
                       </p>
                     </div>
                     <Badge variant="outline" className="shrink-0">
-                      {d.formaPagamento}
+                      {formaPagamentoLabel(d.formaPagamento)}
                     </Badge>
                   </CardContent>
                 </Card>
@@ -311,7 +312,7 @@ export function DizimistaDetalhePage() {
       <Dialog open={modalDevolucao} onOpenChange={setModalDevolucao}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Lançar devolução avulsa</DialogTitle>
+            <DialogTitle>Lançar devolução</DialogTitle>
           </DialogHeader>
           <DevolucaoForm onSalvar={handleLancarDevolucao} onCancelar={() => setModalDevolucao(false)} />
         </DialogContent>

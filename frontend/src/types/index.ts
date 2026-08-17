@@ -64,7 +64,7 @@ export interface PagamentoPix {
   atualizadoEm: string
 }
 
-export type FormaPagamentoDevolucao = 'pix' | 'dinheiro' | 'transferencia' | 'cheque'
+export type FormaPagamentoDevolucao = 'pix' | 'cartao' | 'dinheiro'
 
 export interface Devolucao {
   id: string

@@ -99,6 +99,26 @@ export function dataBrParaIso(valorBr: string): string {
   return `${ano}-${mes}-${dia}`
 }
 
+/**
+ * Máscara monetária no padrão brasileiro: os dígitos digitados são lidos como centavos e
+ * formatados com ponto nos milhares e vírgula nos centavos ("1234567" -> "12.345,67").
+ */
+export function maskMoeda(valor: string): string {
+  const digitos = valor.replace(/\D/g, '').slice(0, 11)
+  if (!digitos) return ''
+
+  return (Number(digitos) / 100).toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+}
+
+/** Converte o texto mascarado ("12.345,67") no número correspondente (12345.67). */
+export function moedaParaNumero(valor: string): number {
+  const digitos = valor.replace(/\D/g, '')
+  return digitos ? Number(digitos) / 100 : 0
+}
+
 export function maskMesAno(valor: string): string {
   return valor
     .replace(/\D/g, '')

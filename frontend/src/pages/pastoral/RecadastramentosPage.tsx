@@ -21,24 +21,35 @@ function dataRecadastro(d: Dizimista): string {
 }
 
 export function RecadastramentosPage() {
-  const [recadastrados, setRecadastrados] = React.useState<Dizimista[]>([])
+  const [todos, setTodos] = React.useState<Dizimista[]>([])
   const [carregando, setCarregando] = React.useState(true)
   const [busca, setBusca] = React.useState('')
 
   React.useEffect(() => {
-    setCarregando(true)
-    listarDizimistas(busca).then((dados) => {
+    // Carrega uma única vez: a filtragem é local, então digitar na busca não relê a coleção.
+    listarDizimistas().then((dados) => {
       // Só quem passou pelo formulário de recadastramento (importados da planilha ficam de fora
       // até se recadastrarem). `origem` cobre os recadastramentos feitos antes de `recadastradoEm`
       // passar a ser gravado.
-      setRecadastrados(
+      setTodos(
         dados
           .filter((d) => !!d.recadastradoEm || d.origem === 'recadastramento')
           .sort((a, b) => (dataRecadastro(a) < dataRecadastro(b) ? 1 : -1)),
       )
       setCarregando(false)
     })
-  }, [busca])
+  }, [])
+
+  const recadastrados = React.useMemo(() => {
+    const termo = busca.trim().toLowerCase()
+    if (!termo) return todos
+
+    return todos.filter((d) =>
+      [d.nomeCompleto, d.numeroCarne, d.responsavelRecadastramento].some((campo) =>
+        (campo ?? '').toLowerCase().includes(termo),
+      ),
+    )
+  }, [todos, busca])
 
   return (
     <div>
@@ -47,7 +58,11 @@ export function RecadastramentosPage() {
         description={`${recadastrados.length} recadastramento(s) realizado(s)`}
       />
 
-      <FiltroBar busca={busca} onBuscaChange={setBusca} placeholder="Buscar por nome ou nº do carnê..." />
+      <FiltroBar
+        busca={busca}
+        onBuscaChange={setBusca}
+        placeholder="Buscar por nome, nº do carnê ou responsável..."
+      />
 
       {carregando ? (
         <div className="space-y-3">

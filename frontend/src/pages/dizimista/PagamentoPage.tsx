@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label'
 import { useDizimistaSessao } from '@/hooks/useDizimistaSessao'
 import { consultarStatusPagamento, criarPagamentoPix, type CriarPixResultado } from '@/services/pagamentoService'
 import type { StatusPagamento } from '@/types'
+import { maskMoeda, moedaParaNumero } from '@/utils/format'
 
 const STATUS_CONFIG: Record<StatusPagamento, { label: string; variant: 'success' | 'warning' | 'destructive' }> = {
   aprovado: { label: 'Pago', variant: 'success' },
@@ -45,8 +46,8 @@ export function DizimistaPagamentoPage() {
     event.preventDefault()
     if (!numeroCarne) return
 
-    const valorNumerico = Number(valor.replace(',', '.'))
-    if (!Number.isFinite(valorNumerico) || valorNumerico <= 0) {
+    const valorNumerico = moedaParaNumero(valor)
+    if (valorNumerico <= 0) {
       toast.error('Informe um valor válido.')
       return
     }
@@ -83,14 +84,20 @@ export function DizimistaPagamentoPage() {
           <CardContent>
             <form onSubmit={handleGerar} className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="valor">Valor (R$)</Label>
-                <Input
-                  id="valor"
-                  inputMode="decimal"
-                  placeholder="0,00"
-                  value={valor}
-                  onChange={(e) => setValor(e.target.value)}
-                />
+                <Label htmlFor="valor">Valor</Label>
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                    R$
+                  </span>
+                  <Input
+                    id="valor"
+                    inputMode="numeric"
+                    placeholder="0,00"
+                    className="pl-9"
+                    value={valor}
+                    onChange={(e) => setValor(maskMoeda(e.target.value))}
+                  />
+                </div>
               </div>
               <Button type="submit" size="lg" className="w-full" disabled={gerando}>
                 <QrCode className="h-4 w-4" />

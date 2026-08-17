@@ -614,7 +614,7 @@ export function RecadastramentoForm({
               </p>
             )}
             {!errors.numeroCarne && !gerandoCarne && statusCarne === 'gerado' && (
-              <p className="text-xs text-success font-bold">
+              <p className={buscaSemResultado ? 'text-sm font-semibold text-success' : 'text-xs text-success'}>
                 {buscaSemResultado
                   ? 'Não encontramos um cadastro com esses dados — mas não se preocupe: geramos um novo número de carnê. Anote-o, é com ele que se acessa o site.'
                   : 'Anote este número: ele será usado para acompanhar o dízimo.'}

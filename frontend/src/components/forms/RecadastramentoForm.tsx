@@ -30,6 +30,10 @@ import {
   maskTelefone,
 } from '@/utils/format'
 import { palavrasDoNome } from '@/utils/busca'
+import { aguardarPeloMenos } from '@/utils/async'
+
+/** Tempo mínimo (ms) que um spinner de busca fica visível, para não parecer estático. */
+const DURACAO_MINIMA_LOADING_MS = 500
 
 const MAX_FILHOS = 4
 
@@ -120,6 +124,8 @@ interface RecadastramentoFormProps {
   /** false no cadastro feito pelo admin: o nº do carnê é gerado ao salvar, não informado no form. */
   exibirCarne?: boolean
   bloquearCarne?: boolean
+  /** true no recadastramento público: após salvar, limpa tudo para permitir outro em seguida. */
+  limparAposSalvar?: boolean
   onSalvar: (
     dados: DadosCadastraisDizimista,
     numeroCarneInformado: string,
@@ -127,10 +133,38 @@ interface RecadastramentoFormProps {
   ) => Promise<void>
 }
 
+/** Monta os valores do formulário a partir de um dizimista existente, ou em branco (novo). */
+function valoresDoFormulario(dizimista?: Dizimista): FormValues {
+  return {
+    numeroCarne: dizimista?.numeroCarne ?? '',
+    sabeNumeroCarne: 'sim',
+    nomeCompleto: dizimista?.nomeCompleto ?? '',
+    dataNascimento: dizimista?.dataNascimento ? dataIsoParaBr(dizimista.dataNascimento) : '',
+    cep: dizimista?.endereco.cep ?? '',
+    logradouro: dizimista?.endereco.logradouro ?? '',
+    numero: dizimista?.endereco.numero === SEM_NUMERO ? '' : (dizimista?.endereco.numero ?? ''),
+    semNumero: dizimista?.endereco.numero === SEM_NUMERO,
+    complemento: dizimista?.endereco.complemento ?? '',
+    bairro: dizimista?.endereco.bairro ?? '',
+    cidade: dizimista?.endereco.cidade ?? '',
+    estado: dizimista?.endereco.estado ?? '',
+    telefone: dizimista?.telefone ?? '',
+    email: dizimista?.email ?? '',
+    temConjuge: !!dizimista?.conjuge,
+    conjugeNome: dizimista?.conjuge?.nomeCompleto ?? '',
+    conjugeDataNascimento: dizimista?.conjuge?.dataNascimento
+      ? dataIsoParaBr(dizimista.conjuge.dataNascimento)
+      : '',
+    filhos: (dizimista?.filhos ?? []).map((f) => ({ ...f, dataNascimento: dataIsoParaBr(f.dataNascimento) })),
+    responsavelRecadastramento: dizimista?.responsavelRecadastramento ?? '',
+  }
+}
+
 export function RecadastramentoForm({
   dizimista,
   exibirCarne = true,
   bloquearCarne = false,
+  limparAposSalvar = false,
   onSalvar,
 }: RecadastramentoFormProps) {
   const [erro, setErro] = React.useState<string | null>(null)
@@ -147,29 +181,7 @@ export function RecadastramentoForm({
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: {
-      numeroCarne: dizimista?.numeroCarne ?? '',
-      sabeNumeroCarne: 'sim',
-      nomeCompleto: dizimista?.nomeCompleto ?? '',
-      dataNascimento: dizimista?.dataNascimento ? dataIsoParaBr(dizimista.dataNascimento) : '',
-      cep: dizimista?.endereco.cep ?? '',
-      logradouro: dizimista?.endereco.logradouro ?? '',
-      numero: dizimista?.endereco.numero === SEM_NUMERO ? '' : (dizimista?.endereco.numero ?? ''),
-      semNumero: dizimista?.endereco.numero === SEM_NUMERO,
-      complemento: dizimista?.endereco.complemento ?? '',
-      bairro: dizimista?.endereco.bairro ?? '',
-      cidade: dizimista?.endereco.cidade ?? '',
-      estado: dizimista?.endereco.estado ?? '',
-      telefone: dizimista?.telefone ?? '',
-      email: dizimista?.email ?? '',
-      temConjuge: !!dizimista?.conjuge,
-      conjugeNome: dizimista?.conjuge?.nomeCompleto ?? '',
-      conjugeDataNascimento: dizimista?.conjuge?.dataNascimento
-        ? dataIsoParaBr(dizimista.conjuge.dataNascimento)
-        : '',
-      filhos: (dizimista?.filhos ?? []).map((f) => ({ ...f, dataNascimento: dataIsoParaBr(f.dataNascimento) })),
-      responsavelRecadastramento: dizimista?.responsavelRecadastramento ?? '',
-    },
+    defaultValues: valoresDoFormulario(dizimista),
   })
 
   /**
@@ -294,9 +306,11 @@ export function RecadastramentoForm({
     setBuscaSemResultado(false)
     setCandidatos(null)
     setBuscandoPorNome(true)
+    const inicio = Date.now()
 
     try {
       const encontrados = await buscarCarnePorNomeENascimento(nome, diaMesBusca)
+      await aguardarPeloMenos(inicio, DURACAO_MINIMA_LOADING_MS)
 
       // Um único candidato forte e com a data conferindo: assume sem perguntar. Com apenas um
       // nome informado ("MARIA") o risco de pegar a pessoa errada é alto, então sempre confirma.
@@ -340,7 +354,9 @@ export function RecadastramentoForm({
     let cancelado = false
     const timer = setTimeout(async () => {
       setBuscandoCarne(true)
+      const inicio = Date.now()
       const encontrado = await buscarDizimistaPorCarne(carne).catch(() => null)
+      await aguardarPeloMenos(inicio, DURACAO_MINIMA_LOADING_MS)
       if (cancelado) return
 
       ultimoCarneBuscado.current = carne
@@ -394,8 +410,10 @@ export function RecadastramentoForm({
     let cancelado = false
     setBuscandoCep(true)
     setCepNaoEncontrado(false)
+    const inicio = Date.now()
 
-    buscarEnderecoPorCep(digitos).then((endereco) => {
+    buscarEnderecoPorCep(digitos).then(async (endereco) => {
+      await aguardarPeloMenos(inicio, DURACAO_MINIMA_LOADING_MS)
       if (cancelado) return
       setBuscandoCep(false)
 
@@ -452,6 +470,18 @@ export function RecadastramentoForm({
       await onSalvar(dados, (values.numeroCarne ?? '').trim(), {
         carneGeradoPeloSite: values.sabeNumeroCarne === 'nao' && statusCarne === 'gerado',
       })
+
+      if (limparAposSalvar) {
+        reset(valoresDoFormulario())
+        ultimoCarneBuscado.current = null
+        setStatusCarne(null)
+        setNomeBusca('')
+        setDiaMesBusca('')
+        setErroBusca(null)
+        setCandidatos(null)
+        setBuscaSemResultado(false)
+        setCepNaoEncontrado(false)
+      }
     } catch (err) {
       setErro(err instanceof Error ? err.message : 'Não foi possível salvar. Tente novamente.')
     }
@@ -567,7 +597,9 @@ export function RecadastramentoForm({
                 {...register('numeroCarne')}
               />
               {(buscandoCarne || gerandoCarne) && (
-                <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+                <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                </span>
               )}
             </div>
             {errors.numeroCarne && <p className="text-xs text-destructive">{errors.numeroCarne.message}</p>}
@@ -664,7 +696,9 @@ export function RecadastramentoForm({
                 )}
               />
               {buscandoCep && (
-                <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+                <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                </span>
               )}
             </div>
             {errors.cep && <p className="text-xs text-destructive">{errors.cep.message}</p>}

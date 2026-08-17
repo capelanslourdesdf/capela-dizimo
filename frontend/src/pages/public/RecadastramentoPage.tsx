@@ -40,7 +40,7 @@ export function RecadastramentoPage() {
           <CardDescription>Atualize seus dados usando o número do carnê que você já possui.</CardDescription>
         </CardHeader>
         <CardContent>
-          <RecadastramentoForm onSalvar={handleSalvar} />
+          <RecadastramentoForm onSalvar={handleSalvar} limparAposSalvar />
         </CardContent>
       </Card>
     </div>

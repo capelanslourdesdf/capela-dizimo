@@ -875,7 +875,7 @@ export function RecadastramentoForm({
         <Label htmlFor="responsavelRecadastramento">Responsável pelo recadastramento</Label>
         <Input
           id="responsavelRecadastramento"
-          placeholder="Nome de quem está preenchendo este formulário"
+          placeholder="Nome de quem preencheu"
           {...registrarMaiusculo('responsavelRecadastramento')}
         />
         {errors.responsavelRecadastramento && (

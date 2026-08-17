@@ -383,7 +383,7 @@ export function RecadastramentoForm({
             )}
             {!errors.numeroCarne && !gerandoCarne && statusCarne === 'gerado' && (
               <p className="text-xs text-success">
-                Geramos este número para você. Anote-o: é com ele que você vai acessar o site.
+                Anote este número: é o carnê do dizimista e será usado para acessar o site.
               </p>
             )}
           </div>
@@ -639,7 +639,7 @@ export function RecadastramentoForm({
         <Label htmlFor="responsavelRecadastramento">Responsável pelo recadastramento</Label>
         <Input
           id="responsavelRecadastramento"
-          placeholder="Digite o nome de quem fez o recadastramento"
+          placeholder="Nome de quem está preenchendo este formulário"
           {...register('responsavelRecadastramento')}
         />
         {errors.responsavelRecadastramento && (

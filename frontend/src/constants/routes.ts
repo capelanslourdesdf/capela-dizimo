@@ -1,5 +1,7 @@
 export const ROUTES = {
   home: '/',
+  /** Página do Dízimo: acessos do dizimista e da Pastoral. */
+  dizimo: '/dizimo',
   comoFunciona: '/como-funciona',
   recadastramento: '/recadastramento',
   entrar: '/entrar',
@@ -15,5 +17,7 @@ export const ROUTES = {
     entrar: '/pastoral/entrar',
     root: '/pastoral',
     dizimistaDetalhe: (numeroCarne: string) => `/pastoral/dizimistas/${numeroCarne}`,
+    recadastramentos: '/pastoral/recadastramentos',
+    membros: '/pastoral/membros',
   },
 } as const

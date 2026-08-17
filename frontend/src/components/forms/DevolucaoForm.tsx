@@ -3,6 +3,7 @@ import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { ArrowLeftRight } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,16 +12,19 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import type { DadosDevolucao } from '@/services/devolucaoService'
-import type { FormaPagamentoDevolucao } from '@/types'
-import { dataBrEhValida, dataBrParaIso, dataIsoParaBr, maskDataBr } from '@/utils/format'
+import { listarMembrosPastoral } from '@/services/membroPastoralService'
+import type { FormaPagamentoDevolucao, MembroPastoral } from '@/types'
+import { competenciaAtual, competenciaParaMesAno, maskMesAno, mesAnoEhValido, mesAnoParaCompetencia } from '@/utils/format'
+import { ROUTES } from '@/constants/routes'
 
 const schema = z.object({
   valor: z.string().min(1, 'Informe o valor.'),
   formaPagamento: z.enum(['pix', 'dinheiro', 'transferencia', 'cheque']),
-  data: z
+  competencia: z
     .string()
-    .regex(/^\d{2}\/\d{2}\/\d{4}$/, 'Use o formato dd/mm/aaaa.')
-    .refine((valor) => dataBrEhValida(valor), 'Informe uma data válida.'),
+    .regex(/^\d{2}\/\d{4}$/, 'Use o formato mm/aaaa.')
+    .refine((valor) => mesAnoEhValido(valor), 'Informe um mês/ano válido.'),
+  lancadoPor: z.string().min(1, 'Informe quem está lançando.'),
   observacao: z.string().optional(),
 })
 
@@ -40,6 +44,8 @@ interface DevolucaoFormProps {
 
 export function DevolucaoForm({ onSalvar, onCancelar }: DevolucaoFormProps) {
   const [erro, setErro] = React.useState<string | null>(null)
+  const [membros, setMembros] = React.useState<MembroPastoral[]>([])
+  const [carregandoMembros, setCarregandoMembros] = React.useState(true)
 
   const {
     register,
@@ -50,9 +56,16 @@ export function DevolucaoForm({ onSalvar, onCancelar }: DevolucaoFormProps) {
     resolver: zodResolver(schema),
     defaultValues: {
       formaPagamento: 'pix',
-      data: dataIsoParaBr(new Date().toISOString().slice(0, 10)),
+      competencia: competenciaParaMesAno(competenciaAtual()),
+      lancadoPor: '',
     },
   })
+
+  React.useEffect(() => {
+    listarMembrosPastoral()
+      .then(setMembros)
+      .finally(() => setCarregandoMembros(false))
+  }, [])
 
   async function onSubmit(values: FormValues) {
     setErro(null)
@@ -66,8 +79,8 @@ export function DevolucaoForm({ onSalvar, onCancelar }: DevolucaoFormProps) {
       await onSalvar({
         valor,
         formaPagamento: values.formaPagamento,
-        // Persistido em ISO (aaaa-mm-dd), que é o formato lido pelas telas de histórico.
-        data: dataBrParaIso(values.data),
+        competencia: mesAnoParaCompetencia(values.competencia),
+        lancadoPor: values.lancadoPor,
         observacao: values.observacao,
       })
     } catch (err) {
@@ -90,21 +103,25 @@ export function DevolucaoForm({ onSalvar, onCancelar }: DevolucaoFormProps) {
           {errors.valor && <p className="text-xs text-destructive">{errors.valor.message}</p>}
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="data">Data</Label>
+          <Label htmlFor="competencia">Mês/ano da devolução</Label>
           <Controller
             control={control}
-            name="data"
+            name="competencia"
             render={({ field }) => (
               <Input
-                id="data"
+                id="competencia"
                 inputMode="numeric"
-                placeholder="dd/mm/aaaa"
+                placeholder="mm/aaaa"
                 value={field.value ?? ''}
-                onChange={(e) => field.onChange(maskDataBr(e.target.value))}
+                onChange={(e) => field.onChange(maskMesAno(e.target.value))}
               />
             )}
           />
-          {errors.data && <p className="text-xs text-destructive">{errors.data.message}</p>}
+          {errors.competencia ? (
+            <p className="text-xs text-destructive">{errors.competencia.message}</p>
+          ) : (
+            <p className="text-xs text-muted-foreground">Use para lançar meses retroativos.</p>
+          )}
         </div>
       </div>
 
@@ -128,6 +145,37 @@ export function DevolucaoForm({ onSalvar, onCancelar }: DevolucaoFormProps) {
             </Select>
           )}
         />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="lancadoPor">Lançado por</Label>
+        <Controller
+          control={control}
+          name="lancadoPor"
+          render={({ field }) => (
+            <Select value={field.value} onValueChange={field.onChange} disabled={carregandoMembros}>
+              <SelectTrigger id="lancadoPor">
+                <SelectValue placeholder={carregandoMembros ? 'Carregando...' : 'Selecione o membro da Pastoral'} />
+              </SelectTrigger>
+              <SelectContent>
+                {membros.map((m) => (
+                  <SelectItem key={m.id} value={m.nome}>
+                    {m.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        />
+        {errors.lancadoPor && <p className="text-xs text-destructive">{errors.lancadoPor.message}</p>}
+        {!carregandoMembros && membros.length === 0 && (
+          <p className="text-xs text-muted-foreground">
+            Nenhum membro cadastrado.{' '}
+            <Link to={ROUTES.pastoral.membros} className="font-medium text-primary hover:underline">
+              Cadastrar membros da Pastoral
+            </Link>
+          </p>
+        )}
       </div>
 
       <div className="space-y-1.5">

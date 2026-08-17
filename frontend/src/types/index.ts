@@ -34,11 +34,21 @@ export interface Dizimista {
   conjuge?: FamiliarBasico | null
   filhos: FamiliarBasico[]
   origem: OrigemCadastro
+  /** Nome de quem preencheu o recadastramento (pode ser um familiar ou voluntário). */
+  responsavelRecadastramento?: string
+  /**
+   * Quando o dizimista se recadastrou no site. É a data de referência para cobrar/acompanhar as
+   * devoluções — nada antes disso é considerado pendente.
+   */
+  recadastradoEm?: string
   criadoEm: string
   atualizadoEm: string
 }
 
-export type DadosCadastraisDizimista = Omit<Dizimista, 'numeroCarne' | 'origem' | 'criadoEm' | 'atualizadoEm'>
+export type DadosCadastraisDizimista = Omit<
+  Dizimista,
+  'numeroCarne' | 'origem' | 'criadoEm' | 'atualizadoEm' | 'recadastradoEm'
+>
 
 export type StatusPagamento = 'pendente' | 'aprovado' | 'rejeitado'
 
@@ -60,7 +70,19 @@ export interface Devolucao {
   id: string
   valor: number
   formaPagamento: FormaPagamentoDevolucao
-  data: string
+  /** Mês/ano a que a devolução se refere ("aaaa-mm") — permite lançar retroativo. */
+  competencia: string
+  /** Nome do membro da Pastoral que fez o lançamento. */
+  lancadoPor: string
+  /** Data/hora em que a Pastoral registrou o lançamento no site. */
+  criadoEm: string
   observacao?: string
+  /** Lançamentos antigos guardavam só a data do pagamento, sem competência. */
+  data?: string
+}
+
+export interface MembroPastoral {
+  id: string
+  nome: string
   criadoEm: string
 }

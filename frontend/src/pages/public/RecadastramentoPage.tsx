@@ -1,4 +1,3 @@
-import { useNavigate } from 'react-router-dom'
 import { HeartHandshake } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -6,23 +5,21 @@ import { RecadastramentoForm } from '@/components/forms/RecadastramentoForm'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { salvarRecadastramento } from '@/services/dizimistaService'
 import type { DadosCadastraisDizimista } from '@/types'
-import { ROUTES } from '@/constants/routes'
 
 export function RecadastramentoPage() {
-  const navigate = useNavigate()
-
   async function handleSalvar(
     dados: DadosCadastraisDizimista,
     numeroCarneInformado: string,
-    opcoes?: { numeroCarneAnterior?: string },
+    opcoes?: { carneGeradoPeloSite?: boolean },
   ) {
-    await salvarRecadastramento(numeroCarneInformado, dados, opcoes?.numeroCarneAnterior)
+    await salvarRecadastramento(numeroCarneInformado, dados, { exigirNovo: opcoes?.carneGeradoPeloSite })
+
+    // Permanece na própria página: o usuário volta ao topo e vê a confirmação.
+    window.scrollTo({ top: 0, behavior: 'smooth' })
     toast.success(
-      opcoes?.numeroCarneAnterior
-        ? `Recadastramento concluído! Seu carnê agora é o nº ${numeroCarneInformado}.`
-        : 'Recadastramento concluído! Agora você já pode entrar com seu carnê e o dia/mês do seu nascimento.',
+      `Recadastramento concluído! Use o carnê nº ${numeroCarneInformado} e o dia/mês do seu nascimento para entrar.`,
+      { duration: 8000 },
     )
-    navigate(ROUTES.entrar)
   }
 
   return (

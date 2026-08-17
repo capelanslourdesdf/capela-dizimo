@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 import { useDizimistaSessao } from '@/hooks/useDizimistaSessao'
 import { listarPagamentos } from '@/services/pagamentoService'
-import { listarDevolucoes } from '@/services/devolucaoService'
+import { competenciaDaDevolucao, listarDevolucoes } from '@/services/devolucaoService'
 import type { Devolucao, PagamentoPix, StatusPagamento } from '@/types'
 import { formatCurrency, formatDate, formatCompetencia } from '@/utils/format'
 
@@ -100,7 +100,12 @@ export function DizimistaPagamentosPage() {
                     <div>
                       <p className="font-medium text-foreground">{formatCurrency(d.valor)}</p>
                       <p className="text-xs text-muted-foreground">
-                        {FORMA_PAGAMENTO_LABEL[d.formaPagamento]} · {formatDate(d.data)}
+                        Referente a {formatCompetencia(competenciaDaDevolucao(d))} ·{' '}
+                        {FORMA_PAGAMENTO_LABEL[d.formaPagamento]}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Lançado em {formatDate(d.criadoEm.slice(0, 10))}
+                        {d.lancadoPor ? ` por ${d.lancadoPor}` : ''}
                       </p>
                       {d.observacao && <p className="mt-1 text-xs text-muted-foreground">{d.observacao}</p>}
                     </div>

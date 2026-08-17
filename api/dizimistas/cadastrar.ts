@@ -19,6 +19,7 @@ type CadastrarDizimistaBody = {
     email?: string;
     conjuge?: FamiliarBasico | null;
     filhos?: FamiliarBasico[];
+    responsavelRecadastramento?: string;
 };
 
 const MAX_FILHOS = 4;
@@ -76,7 +77,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             ? { nomeCompleto: body.conjuge.nomeCompleto.trim(), dataNascimento: body.conjuge.dataNascimento || "" }
             : null,
         filhos: filhos.map((f) => ({ nomeCompleto: f.nomeCompleto!.trim(), dataNascimento: f.dataNascimento || "" })),
+        responsavelRecadastramento: body.responsavelRecadastramento?.trim() || null,
         origem: "cadastro_admin",
+        recadastradoEm: agora,
         criadoEm: agora,
         atualizadoEm: agora,
     };

@@ -1,4 +1,4 @@
-import { Home, IdCard, QrCode, Receipt, Users, type LucideIcon } from 'lucide-react'
+import { ClipboardList, Home, IdCard, QrCode, Receipt, UserCog, Users, type LucideIcon } from 'lucide-react'
 
 import { ROUTES } from '@/constants/routes'
 
@@ -18,4 +18,8 @@ export const dizimistaNav: NavItem[] = [
 
 export const dizimistaMobileNav: NavItem[] = dizimistaNav
 
-export const pastoralNav: NavItem[] = [{ label: 'Dizimistas', href: ROUTES.pastoral.root, icon: Users, end: true }]
+export const pastoralNav: NavItem[] = [
+  { label: 'Dizimistas', href: ROUTES.pastoral.root, icon: Users, end: true },
+  { label: 'Recadastramentos', href: ROUTES.pastoral.recadastramentos, icon: ClipboardList },
+  { label: 'Membros da Pastoral', href: ROUTES.pastoral.membros, icon: UserCog },
+]

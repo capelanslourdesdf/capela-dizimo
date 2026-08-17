@@ -18,7 +18,12 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 import { buscarDizimistaPorCarne, excluirDizimista, salvarRecadastramento } from '@/services/dizimistaService'
 import { listarPagamentos } from '@/services/pagamentoService'
-import { lancarDevolucao, listarDevolucoes, type DadosDevolucao } from '@/services/devolucaoService'
+import {
+  competenciaDaDevolucao,
+  lancarDevolucao,
+  listarDevolucoes,
+  type DadosDevolucao,
+} from '@/services/devolucaoService'
 import type { DadosCadastraisDizimista, Devolucao, Dizimista, PagamentoPix, StatusPagamento } from '@/types'
 import { formatCurrency, formatDate, formatCompetencia, getIniciais } from '@/utils/format'
 import { ROUTES } from '@/constants/routes'
@@ -202,11 +207,19 @@ export function DizimistaDetalhePage() {
               {devolucoes.map((d) => (
                 <Card key={d.id}>
                   <CardContent className="flex items-center justify-between gap-3">
-                    <div>
+                    <div className="min-w-0">
                       <p className="font-medium text-foreground">{formatCurrency(d.valor)}</p>
-                      <p className="text-xs text-muted-foreground">{formatDate(d.data)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Referente a {formatCompetencia(competenciaDaDevolucao(d))}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Lançado em {formatDate(d.criadoEm.slice(0, 10))}
+                        {d.lancadoPor ? ` por ${d.lancadoPor}` : ''}
+                      </p>
                     </div>
-                    <Badge variant="outline">{d.formaPagamento}</Badge>
+                    <Badge variant="outline" className="shrink-0">
+                      {d.formaPagamento}
+                    </Badge>
                   </CardContent>
                 </Card>
               ))}

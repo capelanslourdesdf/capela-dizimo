@@ -8,12 +8,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Switch } from '@/components/ui/switch'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
 import type { DadosCadastraisDizimista, Dizimista } from '@/types'
 import { buscarEnderecoPorCep } from '@/services/cepService'
-import { buscarDizimistaPorCarne } from '@/services/dizimistaService'
+import { buscarDizimistaPorCarne, gerarNumeroCarneDisponivel } from '@/services/dizimistaService'
 import { dataBrEhValida, dataBrParaIso, dataIsoParaBr, maskCep, maskDataBr, maskTelefone } from '@/utils/format'
 
 const MAX_FILHOS = 4
@@ -32,8 +32,7 @@ function createSchema(exigirCarne: boolean) {
   return z
     .object({
       numeroCarne: exigirCarne ? z.string().trim().min(1, 'Informe o número do carnê.') : z.string().optional(),
-      alterarNumeroCarne: z.boolean(),
-      novoNumeroCarne: z.string().optional(),
+      sabeNumeroCarne: z.enum(['sim', 'nao']),
       nomeCompleto: z.string().min(3, 'Informe o nome completo.'),
       dataNascimento: dataNascimentoSchema,
       cep: z.union([z.string().regex(/^\d{5}-\d{3}$/, 'Informe um CEP válido.'), z.literal('')]),
@@ -49,6 +48,7 @@ function createSchema(exigirCarne: boolean) {
       conjugeNome: z.string().optional(),
       conjugeDataNascimento: z.string().optional(),
       filhos: z.array(familiarSchema).max(MAX_FILHOS, `No máximo ${MAX_FILHOS} filhos.`),
+      responsavelRecadastramento: z.string().trim().min(3, 'Informe quem preencheu este recadastramento.'),
     })
     .refine((data) => !data.temConjuge || (data.conjugeNome?.trim().length ?? 0) >= 3, {
       message: 'Informe o nome completo do cônjuge.',
@@ -58,17 +58,39 @@ function createSchema(exigirCarne: boolean) {
       message: 'Informe a data de nascimento do cônjuge no formato dd/mm/aaaa.',
       path: ['conjugeDataNascimento'],
     })
-    .refine((data) => !data.alterarNumeroCarne || !!data.novoNumeroCarne?.trim(), {
-      message: 'Informe o novo número do carnê.',
-      path: ['novoNumeroCarne'],
-    })
-    .refine((data) => !data.alterarNumeroCarne || data.novoNumeroCarne?.trim() !== data.numeroCarne?.trim(), {
-      message: 'O novo número é igual ao atual.',
-      path: ['novoNumeroCarne'],
-    })
 }
 
 type FormValues = z.infer<ReturnType<typeof createSchema>>
+
+/** Achata o objeto de erros do react-hook-form em caminhos ("filhos.0.nomeCompleto"). */
+function caminhosComErro(erros: unknown, prefixo = ''): string[] {
+  if (!erros || typeof erros !== 'object') return []
+  if ('message' in (erros as Record<string, unknown>) && prefixo) return [prefixo]
+
+  return Object.entries(erros as Record<string, unknown>).flatMap(([chave, valor]) =>
+    caminhosComErro(valor, prefixo ? `${prefixo}.${chave}` : chave),
+  )
+}
+
+/**
+ * Leva o usuário até o primeiro campo inválido. Os inputs usam `id` igual ao nome do campo, e a
+ * ordem é decidida pela posição real no DOM — assim funciona também para os filhos (array).
+ */
+function irParaPrimeiroErro(erros: unknown) {
+  const elementos = caminhosComErro(erros)
+    .map((caminho) => document.getElementById(caminho))
+    .filter((el): el is HTMLElement => !!el)
+
+  if (elementos.length === 0) return
+
+  const primeiro = elementos.reduce((a, b) =>
+    a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_PRECEDING ? b : a,
+  )
+
+  primeiro.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  // O foco vem depois da rolagem para não competir com ela em telas pequenas.
+  window.setTimeout(() => primeiro.focus({ preventScroll: true }), 300)
+}
 
 interface RecadastramentoFormProps {
   dizimista?: Dizimista
@@ -78,7 +100,7 @@ interface RecadastramentoFormProps {
   onSalvar: (
     dados: DadosCadastraisDizimista,
     numeroCarneInformado: string,
-    opcoes?: { numeroCarneAnterior?: string },
+    opcoes?: { carneGeradoPeloSite?: boolean },
   ) => Promise<void>
 }
 
@@ -104,8 +126,7 @@ export function RecadastramentoForm({
     resolver: zodResolver(schema),
     defaultValues: {
       numeroCarne: dizimista?.numeroCarne ?? '',
-      alterarNumeroCarne: false,
-      novoNumeroCarne: '',
+      sabeNumeroCarne: 'sim',
       nomeCompleto: dizimista?.nomeCompleto ?? '',
       dataNascimento: dizimista?.dataNascimento ? dataIsoParaBr(dizimista.dataNascimento) : '',
       cep: dizimista?.endereco.cep ?? '',
@@ -123,6 +144,7 @@ export function RecadastramentoForm({
         ? dataIsoParaBr(dizimista.conjuge.dataNascimento)
         : '',
       filhos: (dizimista?.filhos ?? []).map((f) => ({ ...f, dataNascimento: dataIsoParaBr(f.dataNascimento) })),
+      responsavelRecadastramento: dizimista?.responsavelRecadastramento ?? '',
     },
   })
 
@@ -130,16 +152,42 @@ export function RecadastramentoForm({
   const temConjuge = watch('temConjuge')
   const cep = watch('cep')
   const numeroCarneDigitado = watch('numeroCarne')
-  const alterarNumeroCarne = watch('alterarNumeroCarne')
+  const sabeNumeroCarne = watch('sabeNumeroCarne')
   const [buscandoCep, setBuscandoCep] = React.useState(false)
   const [cepNaoEncontrado, setCepNaoEncontrado] = React.useState(false)
   const [buscandoCarne, setBuscandoCarne] = React.useState(false)
-  const [statusCarne, setStatusCarne] = React.useState<'encontrado' | 'novo' | null>(null)
+  const [gerandoCarne, setGerandoCarne] = React.useState(false)
+  const [statusCarne, setStatusCarne] = React.useState<'encontrado' | 'novo' | 'gerado' | null>(null)
 
   // Só busca no fluxo público de recadastramento: no cadastro pelo admin o carnê ainda não
   // existe (é gerado ao salvar) e na edição os dados já vêm prontos via prop `dizimista`.
-  const deveBuscarPorCarne = exibirCarne && !bloquearCarne
+  const deveBuscarPorCarne = exibirCarne && !bloquearCarne && sabeNumeroCarne === 'sim'
   const ultimoCarneBuscado = React.useRef<string | null>(null)
+
+  async function handleMudarSabeNumero(valor: 'sim' | 'nao') {
+    setValue('sabeNumeroCarne', valor)
+    ultimoCarneBuscado.current = null
+
+    if (valor === 'sim') {
+      setValue('numeroCarne', '', { shouldValidate: false })
+      setStatusCarne(null)
+      return
+    }
+
+    // Não sabe o número: gera um carnê novo (4 dígitos, a partir de 1000) ainda livre na base.
+    setErro(null)
+    setGerandoCarne(true)
+    try {
+      const gerado = await gerarNumeroCarneDisponivel()
+      setValue('numeroCarne', gerado, { shouldValidate: true })
+      setStatusCarne('gerado')
+    } catch (err) {
+      setValue('sabeNumeroCarne', 'sim')
+      setErro(err instanceof Error ? err.message : 'Não foi possível gerar um número de carnê.')
+    } finally {
+      setGerandoCarne(false)
+    }
+  }
 
   React.useEffect(() => {
     if (!deveBuscarPorCarne) return
@@ -170,9 +218,6 @@ export function RecadastramentoForm({
       reset({
         ...getValues(),
         numeroCarne: carne,
-        // Nova consulta = novo contexto: não faz sentido manter uma troca digitada antes.
-        alterarNumeroCarne: false,
-        novoNumeroCarne: '',
         nomeCompleto: encontrado.nomeCompleto,
         dataNascimento: dataIsoParaBr(encontrado.dataNascimento),
         cep: encontrado.endereco.cep ?? '',
@@ -260,25 +305,19 @@ export function RecadastramentoForm({
           nomeCompleto: f.nomeCompleto,
           dataNascimento: dataBrParaIso(f.dataNascimento),
         })),
+        responsavelRecadastramento: values.responsavelRecadastramento.trim(),
       }
 
-      const carneAtual = (values.numeroCarne ?? '').trim()
-      const carneNovo = (values.novoNumeroCarne ?? '').trim()
-      const trocouCarne =
-        values.alterarNumeroCarne && !!carneNovo && carneNovo !== carneAtual && statusCarne === 'encontrado'
-
-      await onSalvar(
-        dados,
-        trocouCarne ? carneNovo : carneAtual,
-        trocouCarne ? { numeroCarneAnterior: carneAtual } : undefined,
-      )
+      await onSalvar(dados, (values.numeroCarne ?? '').trim(), {
+        carneGeradoPeloSite: values.sabeNumeroCarne === 'nao' && statusCarne === 'gerado',
+      })
     } catch (err) {
       setErro(err instanceof Error ? err.message : 'Não foi possível salvar. Tente novamente.')
     }
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-6">
+    <form onSubmit={handleSubmit(onSubmit, irParaPrimeiroErro)} noValidate className="space-y-6">
       {erro && (
         <Alert variant="destructive">
           <AlertDescription>{erro}</AlertDescription>
@@ -288,6 +327,23 @@ export function RecadastramentoForm({
       <div className="space-y-4">
         <h2 className="text-sm font-semibold text-foreground">Dados do dizimista</h2>
 
+        {exibirCarne && !bloquearCarne && (
+          <RadioGroup
+            value={sabeNumeroCarne}
+            onValueChange={(v) => handleMudarSabeNumero(v as 'sim' | 'nao')}
+            className="grid-cols-1 sm:grid-cols-2"
+          >
+            <label className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-input px-3.5 py-3 text-sm has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary/5">
+              <RadioGroupItem value="sim" />
+              Já tenho o número do carnê
+            </label>
+            <label className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-input px-3.5 py-3 text-sm has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary/5">
+              <RadioGroupItem value="nao" />
+              Não sei o número do carnê
+            </label>
+          </RadioGroup>
+        )}
+
         {exibirCarne && (
           <div className="space-y-1.5">
             <Label htmlFor="numeroCarne">Nº do carnê</Label>
@@ -296,11 +352,11 @@ export function RecadastramentoForm({
                 id="numeroCarne"
                 inputMode="numeric"
                 placeholder="Número impresso no carnê"
-                disabled={bloquearCarne}
-                className={buscandoCarne ? 'pr-9' : undefined}
+                disabled={bloquearCarne || sabeNumeroCarne === 'nao'}
+                className={buscandoCarne || gerandoCarne ? 'pr-9' : undefined}
                 {...register('numeroCarne')}
               />
-              {buscandoCarne && (
+              {(buscandoCarne || gerandoCarne) && (
                 <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
               )}
             </div>
@@ -315,45 +371,14 @@ export function RecadastramentoForm({
                 Nenhum cadastro encontrado para este carnê — preencha os dados abaixo.
               </p>
             )}
-          </div>
-        )}
-
-        {exibirCarne && !bloquearCarne && statusCarne === 'encontrado' && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between gap-4">
-              <Label htmlFor="alterarNumeroCarne" className="font-normal">
-                Alterar número do carnê
-              </Label>
-              <Controller
-                control={control}
-                name="alterarNumeroCarne"
-                render={({ field }) => (
-                  <Switch id="alterarNumeroCarne" checked={field.value} onCheckedChange={field.onChange} />
-                )}
-              />
-            </div>
-
-            {alterarNumeroCarne && (
-              <div className="space-y-1.5">
-                <Label htmlFor="novoNumeroCarne">Novo nº do carnê</Label>
-                <Input
-                  id="novoNumeroCarne"
-                  inputMode="numeric"
-                  placeholder="Número do novo carnê"
-                  {...register('novoNumeroCarne')}
-                />
-                {errors.novoNumeroCarne ? (
-                  <p className="text-xs text-destructive">{errors.novoNumeroCarne.message}</p>
-                ) : (
-                  <p className="text-xs text-muted-foreground">
-                    Ao salvar, o cadastro passa para este número, levando junto o histórico de
-                    pagamentos e devoluções.
-                  </p>
-                )}
-              </div>
+            {!errors.numeroCarne && !gerandoCarne && statusCarne === 'gerado' && (
+              <p className="text-xs text-success">
+                Geramos este número para você. Anote-o: é com ele que você vai acessar o site.
+              </p>
             )}
           </div>
         )}
+
 
         <div className="space-y-1.5">
           <Label htmlFor="nomeCompleto">Nome completo</Label>
@@ -572,6 +597,18 @@ export function RecadastramentoForm({
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="responsavelRecadastramento">Responsável pelo recadastramento</Label>
+        <Input
+          id="responsavelRecadastramento"
+          placeholder="Digite o nome de quem fez o recadastramento"
+          {...register('responsavelRecadastramento')}
+        />
+        {errors.responsavelRecadastramento && (
+          <p className="text-xs text-destructive">{errors.responsavelRecadastramento.message}</p>
+        )}
       </div>
 
       <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>

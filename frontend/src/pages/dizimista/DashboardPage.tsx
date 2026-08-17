@@ -1,115 +1,136 @@
 import * as React from 'react'
-import { Link } from 'react-router-dom'
-import { IdCard, QrCode, Receipt, Wallet } from 'lucide-react'
+import { AlertCircle, CalendarCheck, CheckCircle2, IdCard, Wallet } from 'lucide-react'
 
 import { PageHeader } from '@/components/layout/PageHeader'
 import { StatCard } from '@/components/dashboard/StatCard'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 
 import { useDizimistaSessao } from '@/hooks/useDizimistaSessao'
-import { listarPagamentos } from '@/services/pagamentoService'
-import type { PagamentoPix } from '@/types'
-import { formatCurrency } from '@/utils/format'
-import { ROUTES } from '@/constants/routes'
+import { competenciaDaDevolucao, listarDevolucoes } from '@/services/devolucaoService'
+import type { Devolucao } from '@/types'
+import { competenciaAtual, competenciasEntre, formatCompetencia, formatCurrency, formatDate } from '@/utils/format'
 
-function competenciaAtual(): string {
-  const agora = new Date()
-  return `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`
-}
-
-/** "2026-08" -> "08/2026" */
-function competenciaMesAno(competencia: string): string {
-  const [ano, mes] = competencia.split('-')
-  return `${mes}/${ano}`
+/** Competência ("aaaa-mm") em que o dizimista passou a ser acompanhado no site. */
+function competenciaDeRegistro(dataIso?: string): string {
+  return dataIso?.slice(0, 7) ?? ''
 }
 
 export function DizimistaDashboardPage() {
   const { numeroCarne, dizimista } = useDizimistaSessao()
-  const [pagamentos, setPagamentos] = React.useState<PagamentoPix[]>([])
+  const [devolucoes, setDevolucoes] = React.useState<Devolucao[]>([])
   const [carregando, setCarregando] = React.useState(true)
 
   React.useEffect(() => {
     if (!numeroCarne) return
-    listarPagamentos(numeroCarne).then((dados) => {
-      setPagamentos(dados)
+    listarDevolucoes(numeroCarne).then((dados) => {
+      setDevolucoes(dados)
       setCarregando(false)
     })
   }, [numeroCarne])
 
-  const competencia = competenciaAtual()
-  const totalMesAprovado = pagamentos
-    .filter((p) => p.competencia === competencia && p.status === 'aprovado')
-    .reduce((soma, p) => soma + p.valor, 0)
+  const registro = competenciaDeRegistro(dizimista?.recadastradoEm || dizimista?.criadoEm)
+  const totalDevolvido = devolucoes.reduce((soma, d) => soma + d.valor, 0)
+
+  const pendentes = React.useMemo(() => {
+    if (!registro) return [] as string[]
+    const quitadas = new Set(devolucoes.map(competenciaDaDevolucao))
+    return competenciasEntre(registro, competenciaAtual()).filter((c) => !quitadas.has(c))
+  }, [registro, devolucoes])
 
   return (
     <div>
-      <PageHeader title={`Olá, ${dizimista?.nomeCompleto.split(' ')[0] || 'dizimista'}`} description="Bem-vindo(a) à sua área." />
+      <PageHeader
+        title={`Olá, ${dizimista?.nomeCompleto.split(' ')[0] || 'dizimista'}`}
+        description="Acompanhe suas devoluções do dízimo."
+      />
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <StatCard label="Nº do carnê" value={numeroCarne || '—'} icon={IdCard} />
-        {carregando ? (
-          <Card>
-            <CardContent>
-              <Skeleton className="h-6 w-32" />
-            </CardContent>
-          </Card>
-        ) : (
+      {carregando ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-28 w-full rounded-xl" />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <StatCard label="Nº do carnê" value={numeroCarne || '—'} icon={IdCard} />
+          <StatCard label="Total devolvido" value={formatCurrency(totalDevolvido)} icon={Wallet} />
           <StatCard
-            label={`Devolvido em ${competenciaMesAno(competencia)}`}
-            value={formatCurrency(totalMesAprovado)}
-            icon={Wallet}
+            label="Meses pendentes"
+            value={String(pendentes.length)}
+            icon={pendentes.length > 0 ? AlertCircle : CheckCircle2}
+            helper={pendentes.length === 0 ? 'Tudo em dia' : undefined}
           />
-        )}
-      </div>
+        </div>
+      )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card>
-          <CardContent className="flex flex-col items-start gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <IdCard className="h-5 w-5" />
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <CalendarCheck className="h-4 w-4 text-primary" />
+            Meses pendentes
+          </CardTitle>
+          <CardDescription>
+            {registro
+              ? `Contados a partir do seu registro no Meu Dízimo Digital, em ${formatCompetencia(registro)}.`
+              : 'Faça seu recadastramento para começarmos a acompanhar suas devoluções.'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {carregando ? (
+            <Skeleton className="h-10 w-full" />
+          ) : pendentes.length === 0 ? (
+            <p className="flex items-center gap-2 text-sm text-success">
+              <CheckCircle2 className="h-4 w-4" />
+              {registro ? 'Nenhum mês pendente. Obrigado pela sua fidelidade!' : 'Nada a acompanhar por enquanto.'}
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {pendentes.map((competencia) => (
+                <Badge key={competencia} variant="warning">
+                  {formatCompetencia(competencia)}
+                </Badge>
+              ))}
             </div>
-            <div>
-              <p className="font-medium text-foreground">Atualização cadastral</p>
-              <p className="mt-1 text-sm text-muted-foreground">Mantenha seus dados sempre em dia.</p>
-            </div>
-            <Button asChild variant="outline" size="sm">
-              <Link to={ROUTES.dizimista.cadastro}>Atualizar dados</Link>
-            </Button>
-          </CardContent>
-        </Card>
+          )}
+        </CardContent>
+      </Card>
 
-        <Card>
-          <CardContent className="flex flex-col items-start gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <QrCode className="h-5 w-5" />
+      <Card className="mt-5">
+        <CardHeader>
+          <CardTitle className="text-base">Devoluções registradas</CardTitle>
+          <CardDescription>Lançamentos feitos pela Pastoral do Dízimo.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {carregando ? (
+            <div className="space-y-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
             </div>
-            <div>
-              <p className="font-medium text-foreground">Pagar com Pix</p>
-              <p className="mt-1 text-sm text-muted-foreground">Gere um Pix e contribua agora.</p>
-            </div>
-            <Button asChild size="sm">
-              <Link to={ROUTES.dizimista.pagamento}>Gerar Pix</Link>
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="flex flex-col items-start gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Receipt className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="font-medium text-foreground">Meus pagamentos</p>
-              <p className="mt-1 text-sm text-muted-foreground">Consulte seu histórico e devoluções.</p>
-            </div>
-            <Button asChild variant="outline" size="sm">
-              <Link to={ROUTES.dizimista.pagamentos}>Ver histórico</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+          ) : devolucoes.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhuma devolução registrada até o momento.</p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {devolucoes.map((d) => (
+                <li key={d.id} className="flex items-center justify-between gap-3 py-3">
+                  <div className="min-w-0">
+                    <p className="font-medium text-foreground">{formatCurrency(d.valor)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Referente a {formatCompetencia(competenciaDaDevolucao(d))}
+                      {d.lancadoPor ? ` · lançado por ${d.lancadoPor}` : ''}
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {formatDate(d.criadoEm.slice(0, 10))}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

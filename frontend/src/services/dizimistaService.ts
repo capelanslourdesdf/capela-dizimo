@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, getDocs, setDoc, writeBatch } from 'firebase/firestore'
+import { collection, doc, getDoc, getDocs, runTransaction, setDoc, writeBatch } from 'firebase/firestore'
 
 import { db } from '@/lib/firebase'
 import type { DadosCadastraisDizimista, Dizimista } from '@/types'
@@ -11,6 +11,29 @@ export async function buscarDizimistaPorCarne(numeroCarne: string): Promise<Dizi
   const snap = await getDoc(ref)
   if (!snap.exists()) return null
   return { numeroCarne: snap.id, ...(snap.data() as Omit<Dizimista, 'numeroCarne'>) }
+}
+
+const NUMERO_CARNE_INICIAL = 1000
+
+/**
+ * Gera o próximo nº de carnê livre para quem não sabe o próprio número: sempre com 4 dígitos,
+ * a partir de 1000. Parte do contador mantido pela importação/cadastro admin e avança até achar
+ * um número que ainda não exista na base.
+ */
+export async function gerarNumeroCarneDisponivel(): Promise<string> {
+  const contador = await getDoc(doc(db, 'contadores', 'proximoNumeroCarne'))
+  const valorContador = contador.exists() ? Number((contador.data() as { valor?: number }).valor) : NaN
+
+  let candidato =
+    Number.isInteger(valorContador) && valorContador >= NUMERO_CARNE_INICIAL ? valorContador : NUMERO_CARNE_INICIAL
+
+  for (let tentativa = 0; tentativa < 100; tentativa++) {
+    const existente = await getDoc(doc(db, COLECAO, String(candidato)))
+    if (!existente.exists()) return String(candidato)
+    candidato++
+  }
+
+  throw new Error('Não foi possível gerar um número de carnê disponível. Procure a Pastoral do Dízimo.')
 }
 
 function montarPayload(dados: DadosCadastraisDizimista, agora: string) {
@@ -28,6 +51,10 @@ function montarPayload(dados: DadosCadastraisDizimista, agora: string) {
     email: dados.email?.trim() || null,
     conjuge: dados.conjuge ?? null,
     filhos: dados.filhos ?? [],
+    responsavelRecadastramento: dados.responsavelRecadastramento?.trim() || null,
+    // Data de referência do dizimista no site: a partir dela é que os meses passam a ser
+    // cobrados/acompanhados. Atualizada a cada recadastramento.
+    recadastradoEm: agora,
     atualizadoEm: agora,
   }
 }
@@ -38,62 +65,32 @@ function montarPayload(dados: DadosCadastraisDizimista, agora: string) {
  * quem preenche o formulário (não é gerado aqui — geração automática só ocorre no cadastro feito
  * pelo admin, em /api/dizimistas/cadastrar).
  *
- * Quando `numeroCarneAnterior` é informado e difere do novo número, o cadastro é *movido*: como o
- * carnê é o ID do documento, o registro é recriado sob o novo número levando junto o histórico
- * (pagamentos e devoluções), e o documento antigo é apagado — tudo em um único batch.
+ * `exigirNovo` é usado quando o número foi gerado pelo próprio site ("não sei meu carnê"): nesse
+ * caso a gravação roda em transação e falha se o número tiver sido ocupado nesse meio-tempo, em
+ * vez de mesclar os dados por cima de outro dizimista.
  */
 export async function salvarRecadastramento(
   numeroCarne: string,
   dados: DadosCadastraisDizimista,
-  numeroCarneAnterior?: string,
+  opcoes: { exigirNovo?: boolean } = {},
 ): Promise<void> {
   const carne = numeroCarne.trim()
-  const anterior = numeroCarneAnterior?.trim()
   const agora = new Date().toISOString()
   const payload = montarPayload(dados, agora)
-
   const ref = doc(db, COLECAO, carne)
-  const existente = await getDoc(ref)
 
-  if (anterior && anterior !== carne) {
-    if (existente.exists()) {
-      throw new Error(`Já existe um cadastro com o carnê nº ${carne}. Confira o número informado.`)
-    }
-
-    const refAntigo = doc(db, COLECAO, anterior)
-    const antigo = await getDoc(refAntigo)
-
-    if (antigo.exists()) {
-      const [pagamentos, devolucoes] = await Promise.all([
-        getDocs(collection(db, COLECAO, anterior, 'pagamentos')),
-        getDocs(collection(db, COLECAO, anterior, 'devolucoes')),
-      ])
-
-      const batch = writeBatch(db)
-      const dadosAntigos = antigo.data() as Partial<Dizimista>
-
-      batch.set(ref, {
-        ...dadosAntigos,
-        ...payload,
-        numeroCarne: carne,
-        origem: dadosAntigos.origem ?? 'recadastramento',
-        criadoEm: dadosAntigos.criadoEm ?? agora,
-      })
-
-      pagamentos.docs.forEach((d) => {
-        batch.set(doc(db, COLECAO, carne, 'pagamentos', d.id), d.data())
-        batch.delete(d.ref)
-      })
-      devolucoes.docs.forEach((d) => {
-        batch.set(doc(db, COLECAO, carne, 'devolucoes', d.id), d.data())
-        batch.delete(d.ref)
-      })
-
-      batch.delete(refAntigo)
-      await batch.commit()
-      return
-    }
+  if (opcoes.exigirNovo) {
+    await runTransaction(db, async (tx) => {
+      const existente = await tx.get(ref)
+      if (existente.exists()) {
+        throw new Error(`O carnê nº ${carne} acabou de ser usado por outra pessoa. Tente salvar novamente.`)
+      }
+      tx.set(ref, { ...payload, numeroCarne: carne, origem: 'recadastramento', criadoEm: agora })
+    })
+    return
   }
+
+  const existente = await getDoc(ref)
 
   await setDoc(
     ref,

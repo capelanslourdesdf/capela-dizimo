@@ -99,6 +99,62 @@ export function dataBrParaIso(valorBr: string): string {
   return `${ano}-${mes}-${dia}`
 }
 
+export function maskMesAno(valor: string): string {
+  return valor
+    .replace(/\D/g, '')
+    .slice(0, 6)
+    .replace(/(\d{2})(\d)/, '$1/$2')
+}
+
+export function mesAnoEhValido(valor: string): boolean {
+  const match = valor.match(/^(\d{2})\/(\d{4})$/)
+  if (!match) return false
+  const mes = Number(match[1])
+  const ano = Number(match[2])
+  return mes >= 1 && mes <= 12 && ano >= 1900 && ano <= new Date().getFullYear() + 1
+}
+
+/** "mm/aaaa" -> "aaaa-mm" */
+export function mesAnoParaCompetencia(valor: string): string {
+  const match = valor.match(/^(\d{2})\/(\d{4})$/)
+  return match ? `${match[2]}-${match[1]}` : ''
+}
+
+/** "aaaa-mm" -> "mm/aaaa" */
+export function competenciaParaMesAno(competencia: string): string {
+  const match = competencia.match(/^(\d{4})-(\d{2})$/)
+  return match ? `${match[2]}/${match[1]}` : ''
+}
+
+export function competenciaAtual(): string {
+  const agora = new Date()
+  return `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`
+}
+
+/**
+ * Lista as competências ("aaaa-mm") de `inicio` até `fim`, inclusive. Usada para descobrir os
+ * meses que o dizimista deveria ter devolvido desde que se recadastrou.
+ */
+export function competenciasEntre(inicio: string, fim: string): string[] {
+  if (!/^\d{4}-\d{2}$/.test(inicio) || !/^\d{4}-\d{2}$/.test(fim) || inicio > fim) return []
+
+  const competencias: string[] = []
+  let [ano, mes] = inicio.split('-').map(Number)
+
+  for (let i = 0; i < 600; i++) {
+    const atual = `${ano}-${String(mes).padStart(2, '0')}`
+    competencias.push(atual)
+    if (atual === fim) break
+    mes++
+    if (mes > 12) {
+      mes = 1
+      ano++
+    }
+  }
+
+  return competencias
+}
+
 export function maskDiaMes(valor: string): string {
   return valor
     .replace(/\D/g, '')

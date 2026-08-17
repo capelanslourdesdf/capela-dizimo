@@ -8,7 +8,12 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose 
 import { ROUTES } from '@/constants/routes'
 import { cn } from '@/lib/utils'
 
-const links = [{ label: 'Início', href: ROUTES.home }]
+const links = [
+  { label: 'Início', href: ROUTES.home },
+  { label: 'Dízimo', href: ROUTES.dizimo },
+  { label: 'Como funciona', href: ROUTES.comoFunciona },
+  { label: 'Recadastramento', href: ROUTES.recadastramento },
+]
 
 export function PublicHeader() {
   const [open, setOpen] = React.useState(false)

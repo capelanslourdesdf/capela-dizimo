@@ -14,27 +14,42 @@ export async function buscarDizimistaPorCarne(numeroCarne: string): Promise<Dizi
   return { numeroCarne: snap.id, ...(snap.data() as Omit<Dizimista, 'numeroCarne'>) }
 }
 
-const NUMERO_CARNE_INICIAL = 1000
+const NUMERO_CARNE_INICIAL = 500
+const NUMERO_CARNE_MAXIMO = 99999 // até 5 dígitos
 
 /**
- * Gera o próximo nº de carnê livre para quem não sabe o próprio número: sempre com 4 dígitos,
- * a partir de 1000. Parte do contador mantido pela importação/cadastro admin e avança até achar
- * um número que ainda não exista na base.
+ * Gera o próximo nº de carnê livre para quem não sabe o próprio número: até 5 dígitos, a partir
+ * de 500. Usa o mesmo contador do cadastro pelo admin (`contadores/proximoNumeroCarne`), e o
+ * avança dentro de uma transação — o número é "queimado" assim que é gerado (não só quando o
+ * recadastramento é salvo), garantindo que nunca se repita, mesmo entre pessoas gerando um
+ * número ao mesmo tempo.
  */
 export async function gerarNumeroCarneDisponivel(): Promise<string> {
-  const contador = await getDoc(doc(db, 'contadores', 'proximoNumeroCarne'))
-  const valorContador = contador.exists() ? Number((contador.data() as { valor?: number }).valor) : NaN
+  const contadorRef = doc(db, 'contadores', 'proximoNumeroCarne')
 
-  let candidato =
-    Number.isInteger(valorContador) && valorContador >= NUMERO_CARNE_INICIAL ? valorContador : NUMERO_CARNE_INICIAL
+  const candidato = await runTransaction(db, async (tx) => {
+    const contador = await tx.get(contadorRef)
+    const valorContador = contador.exists() ? Number((contador.data() as { valor?: number }).valor) : NaN
 
-  for (let tentativa = 0; tentativa < 100; tentativa++) {
-    const existente = await getDoc(doc(db, COLECAO, String(candidato)))
-    if (!existente.exists()) return String(candidato)
-    candidato++
-  }
+    let numero =
+      Number.isInteger(valorContador) && valorContador >= NUMERO_CARNE_INICIAL ? valorContador : NUMERO_CARNE_INICIAL
 
-  throw new Error('Não foi possível gerar um número de carnê disponível. Procure a Pastoral do Dízimo.')
+    // Pula números já em uso (ex.: carnês físicos legados que caiam nessa faixa). Todas as
+    // leituras da transação precisam vir antes da escrita final do contador.
+    for (let tentativa = 0; tentativa < 100; tentativa++) {
+      if (numero > NUMERO_CARNE_MAXIMO) {
+        throw new Error('Não foi possível gerar um número de carnê disponível. Procure a Pastoral do Dízimo.')
+      }
+      const existente = await tx.get(doc(db, COLECAO, String(numero)))
+      if (!existente.exists()) break
+      numero++
+    }
+
+    tx.set(contadorRef, { valor: numero + 1 }, { merge: true })
+    return numero
+  })
+
+  return String(candidato)
 }
 
 export interface CandidatoCarne {

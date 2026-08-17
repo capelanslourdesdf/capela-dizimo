@@ -6,10 +6,14 @@ import { createFirestoreDocumentWithId, getFirestoreDocument, patchFirestoreDocu
  * módulo não interfere nesses números.
  *
  * Novos dizimistas (cadastro pelo admin) recebem números sequenciais,
- * começando em 1000 (4 dígitos), controlados por um contador no Firestore.
+ * começando em 500 e com até 5 dígitos, controlados por um único contador no
+ * Firestore — o mesmo usado pela geração de carnê no recadastramento público
+ * (ver frontend/src/services/dizimistaService.ts), então os números nunca se
+ * repetem entre os dois fluxos.
  */
 
-const NUMERO_CARNE_INICIAL = 1000;
+const NUMERO_CARNE_INICIAL = 500;
+const NUMERO_CARNE_MAXIMO = 99999; // até 5 dígitos
 const CONTADOR_COLECAO = "contadores";
 const CONTADOR_DOCUMENTO = "proximoNumeroCarne";
 const CONTADOR_PATH = `${CONTADOR_COLECAO}/${CONTADOR_DOCUMENTO}`;
@@ -35,10 +39,10 @@ async function persistirProximoNumero(valor: number): Promise<void> {
  * Reserva o próximo número de carnê sequencial disponível, criando o documento
  * do dizimista de forma atômica (ID explícito no Firestore, que rejeita
  * duplicatas) para evitar corrida entre cadastros simultâneos. Se o número já
- * estiver em uso — por exemplo, coincidindo com um carnê físico legado de 3
- * dígitos que por acaso caia acima de 999 — tenta o próximo, em sequência.
+ * estiver em uso — por exemplo, coincidindo com um carnê físico legado que por
+ * acaso caia nessa faixa — tenta o próximo, em sequência.
  * Retorna o número de carnê reservado, ou null se não conseguir após
- * `maxTentativas`.
+ * `maxTentativas` ou ao ultrapassar `NUMERO_CARNE_MAXIMO`.
  */
 export async function reservarProximoNumeroCarne(
     dadosDizimista: Record<string, unknown>,
@@ -47,6 +51,8 @@ export async function reservarProximoNumeroCarne(
     let candidato = await lerProximoNumero();
 
     for (let tentativa = 0; tentativa < maxTentativas; tentativa++) {
+        if (candidato > NUMERO_CARNE_MAXIMO) return null;
+
         const numeroCarne = String(candidato);
         const resultado = await createFirestoreDocumentWithId("dizimistas", numeroCarne, {
             ...dadosDizimista,

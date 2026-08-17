@@ -273,7 +273,7 @@ export function RecadastramentoForm({
     [reset, getValues],
   )
 
-  /** Gera um carnê novo (4 dígitos, a partir de 1000) ainda livre na base. */
+  /** Gera um carnê novo (até 5 dígitos, a partir de 500) ainda livre na base. */
   async function gerarNovoCarne() {
     setErro(null)
     setGerandoCarne(true)

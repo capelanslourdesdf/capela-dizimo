@@ -69,7 +69,7 @@ function abrirPlanilha(arquivo) {
 
 const COLECAO = 'dizimistas'
 const MAX_FILHOS = 4
-const NUMERO_CARNE_INICIAL = 1000
+const NUMERO_CARNE_INICIAL = 500
 
 // ---------------------------------------------------------------- utilidades
 

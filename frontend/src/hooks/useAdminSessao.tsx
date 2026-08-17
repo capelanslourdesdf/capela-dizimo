@@ -1,7 +1,12 @@
 import * as React from 'react'
 
 import { STORAGE_KEYS } from '@/constants/storage'
-import { ADMIN_SENHA_HASH, ADMIN_USUARIO } from '@/constants/adminAuth'
+import {
+  ADMIN_SENHA_HASH,
+  ADMIN_SENHA_HASH_PADRAO,
+  ADMIN_SENHA_TEXTO,
+  ADMIN_USUARIO,
+} from '@/constants/adminAuth'
 import { sha256Hex } from '@/utils/hash'
 
 const SESSAO_TTL_MS = 12 * 60 * 60 * 1000
@@ -42,9 +47,11 @@ export function AdminSessaoProvider({ children }: { children: React.ReactNode })
   }, [])
 
   const entrar = React.useCallback(async (usuario: string, senha: string) => {
+    // Ordem de precedência: hash configurado > senha em texto na env > hash padrão do código.
+    const hashEsperado = ADMIN_SENHA_HASH || (ADMIN_SENHA_TEXTO ? await sha256Hex(ADMIN_SENHA_TEXTO) : ADMIN_SENHA_HASH_PADRAO)
     const senhaHash = await sha256Hex(senha)
 
-    if (usuario.trim() !== ADMIN_USUARIO || senhaHash !== ADMIN_SENHA_HASH) {
+    if (usuario.trim() !== ADMIN_USUARIO || senhaHash !== hashEsperado) {
       throw new Error('Usuário ou senha inválidos.')
     }
 

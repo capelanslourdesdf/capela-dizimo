@@ -614,7 +614,7 @@ export function RecadastramentoForm({
               </p>
             )}
             {!errors.numeroCarne && !gerandoCarne && statusCarne === 'gerado' && (
-              <p className="text-xs text-success">
+              <p className="text-xs text-success font-bold">
                 {buscaSemResultado
                   ? 'Não encontramos um cadastro com esses dados — mas não se preocupe: geramos um novo número de carnê. Anote-o, é com ele que se acessa o site.'
                   : 'Anote este número: ele será usado para acompanhar o dízimo.'}
@@ -657,7 +657,7 @@ export function RecadastramentoForm({
                 <Input
                   id="telefone"
                   inputMode="numeric"
-                  placeholder="(61) 99999-9999"
+                  // placeholder="(61) 99999-9999"
                   autoComplete="tel"
                   value={field.value}
                   onChange={(e) => field.onChange(maskTelefone(e.target.value))}

@@ -2,7 +2,7 @@ import * as React from 'react'
 import { useFieldArray, useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Loader2, Plus, Save, Trash2 } from 'lucide-react'
+import { Loader2, Plus, Save, Search, Trash2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,8 +13,23 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
 import type { DadosCadastraisDizimista, Dizimista } from '@/types'
 import { buscarEnderecoPorCep } from '@/services/cepService'
-import { buscarDizimistaPorCarne, gerarNumeroCarneDisponivel } from '@/services/dizimistaService'
-import { dataBrEhValida, dataBrParaIso, dataIsoParaBr, maskCep, maskDataBr, maskTelefone } from '@/utils/format'
+import {
+  buscarCarnePorNomeENascimento,
+  buscarDizimistaPorCarne,
+  gerarNumeroCarneDisponivel,
+  type CandidatoCarne,
+} from '@/services/dizimistaService'
+import {
+  dataBrEhValida,
+  dataBrParaIso,
+  dataIsoParaBr,
+  diaMesEhValido,
+  maskCep,
+  maskDataBr,
+  maskDiaMes,
+  maskTelefone,
+} from '@/utils/format'
+import { palavrasDoNome } from '@/utils/busca'
 
 const MAX_FILHOS = 4
 
@@ -184,33 +199,130 @@ export function RecadastramentoForm({
   const [gerandoCarne, setGerandoCarne] = React.useState(false)
   const [statusCarne, setStatusCarne] = React.useState<'encontrado' | 'novo' | 'gerado' | null>(null)
 
+  // Busca do carnê por nome + mês/ano de nascimento (opção "não sei o número").
+  const [nomeBusca, setNomeBusca] = React.useState('')
+  const [diaMesBusca, setDiaMesBusca] = React.useState('')
+  const [buscandoPorNome, setBuscandoPorNome] = React.useState(false)
+  const [erroBusca, setErroBusca] = React.useState<string | null>(null)
+  const [candidatos, setCandidatos] = React.useState<CandidatoCarne[] | null>(null)
+  const [buscaSemResultado, setBuscaSemResultado] = React.useState(false)
+
   // Só busca no fluxo público de recadastramento: no cadastro pelo admin o carnê ainda não
   // existe (é gerado ao salvar) e na edição os dados já vêm prontos via prop `dizimista`.
   const deveBuscarPorCarne = exibirCarne && !bloquearCarne && sabeNumeroCarne === 'sim'
   const ultimoCarneBuscado = React.useRef<string | null>(null)
 
-  async function handleMudarSabeNumero(valor: 'sim' | 'nao') {
+  function handleMudarSabeNumero(valor: 'sim' | 'nao') {
     setValue('sabeNumeroCarne', valor)
     ultimoCarneBuscado.current = null
+    setStatusCarne(null)
+    setErro(null)
+    setCandidatos(null)
+    setBuscaSemResultado(false)
 
     if (valor === 'sim') {
       setValue('numeroCarne', '', { shouldValidate: false })
-      setStatusCarne(null)
-      return
     }
+  }
 
-    // Não sabe o número: gera um carnê novo (4 dígitos, a partir de 1000) ainda livre na base.
+  /** Preenche o formulário com os dados de um dizimista já cadastrado. */
+  const preencherCom = React.useCallback(
+    (encontrado: Dizimista) => {
+      ultimoCarneBuscado.current = encontrado.numeroCarne
+      reset({
+        ...getValues(),
+        numeroCarne: encontrado.numeroCarne,
+        nomeCompleto: encontrado.nomeCompleto,
+        dataNascimento: dataIsoParaBr(encontrado.dataNascimento),
+        cep: encontrado.endereco?.cep ?? '',
+        logradouro: encontrado.endereco?.logradouro ?? '',
+        numero: encontrado.endereco?.numero === SEM_NUMERO ? '' : (encontrado.endereco?.numero ?? ''),
+        semNumero: encontrado.endereco?.numero === SEM_NUMERO,
+        complemento: encontrado.endereco?.complemento ?? '',
+        bairro: encontrado.endereco?.bairro ?? '',
+        cidade: encontrado.endereco?.cidade ?? '',
+        estado: encontrado.endereco?.estado ?? '',
+        telefone: encontrado.telefone ?? '',
+        email: encontrado.email ?? '',
+        temConjuge: !!encontrado.conjuge,
+        conjugeNome: encontrado.conjuge?.nomeCompleto ?? '',
+        conjugeDataNascimento: encontrado.conjuge?.dataNascimento
+          ? dataIsoParaBr(encontrado.conjuge.dataNascimento)
+          : '',
+        filhos: (encontrado.filhos ?? []).map((f) => ({
+          nomeCompleto: f.nomeCompleto,
+          dataNascimento: dataIsoParaBr(f.dataNascimento),
+        })),
+      })
+      setStatusCarne('encontrado')
+      setCandidatos(null)
+      setBuscaSemResultado(false)
+    },
+    [reset, getValues],
+  )
+
+  /** Gera um carnê novo (4 dígitos, a partir de 1000) ainda livre na base. */
+  async function gerarNovoCarne() {
     setErro(null)
     setGerandoCarne(true)
     try {
       const gerado = await gerarNumeroCarneDisponivel()
       setValue('numeroCarne', gerado, { shouldValidate: true })
       setStatusCarne('gerado')
+      setCandidatos(null)
+      setBuscaSemResultado(false)
     } catch (err) {
-      setValue('sabeNumeroCarne', 'sim')
       setErro(err instanceof Error ? err.message : 'Não foi possível gerar um número de carnê.')
     } finally {
       setGerandoCarne(false)
+    }
+  }
+
+  async function handleBuscarCarne() {
+    const nome = nomeBusca.trim()
+
+    if (nome.length < 3) {
+      setErroBusca('Informe o nome completo.')
+      return
+    }
+    if (!diaMesEhValido(diaMesBusca)) {
+      setErroBusca('Informe o dia e o mês de nascimento no formato dd/mm.')
+      return
+    }
+
+    setErroBusca(null)
+    setBuscaSemResultado(false)
+    setCandidatos(null)
+    setBuscandoPorNome(true)
+
+    try {
+      const encontrados = await buscarCarnePorNomeENascimento(nome, diaMesBusca)
+
+      // Um único candidato forte e com a data conferindo: assume sem perguntar. Com apenas um
+      // nome informado ("MARIA") o risco de pegar a pessoa errada é alto, então sempre confirma.
+      const unicoCerteiro =
+        encontrados.length === 1 &&
+        encontrados[0].nascimentoConfere &&
+        encontrados[0].pontuacaoNome >= 0.85 &&
+        palavrasDoNome(nome).length >= 2
+
+      if (unicoCerteiro) {
+        preencherCom(encontrados[0].dizimista)
+        return
+      }
+
+      if (encontrados.length === 0) {
+        setBuscaSemResultado(true)
+        await gerarNovoCarne()
+        setBuscaSemResultado(true)
+        return
+      }
+
+      setCandidatos(encontrados)
+    } catch {
+      setErroBusca('Não foi possível consultar agora. Tente novamente.')
+    } finally {
+      setBuscandoPorNome(false)
     }
   }
 
@@ -373,7 +485,76 @@ export function RecadastramentoForm({
           </RadioGroup>
         )}
 
-        {exibirCarne && (
+        {exibirCarne && !bloquearCarne && sabeNumeroCarne === 'nao' && statusCarne === null && (
+          <Card className="border-primary/30 bg-primary/5">
+            <CardContent className="space-y-4 py-5">
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">Vamos procurar seu carnê</h3>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Informe o nome do dizimista e o mês/ano de nascimento para localizarmos o cadastro.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="nomeBusca">Nome do dizimista</Label>
+                <Input
+                  id="nomeBusca"
+                  placeholder="Nome completo"
+                  value={nomeBusca}
+                  onChange={(e) => setNomeBusca(e.target.value.toUpperCase())}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="diaMesBusca">Dia e mês de nascimento</Label>
+                <Input
+                  id="diaMesBusca"
+                  inputMode="numeric"
+                  placeholder="dd/mm"
+                  className="sm:max-w-[10rem]"
+                  value={diaMesBusca}
+                  onChange={(e) => setDiaMesBusca(maskDiaMes(e.target.value))}
+                />
+              </div>
+
+              {erroBusca && <p className="text-xs text-destructive">{erroBusca}</p>}
+
+              {candidatos && candidatos.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">
+                    Encontramos mais de uma possibilidade. Selecione o cadastro correto:
+                  </p>
+                  {candidatos.map(({ dizimista: d, nascimentoConfere }) => (
+                    <button
+                      key={d.numeroCarne}
+                      type="button"
+                      onClick={() => preencherCom(d)}
+                      className="flex w-full items-center justify-between gap-3 rounded-lg border border-input bg-background px-3.5 py-2.5 text-left text-sm hover:border-primary hover:bg-primary/5"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate font-medium text-foreground">{d.nomeCompleto}</span>
+                        <span className="block text-xs text-muted-foreground">
+                          Carnê nº {d.numeroCarne}
+                          {!nascimentoConfere && ' · nascimento não confere'}
+                        </span>
+                      </span>
+                    </button>
+                  ))}
+                  <Button type="button" variant="ghost" size="sm" onClick={gerarNovoCarne} disabled={gerandoCarne}>
+                    Nenhum destes — gerar um número novo
+                  </Button>
+                </div>
+              )}
+
+              <Button type="button" className="w-full" onClick={handleBuscarCarne} disabled={buscandoPorNome}>
+                {buscandoPorNome ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                {buscandoPorNome ? 'Procurando...' : 'Buscar número'}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {exibirCarne && (bloquearCarne || sabeNumeroCarne === 'sim' || statusCarne !== null) && (
           <div className="space-y-1.5">
             <Label htmlFor="numeroCarne">Nº do carnê</Label>
             <div className="relative">
@@ -402,7 +583,9 @@ export function RecadastramentoForm({
             )}
             {!errors.numeroCarne && !gerandoCarne && statusCarne === 'gerado' && (
               <p className="text-xs text-success">
-                Anote este número: é o carnê do dizimista e será usado para acessar o site.
+                {buscaSemResultado
+                  ? 'Não encontramos um cadastro com esses dados — mas não se preocupe: geramos um novo número de carnê. Anote-o, é com ele que se acessa o site.'
+                  : 'Anote este número: ele será usado para acompanhar o dízimo.'}
               </p>
             )}
           </div>

@@ -3,6 +3,7 @@ import { collection, doc, getDoc, getDocs, runTransaction, setDoc, writeBatch } 
 import { db } from '@/lib/firebase'
 import type { DadosCadastraisDizimista, Dizimista } from '@/types'
 import { isoParaDiaMes } from '@/utils/format'
+import { similaridadeNome } from '@/utils/busca'
 
 const COLECAO = 'dizimistas'
 
@@ -34,6 +35,60 @@ export async function gerarNumeroCarneDisponivel(): Promise<string> {
   }
 
   throw new Error('Não foi possível gerar um número de carnê disponível. Procure a Pastoral do Dízimo.')
+}
+
+export interface CandidatoCarne {
+  dizimista: Dizimista
+  pontuacaoNome: number
+  nascimentoConfere: boolean
+}
+
+/**
+ * Dia/mês de nascimento do registro ("dd/mm"). Os importados da planilha guardam só isso; os
+ * recadastrados têm a data completa, da qual o dia/mês é derivado.
+ */
+function diaMesDoRegistro(d: Dizimista): string {
+  return d.diaMesNascimento?.trim() || isoParaDiaMes(d.dataNascimento ?? '')
+}
+
+const PONTUACAO_MINIMA = 0.7
+/** Sem casar a data, exigimos um nome bem mais parecido para sequer sugerir o registro. */
+const PONTUACAO_MINIMA_SEM_DATA = 0.85
+
+/**
+ * Procura o carnê de quem não lembra o número, a partir do nome e do dia/mês de nascimento —
+ * o mesmo par usado no login, e a única informação de nascimento que a planilha antiga traz.
+ *
+ * A comparação de nomes é aproximada (ver utils/busca), porque a base mistura digitação manual
+ * com a planilha — THIAGO/TIAGO, LUIS/LUIZ e afins precisam se encontrar.
+ *
+ * Prioriza quem também bate a data. Se ninguém bater, ainda devolve nomes muito parecidos
+ * (com `nascimentoConfere: false`), para evitar criar um carnê duplicado por causa de uma data
+ * digitada errada — nesse caso a decisão fica com quem está preenchendo.
+ */
+export async function buscarCarnePorNomeENascimento(nome: string, diaMes: string): Promise<CandidatoCarne[]> {
+  const todos = await listarDizimistas()
+  const procurado = diaMes.trim()
+
+  const avaliados = todos.map((dizimista) => ({
+    dizimista,
+    pontuacaoNome: similaridadeNome(nome, dizimista.nomeCompleto),
+    nascimentoConfere: !!procurado && diaMesDoRegistro(dizimista) === procurado,
+  }))
+
+  const ordenar = (a: CandidatoCarne, b: CandidatoCarne) =>
+    Number(b.nascimentoConfere) - Number(a.nascimentoConfere) || b.pontuacaoNome - a.pontuacaoNome
+
+  const comData = avaliados
+    .filter((c) => c.nascimentoConfere && c.pontuacaoNome >= PONTUACAO_MINIMA)
+    .sort(ordenar)
+
+  if (comData.length > 0) return comData.slice(0, 8)
+
+  return avaliados
+    .filter((c) => c.pontuacaoNome >= PONTUACAO_MINIMA_SEM_DATA)
+    .sort(ordenar)
+    .slice(0, 8)
 }
 
 function montarPayload(dados: DadosCadastraisDizimista, agora: string) {

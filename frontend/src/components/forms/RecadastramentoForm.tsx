@@ -37,7 +37,8 @@ function createSchema(exigirCarne: boolean) {
       dataNascimento: dataNascimentoSchema,
       cep: z.union([z.string().regex(/^\d{5}-\d{3}$/, 'Informe um CEP válido.'), z.literal('')]),
       logradouro: z.string().min(1, 'Informe o endereço.'),
-      numero: z.string().min(1, 'Informe o número.'),
+      numero: z.string().optional(),
+      semNumero: z.boolean(),
       complemento: z.string().optional(),
       bairro: z.string().min(1, 'Informe o bairro.'),
       cidade: z.string().min(1, 'Informe a cidade.'),
@@ -58,7 +59,14 @@ function createSchema(exigirCarne: boolean) {
       message: 'Informe a data de nascimento do cônjuge no formato dd/mm/aaaa.',
       path: ['conjugeDataNascimento'],
     })
+    .refine((data) => data.semNumero || !!data.numero?.trim(), {
+      message: 'Informe o número ou marque "Sem número".',
+      path: ['numero'],
+    })
 }
+
+/** Valor gravado no endereço quando o imóvel não tem número. */
+const SEM_NUMERO = 'S/N'
 
 type FormValues = z.infer<ReturnType<typeof createSchema>>
 
@@ -131,7 +139,8 @@ export function RecadastramentoForm({
       dataNascimento: dizimista?.dataNascimento ? dataIsoParaBr(dizimista.dataNascimento) : '',
       cep: dizimista?.endereco.cep ?? '',
       logradouro: dizimista?.endereco.logradouro ?? '',
-      numero: dizimista?.endereco.numero ?? '',
+      numero: dizimista?.endereco.numero === SEM_NUMERO ? '' : (dizimista?.endereco.numero ?? ''),
+      semNumero: dizimista?.endereco.numero === SEM_NUMERO,
       complemento: dizimista?.endereco.complemento ?? '',
       bairro: dizimista?.endereco.bairro ?? '',
       cidade: dizimista?.endereco.cidade ?? '',
@@ -150,6 +159,7 @@ export function RecadastramentoForm({
 
   const { fields, append, remove } = useFieldArray({ control, name: 'filhos' })
   const temConjuge = watch('temConjuge')
+  const semNumero = watch('semNumero')
   const cep = watch('cep')
   const numeroCarneDigitado = watch('numeroCarne')
   const sabeNumeroCarne = watch('sabeNumeroCarne')
@@ -287,7 +297,7 @@ export function RecadastramentoForm({
         endereco: {
           cep: values.cep,
           logradouro: values.logradouro,
-          numero: values.numero,
+          numero: values.semNumero ? SEM_NUMERO : (values.numero ?? '').trim(),
           complemento: values.complemento || undefined,
           bairro: values.bairro,
           cidade: values.cidade,
@@ -413,7 +423,7 @@ export function RecadastramentoForm({
                 <Input
                   id="telefone"
                   inputMode="numeric"
-                  placeholder="(11) 98765-4321"
+                  placeholder="(61) 99999-9999"
                   autoComplete="tel"
                   value={field.value}
                   onChange={(e) => field.onChange(maskTelefone(e.target.value))}
@@ -426,7 +436,7 @@ export function RecadastramentoForm({
 
         <div className="space-y-1.5">
           <Label htmlFor="email">E-mail (opcional)</Label>
-          <Input id="email" type="email" autoComplete="email" placeholder="seuemail@exemplo.com" {...register('email')} />
+          <Input id="email" type="email" autoComplete="email" placeholder="exemplo@gmail.com" {...register('email')} />
           {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
         </div>
       </div>
@@ -470,7 +480,33 @@ export function RecadastramentoForm({
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="space-y-1.5">
             <Label htmlFor="numero">Número</Label>
-            <Input id="numero" {...register('numero')} />
+            <Input
+              id="numero"
+              inputMode="numeric"
+              disabled={semNumero}
+              placeholder={semNumero ? SEM_NUMERO : undefined}
+              {...register('numero')}
+            />
+            <div className="flex items-center gap-2">
+              <Controller
+                control={control}
+                name="semNumero"
+                render={({ field }) => (
+                  <Checkbox
+                    id="semNumero"
+                    checked={field.value}
+                    onCheckedChange={(v) => {
+                      const marcado = v === true
+                      field.onChange(marcado)
+                      if (marcado) setValue('numero', '', { shouldValidate: true })
+                    }}
+                  />
+                )}
+              />
+              <Label htmlFor="semNumero" className="text-xs font-normal text-muted-foreground">
+                Sem número
+              </Label>
+            </div>
             {errors.numero && <p className="text-xs text-destructive">{errors.numero.message}</p>}
           </div>
           <div className="space-y-1.5 sm:col-span-2">

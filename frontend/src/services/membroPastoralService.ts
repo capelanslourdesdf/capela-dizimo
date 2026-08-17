@@ -12,13 +12,13 @@ export async function listarMembrosPastoral(): Promise<MembroPastoral[]> {
 
 export async function criarMembroPastoral(nome: string): Promise<void> {
   await addDoc(collection(db, COLECAO), {
-    nome: nome.trim(),
+    nome: nome.trim().toUpperCase(),
     criadoEm: new Date().toISOString(),
   })
 }
 
 export async function atualizarMembroPastoral(id: string, nome: string): Promise<void> {
-  await updateDoc(doc(db, COLECAO, id), { nome: nome.trim() })
+  await updateDoc(doc(db, COLECAO, id), { nome: nome.trim().toUpperCase() })
 }
 
 export async function excluirMembroPastoral(id: string): Promise<void> {

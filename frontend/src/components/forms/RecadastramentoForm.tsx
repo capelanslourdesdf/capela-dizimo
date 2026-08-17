@@ -157,6 +157,21 @@ export function RecadastramentoForm({
     },
   })
 
+  /**
+   * Registra um campo de texto normalizando para MAIÚSCULAS enquanto o usuário digita, para que
+   * os dados fiquem uniformes na base (nomes, endereço, familiares...).
+   */
+  function registrarMaiusculo(nome: Parameters<typeof register>[0]) {
+    const campo = register(nome)
+    return {
+      ...campo,
+      onChange: (evento: { target: HTMLInputElement; type?: unknown }) => {
+        evento.target.value = evento.target.value.toUpperCase()
+        return campo.onChange(evento)
+      },
+    }
+  }
+
   const { fields, append, remove } = useFieldArray({ control, name: 'filhos' })
   const temConjuge = watch('temConjuge')
   const semNumero = watch('semNumero')
@@ -277,10 +292,10 @@ export function RecadastramentoForm({
         return
       }
 
-      setValue('logradouro', endereco.logradouro, { shouldValidate: true })
-      setValue('bairro', endereco.bairro, { shouldValidate: true })
-      setValue('cidade', endereco.cidade, { shouldValidate: true })
-      setValue('estado', endereco.estado, { shouldValidate: true })
+      setValue('logradouro', endereco.logradouro.toUpperCase(), { shouldValidate: true })
+      setValue('bairro', endereco.bairro.toUpperCase(), { shouldValidate: true })
+      setValue('cidade', endereco.cidade.toUpperCase(), { shouldValidate: true })
+      setValue('estado', endereco.estado.toUpperCase(), { shouldValidate: true })
     })
 
     return () => {
@@ -291,31 +306,35 @@ export function RecadastramentoForm({
   async function onSubmit(values: FormValues) {
     setErro(null)
     try {
+      // Reforço no envio: garante MAIÚSCULAS mesmo em valores colados ou preenchidos pelo
+      // autocompletar do navegador, que não passam pelo onChange dos campos.
+      const emMaiusculas = (valor?: string) => (valor ?? '').trim().toUpperCase()
+
       const dados: DadosCadastraisDizimista = {
-        nomeCompleto: values.nomeCompleto,
+        nomeCompleto: emMaiusculas(values.nomeCompleto),
         dataNascimento: dataBrParaIso(values.dataNascimento),
         endereco: {
           cep: values.cep,
-          logradouro: values.logradouro,
-          numero: values.semNumero ? SEM_NUMERO : (values.numero ?? '').trim(),
-          complemento: values.complemento || undefined,
-          bairro: values.bairro,
-          cidade: values.cidade,
-          estado: values.estado.toUpperCase(),
+          logradouro: emMaiusculas(values.logradouro),
+          numero: values.semNumero ? SEM_NUMERO : emMaiusculas(values.numero),
+          complemento: emMaiusculas(values.complemento) || undefined,
+          bairro: emMaiusculas(values.bairro),
+          cidade: emMaiusculas(values.cidade),
+          estado: emMaiusculas(values.estado),
         },
         telefone: values.telefone,
-        email: values.email || undefined,
+        email: values.email?.trim() || undefined,
         conjuge: values.temConjuge
           ? {
-              nomeCompleto: values.conjugeNome!.trim(),
+              nomeCompleto: emMaiusculas(values.conjugeNome),
               dataNascimento: dataBrParaIso(values.conjugeDataNascimento!),
             }
           : null,
         filhos: values.filhos.map((f) => ({
-          nomeCompleto: f.nomeCompleto,
+          nomeCompleto: emMaiusculas(f.nomeCompleto),
           dataNascimento: dataBrParaIso(f.dataNascimento),
         })),
-        responsavelRecadastramento: values.responsavelRecadastramento.trim(),
+        responsavelRecadastramento: emMaiusculas(values.responsavelRecadastramento),
       }
 
       await onSalvar(dados, (values.numeroCarne ?? '').trim(), {
@@ -392,7 +411,7 @@ export function RecadastramentoForm({
 
         <div className="space-y-1.5">
           <Label htmlFor="nomeCompleto">Nome completo</Label>
-          <Input id="nomeCompleto" autoComplete="name" {...register('nomeCompleto')} />
+          <Input id="nomeCompleto" autoComplete="name" {...registrarMaiusculo('nomeCompleto')} />
           {errors.nomeCompleto && <p className="text-xs text-destructive">{errors.nomeCompleto.message}</p>}
         </div>
 
@@ -472,7 +491,7 @@ export function RecadastramentoForm({
           </div>
           <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="logradouro">Endereço</Label>
-            <Input id="logradouro" {...register('logradouro')} />
+            <Input id="logradouro" {...registrarMaiusculo('logradouro')} />
             {errors.logradouro && <p className="text-xs text-destructive">{errors.logradouro.message}</p>}
           </div>
         </div>
@@ -511,14 +530,14 @@ export function RecadastramentoForm({
           </div>
           <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="complemento">Complemento (opcional)</Label>
-            <Input id="complemento" {...register('complemento')} />
+            <Input id="complemento" {...registrarMaiusculo('complemento')} />
           </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="bairro">Bairro</Label>
-            <Input id="bairro" {...register('bairro')} />
+            <Input id="bairro" {...registrarMaiusculo('bairro')} />
             {errors.bairro && <p className="text-xs text-destructive">{errors.bairro.message}</p>}
           </div>
           <div className="space-y-1.5">
@@ -530,7 +549,7 @@ export function RecadastramentoForm({
 
         <div className="space-y-1.5">
           <Label htmlFor="cidade">Cidade</Label>
-          <Input id="cidade" {...register('cidade')} />
+          <Input id="cidade" {...registrarMaiusculo('cidade')} />
           {errors.cidade && <p className="text-xs text-destructive">{errors.cidade.message}</p>}
         </div>
       </div>
@@ -554,7 +573,7 @@ export function RecadastramentoForm({
             <CardContent className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="conjugeNome">Nome completo do cônjuge</Label>
-                <Input id="conjugeNome" {...register('conjugeNome')} />
+                <Input id="conjugeNome" {...registrarMaiusculo('conjugeNome')} />
                 {errors.conjugeNome && <p className="text-xs text-destructive">{errors.conjugeNome.message}</p>}
               </div>
               <div className="space-y-1.5">
@@ -603,7 +622,7 @@ export function RecadastramentoForm({
             <CardContent className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
               <div className="space-y-1.5">
                 <Label htmlFor={`filhos.${index}.nomeCompleto`}>Nome completo</Label>
-                <Input id={`filhos.${index}.nomeCompleto`} {...register(`filhos.${index}.nomeCompleto`)} />
+                <Input id={`filhos.${index}.nomeCompleto`} {...registrarMaiusculo(`filhos.${index}.nomeCompleto`)} />
                 {errors.filhos?.[index]?.nomeCompleto && (
                   <p className="text-xs text-destructive">{errors.filhos[index]?.nomeCompleto?.message}</p>
                 )}
@@ -640,7 +659,7 @@ export function RecadastramentoForm({
         <Input
           id="responsavelRecadastramento"
           placeholder="Nome de quem está preenchendo este formulário"
-          {...register('responsavelRecadastramento')}
+          {...registrarMaiusculo('responsavelRecadastramento')}
         />
         {errors.responsavelRecadastramento && (
           <p className="text-xs text-destructive">{errors.responsavelRecadastramento.message}</p>

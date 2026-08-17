@@ -106,6 +106,19 @@ nascimento (sem ele a pessoa não consegue *entrar* no site, mas ainda consegue 
 Ao final, o script ajusta o contador `contadores/proximoNumeroCarne` para ficar acima do maior
 carnê importado, evitando colisão com os carnês gerados automaticamente pela Pastoral.
 
+## Normalizar dados existentes
+
+Os formulários salvam os dados textuais (nomes, endereço, familiares, responsável pelo
+recadastramento) em MAIÚSCULAS. Para aplicar o mesmo padrão ao que já estava gravado:
+
+```bash
+npm run normalizar:maiusculas -- --dry-run   # mostra o que mudaria
+npm run normalizar:maiusculas                # grava
+```
+
+Só grava os documentos que realmente mudam, e não altera e-mail, telefone, CEP, datas, números de
+carnê nem observações (texto livre).
+
 ## Variáveis de ambiente
 
 Veja `.env.example` na raiz do projeto para a lista completa, com instruções de onde obter cada

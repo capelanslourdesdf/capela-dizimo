@@ -165,7 +165,7 @@ export function MembrosPastoralPage() {
             <Input
               id="nomeMembro"
               value={nome}
-              onChange={(e) => setNome(e.target.value)}
+              onChange={(e) => setNome(e.target.value.toUpperCase())}
               placeholder="Nome do membro da Pastoral"
               autoFocus
             />

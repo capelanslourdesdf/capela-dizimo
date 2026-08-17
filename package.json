@@ -16,7 +16,8 @@
     "lint": "npm run lint --workspace frontend",
     "typecheck:backend": "npm run typecheck --workspace backend",
     "typecheck:api": "tsc -p tsconfig.api.json",
-    "importar:dizimistas": "node scripts/importar-dizimistas.mjs"
+    "importar:dizimistas": "node scripts/importar-dizimistas.mjs",
+    "normalizar:maiusculas": "node scripts/normalizar-maiusculas.mjs"
   },
   "devDependencies": {
     "@vercel/node": "^5.10.1",

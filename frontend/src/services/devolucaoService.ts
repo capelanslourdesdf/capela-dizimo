@@ -1,4 +1,4 @@
-import { addDoc, collection, getDocs, orderBy, query } from 'firebase/firestore'
+import { addDoc, collection, collectionGroup, getDocs, orderBy, query } from 'firebase/firestore'
 
 import { db } from '@/lib/firebase'
 import type { Devolucao, FormaPagamentoDevolucao } from '@/types'
@@ -7,6 +7,26 @@ export async function listarDevolucoes(numeroCarne: string): Promise<Devolucao[]
   const ref = collection(db, 'dizimistas', numeroCarne, 'devolucoes')
   const snap = await getDocs(query(ref, orderBy('criadoEm', 'desc')))
   return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Devolucao, 'id'>) }))
+}
+
+/**
+ * Todas as devoluções de todos os dizimistas, agrupadas por nº do carnê. Usa uma
+ * collection group query (uma única leitura em lote) em vez de uma consulta por dizimista —
+ * necessário para calcular o status ativo/inativo da lista inteira sem explodir o número de
+ * leituras no Firestore.
+ */
+export async function listarTodasDevolucoesPorCarne(): Promise<Record<string, Devolucao[]>> {
+  const snap = await getDocs(collectionGroup(db, 'devolucoes'))
+  const porCarne: Record<string, Devolucao[]> = {}
+
+  snap.docs.forEach((d) => {
+    const numeroCarne = d.ref.parent.parent?.id
+    if (!numeroCarne) return
+    const devolucao: Devolucao = { id: d.id, ...(d.data() as Omit<Devolucao, 'id'>) }
+    ;(porCarne[numeroCarne] ??= []).push(devolucao)
+  })
+
+  return porCarne
 }
 
 /**

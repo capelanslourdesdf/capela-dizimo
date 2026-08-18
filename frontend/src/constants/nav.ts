@@ -1,4 +1,4 @@
-import { ClipboardList, Home, IdCard, Layers, QrCode, Receipt, UserCog, Users, type LucideIcon } from 'lucide-react'
+import { ArrowLeftRight, ClipboardList, Home, IdCard, Layers, UserCog, Users, type LucideIcon } from 'lucide-react'
 
 import { ROUTES } from '@/constants/routes'
 
@@ -12,8 +12,7 @@ export interface NavItem {
 export const dizimistaNav: NavItem[] = [
   { label: 'Início', href: ROUTES.dizimista.root, icon: Home, end: true },
   { label: 'Atualização cadastral', href: ROUTES.dizimista.cadastro, icon: IdCard },
-  { label: 'Pagar com Pix', href: ROUTES.dizimista.pagamento, icon: QrCode },
-  { label: 'Meus pagamentos', href: ROUTES.dizimista.pagamentos, icon: Receipt },
+  { label: 'Minhas devoluções', href: ROUTES.dizimista.devolucoes, icon: ArrowLeftRight },
 ]
 
 export const dizimistaMobileNav: NavItem[] = dizimistaNav

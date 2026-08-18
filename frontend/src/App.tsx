@@ -22,8 +22,7 @@ import { NotFoundPage } from '@/pages/NotFoundPage'
 
 import { DizimistaDashboardPage } from '@/pages/dizimista/DashboardPage'
 import { DizimistaCadastroPage } from '@/pages/dizimista/CadastroPage'
-import { DizimistaPagamentoPage } from '@/pages/dizimista/PagamentoPage'
-import { DizimistaPagamentosPage } from '@/pages/dizimista/PagamentosPage'
+import { DizimistaDevolucoesPage } from '@/pages/dizimista/DevolucoesPage'
 
 import { DizimistasPage } from '@/pages/pastoral/DizimistasPage'
 import { DizimistaDetalhePage } from '@/pages/pastoral/DizimistaDetalhePage'
@@ -56,8 +55,7 @@ function App() {
                 <Route element={<DizimistaLayout />}>
                   <Route path={ROUTES.dizimista.root} element={<DizimistaDashboardPage />} />
                   <Route path={ROUTES.dizimista.cadastro} element={<DizimistaCadastroPage />} />
-                  <Route path={ROUTES.dizimista.pagamento} element={<DizimistaPagamentoPage />} />
-                  <Route path={ROUTES.dizimista.pagamentos} element={<DizimistaPagamentosPage />} />
+                  <Route path={ROUTES.dizimista.devolucoes} element={<DizimistaDevolucoesPage />} />
                 </Route>
               </Route>
 

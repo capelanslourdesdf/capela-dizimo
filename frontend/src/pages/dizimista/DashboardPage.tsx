@@ -3,7 +3,7 @@ import { AlertCircle, CalendarCheck, CheckCircle2, IdCard, Wallet } from 'lucide
 
 import { PageHeader } from '@/components/layout/PageHeader'
 import { StatCard } from '@/components/dashboard/StatCard'
-import { Badge } from '@/components/ui/badge'
+import { MesesGrid } from '@/components/dashboard/MesesGrid'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -11,11 +11,7 @@ import { useDizimistaSessao } from '@/hooks/useDizimistaSessao'
 import { competenciaDaDevolucao, listarDevolucoes } from '@/services/devolucaoService'
 import type { Devolucao } from '@/types'
 import { competenciaAtual, competenciasEntre, formatCompetencia, formatCurrency, formatDate } from '@/utils/format'
-
-/** Competência ("aaaa-mm") em que o dizimista passou a ser acompanhado no site. */
-function competenciaDeRegistro(dataIso?: string): string {
-  return dataIso?.slice(0, 7) ?? ''
-}
+import { competenciaDeRegistro } from '@/utils/statusDizimista'
 
 export function DizimistaDashboardPage() {
   const { numeroCarne, dizimista } = useDizimistaSessao()
@@ -30,14 +26,16 @@ export function DizimistaDashboardPage() {
     })
   }, [numeroCarne])
 
-  const registro = competenciaDeRegistro(dizimista?.recadastradoEm || dizimista?.criadoEm)
+  const registro = dizimista ? competenciaDeRegistro(dizimista) : ''
   const totalDevolvido = devolucoes.reduce((soma, d) => soma + d.valor, 0)
+  const competenciasPagas = React.useMemo(() => new Set(devolucoes.map(competenciaDaDevolucao)), [devolucoes])
 
   const pendentes = React.useMemo(() => {
     if (!registro) return [] as string[]
-    const quitadas = new Set(devolucoes.map(competenciaDaDevolucao))
-    return competenciasEntre(registro, competenciaAtual()).filter((c) => !quitadas.has(c))
-  }, [registro, devolucoes])
+    return competenciasEntre(registro, competenciaAtual()).filter((c) => !competenciasPagas.has(c))
+  }, [registro, competenciasPagas])
+
+  const anoAtual = new Date().getFullYear()
 
   return (
     <div>
@@ -69,7 +67,7 @@ export function DizimistaDashboardPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <CalendarCheck className="h-4 w-4 text-primary" />
-            Meses pendentes
+            Meses de {anoAtual}
           </CardTitle>
           <CardDescription>
             {registro
@@ -79,20 +77,9 @@ export function DizimistaDashboardPage() {
         </CardHeader>
         <CardContent>
           {carregando ? (
-            <Skeleton className="h-10 w-full" />
-          ) : pendentes.length === 0 ? (
-            <p className="flex items-center gap-2 text-sm text-success">
-              <CheckCircle2 className="h-4 w-4" />
-              {registro ? 'Nenhum mês pendente. Obrigado pela sua fidelidade!' : 'Nada a acompanhar por enquanto.'}
-            </p>
+            <Skeleton className="h-32 w-full" />
           ) : (
-            <div className="flex flex-wrap gap-2">
-              {pendentes.map((competencia) => (
-                <Badge key={competencia} variant="warning">
-                  {formatCompetencia(competencia)}
-                </Badge>
-              ))}
-            </div>
+            <MesesGrid ano={anoAtual} registro={registro} competenciasPagas={competenciasPagas} />
           )}
         </CardContent>
       </Card>

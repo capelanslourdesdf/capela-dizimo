@@ -9,8 +9,9 @@ export const ROUTES = {
   dizimista: {
     root: '/dizimista',
     cadastro: '/dizimista/cadastro',
+    /** Pagamento via Pix — desativado por enquanto, rota não registrada em App.tsx. */
     pagamento: '/dizimista/pagamento',
-    pagamentos: '/dizimista/pagamentos',
+    devolucoes: '/dizimista/devolucoes',
   },
 
   pastoral: {

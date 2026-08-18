@@ -1,46 +1,42 @@
 import * as React from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, ArrowLeftRight, Pencil, Phone, Receipt, Trash2, UsersRound } from 'lucide-react'
+import { ArrowLeft, ArrowLeftRight, CalendarCheck, Pencil, Phone, Trash2, UsersRound, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { EmptyState } from '@/components/dashboard/EmptyState'
+import { StatCard } from '@/components/dashboard/StatCard'
 import { StatusBadge } from '@/components/dashboard/StatusBadge'
+import { MesesGrid } from '@/components/dashboard/MesesGrid'
 import { RecadastramentoForm } from '@/components/forms/RecadastramentoForm'
 import { DevolucaoForm } from '@/components/forms/DevolucaoForm'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 import { buscarDizimistaPorCarne, excluirDizimista, salvarRecadastramento } from '@/services/dizimistaService'
-import { listarPagamentos } from '@/services/pagamentoService'
+import { obterMesesParaInativo } from '@/services/configuracaoService'
 import {
   competenciaDaDevolucao,
   lancarDevolucao,
   listarDevolucoes,
   type DadosDevolucao,
 } from '@/services/devolucaoService'
-import type { DadosCadastraisDizimista, Devolucao, Dizimista, PagamentoPix, StatusPagamento } from '@/types'
-import { formatCurrency, formatDate, formatCompetencia, getIniciais } from '@/utils/format'
+import type { DadosCadastraisDizimista, Devolucao, Dizimista } from '@/types'
+import { formatCurrency, formatDate, formatCompetencia, competenciaAtual, competenciasEntre, getIniciais } from '@/utils/format'
+import { calcularStatusDizimista, competenciaDeRegistro, competenciasPagasDoDizimista } from '@/utils/statusDizimista'
 import { formaPagamentoLabel } from '@/constants/devolucao'
 import { ROUTES } from '@/constants/routes'
-
-const STATUS_CONFIG: Record<StatusPagamento, { label: string; variant: 'success' | 'warning' | 'destructive' }> = {
-  aprovado: { label: 'Pago', variant: 'success' },
-  pendente: { label: 'Pendente', variant: 'warning' },
-  rejeitado: { label: 'Não aprovado', variant: 'destructive' },
-}
 
 export function DizimistaDetalhePage() {
   const { numeroCarne } = useParams<{ numeroCarne: string }>()
   const navigate = useNavigate()
   const [dizimista, setDizimista] = React.useState<Dizimista | null>(null)
-  const [pagamentos, setPagamentos] = React.useState<PagamentoPix[]>([])
   const [devolucoes, setDevolucoes] = React.useState<Devolucao[]>([])
+  const [mesesParaInativo, setMesesParaInativo] = React.useState(5)
   const [carregando, setCarregando] = React.useState(true)
   const [modalEdicao, setModalEdicao] = React.useState(false)
   const [modalDevolucao, setModalDevolucao] = React.useState(false)
@@ -49,14 +45,14 @@ export function DizimistaDetalhePage() {
   const carregar = React.useCallback(async () => {
     if (!numeroCarne) return
     setCarregando(true)
-    const [d, p, dev] = await Promise.all([
+    const [d, dev, meses] = await Promise.all([
       buscarDizimistaPorCarne(numeroCarne),
-      listarPagamentos(numeroCarne),
       listarDevolucoes(numeroCarne),
+      obterMesesParaInativo(),
     ])
     setDizimista(d)
-    setPagamentos(p)
     setDevolucoes(dev)
+    setMesesParaInativo(meses)
     setCarregando(false)
   }, [numeroCarne])
 
@@ -115,6 +111,18 @@ export function DizimistaDetalhePage() {
     )
   }
 
+  const registro = competenciaDeRegistro(dizimista)
+  const competenciasPagas = competenciasPagasDoDizimista(devolucoes)
+  const status = calcularStatusDizimista(registro, competenciasPagas, mesesParaInativo)
+  const totalDevolvido = devolucoes.reduce((soma, d) => soma + d.valor, 0)
+
+  const anoAtual = new Date().getFullYear()
+  const inicioAno = `${anoAtual}-01`
+  const inicioContagemAno = registro && registro > inicioAno ? registro : inicioAno
+  const competenciasDoAno = competenciasEntre(inicioContagemAno, competenciaAtual())
+  const mesesDevolvidosNoAno = competenciasDoAno.filter((c) => competenciasPagas.has(c)).length
+  const mesesPendentesNoAno = competenciasDoAno.length - mesesDevolvidosNoAno
+
   return (
     <div>
       <Button variant="ghost" size="sm" className="mb-3 -ml-2" onClick={() => navigate(ROUTES.pastoral.root)}>
@@ -123,78 +131,72 @@ export function DizimistaDetalhePage() {
       </Button>
 
       <Card className="mb-6">
-        <CardContent className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+        <CardContent className="flex flex-col gap-4">
           <div className="flex items-center gap-4">
             <Avatar className="h-16 w-16">
               <AvatarFallback className="text-xl">{getIniciais(dizimista.nomeCompleto)}</AvatarFallback>
             </Avatar>
-            <div>
-              <h1 className="text-lg font-semibold text-foreground sm:text-xl">{dizimista.nomeCompleto}</h1>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-lg font-semibold text-foreground sm:text-xl">{dizimista.nomeCompleto}</h1>
+                <StatusBadge label={status === 'ativo' ? 'Ativo' : 'Inativo'} variant={status === 'ativo' ? 'success' : 'muted'} />
+              </div>
               <p className="mt-1 text-sm text-muted-foreground">Carnê nº {dizimista.numeroCarne}</p>
               <p className="mt-0.5 flex items-center gap-1.5 text-sm text-muted-foreground">
                 <Phone className="h-3.5 w-3.5" />
                 {dizimista.telefone}
               </p>
-              {(dizimista.recadastradoEm || dizimista.atualizadoEm) && (
-                <p className="mt-0.5 text-sm text-muted-foreground">
-                  Recadastrado em {formatDate((dizimista.recadastradoEm ?? dizimista.atualizadoEm).slice(0, 10))}
-                </p>
-              )}
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={() => setModalEdicao(true)}>
-              <Pencil className="h-4 w-4" />
-              Editar
-            </Button>
-            <Button onClick={() => setModalDevolucao(true)}>
-              <ArrowLeftRight className="h-4 w-4" />
-              Lançar devolução
-            </Button>
+
+          <div className="flex flex-nowrap items-center justify-end gap-2">
             <Button
               variant="outline"
+              size="sm"
               className="text-destructive hover:bg-destructive/10 hover:text-destructive"
               onClick={() => setModalExclusao(true)}
             >
               <Trash2 className="h-4 w-4" />
-              Excluir
+              <span className="hidden sm:inline">Excluir</span>
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setModalEdicao(true)}>
+              <Pencil className="h-4 w-4" />
+              <span className="hidden sm:inline">Editar</span>
+            </Button>
+            <Button size="sm" onClick={() => setModalDevolucao(true)}>
+              <ArrowLeftRight className="h-4 w-4" />
+              <span className="hidden sm:inline">Lançar devolução</span>
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="pagamentos">
-        <TabsList>
-          <TabsTrigger value="pagamentos">Pagamentos</TabsTrigger>
-          <TabsTrigger value="devolucoes">Devoluções</TabsTrigger>
-        </TabsList>
+      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatCard
+          label="Dizimista desde"
+          value={registro ? formatCompetencia(registro) : '—'}
+          icon={CalendarCheck}
+        />
+        <StatCard label="Total devolvido" value={formatCurrency(totalDevolvido)} icon={Wallet} />
+        <StatCard label={`Meses devolvidos em ${anoAtual}`} value={String(mesesDevolvidosNoAno)} icon={ArrowLeftRight} />
+        <StatCard label={`Meses pendentes em ${anoAtual}`} value={String(mesesPendentesNoAno)} icon={CalendarCheck} />
+      </div>
 
-        <TabsContent value="pagamentos">
-          {pagamentos.length === 0 ? (
-            <EmptyState icon={Receipt} title="Nenhum pagamento registrado" />
-          ) : (
-            <div className="space-y-2.5">
-              {pagamentos.map((p) => {
-                const status = STATUS_CONFIG[p.status]
-                return (
-                  <Card key={p.id}>
-                    <CardContent className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="font-medium text-foreground">{formatCurrency(p.valor)}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatCompetencia(p.competencia)} · {formatDate(p.criadoEm)}
-                        </p>
-                      </div>
-                      <StatusBadge label={status.label} variant={status.variant} />
-                    </CardContent>
-                  </Card>
-                )
-              })}
-            </div>
-          )}
-        </TabsContent>
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-base">Meses de {anoAtual}</CardTitle>
+          <CardDescription>Situação mês a mês das devoluções do dízimo.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <MesesGrid ano={anoAtual} registro={registro} competenciasPagas={competenciasPagas} />
+        </CardContent>
+      </Card>
 
-        <TabsContent value="devolucoes">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Devoluções lançadas</CardTitle>
+        </CardHeader>
+        <CardContent>
           {devolucoes.length === 0 ? (
             <EmptyState icon={ArrowLeftRight} title="Nenhuma devolução lançada" />
           ) : (
@@ -220,8 +222,8 @@ export function DizimistaDetalhePage() {
               ))}
             </div>
           )}
-        </TabsContent>
-      </Tabs>
+        </CardContent>
+      </Card>
 
       <Dialog open={modalEdicao} onOpenChange={setModalEdicao}>
         <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">

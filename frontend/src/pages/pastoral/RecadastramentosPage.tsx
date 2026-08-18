@@ -1,11 +1,10 @@
 import * as React from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { ClipboardList, IdCard, Phone } from 'lucide-react'
 
 import { PageHeader } from '@/components/layout/PageHeader'
 import { FiltroBar } from '@/components/pastoral/FiltroBar'
 import { EmptyState } from '@/components/dashboard/EmptyState'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -21,6 +20,7 @@ function dataRecadastro(d: Dizimista): string {
 }
 
 export function RecadastramentosPage() {
+  const navigate = useNavigate()
   const [todos, setTodos] = React.useState<Dizimista[]>([])
   const [carregando, setCarregando] = React.useState(true)
   const [busca, setBusca] = React.useState('')
@@ -84,22 +84,20 @@ export function RecadastramentosPage() {
                   <TableHead>Nº do carnê</TableHead>
                   <TableHead>Telefone</TableHead>
                   <TableHead>Data</TableHead>
-                  <TableHead className="text-right">Ação</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {recadastrados.map((d) => (
-                  <TableRow key={d.numeroCarne}>
+                  <TableRow
+                    key={d.numeroCarne}
+                    className="cursor-pointer"
+                    onClick={() => navigate(ROUTES.pastoral.dizimistaDetalhe(d.numeroCarne))}
+                  >
                     <TableCell className="font-medium">{d.nomeCompleto}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{d.numeroCarne}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{d.telefone || '—'}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {formatDate(dataRecadastro(d).slice(0, 10))}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button asChild variant="ghost" size="sm">
-                        <Link to={ROUTES.pastoral.dizimistaDetalhe(d.numeroCarne)}>Ver perfil</Link>
-                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

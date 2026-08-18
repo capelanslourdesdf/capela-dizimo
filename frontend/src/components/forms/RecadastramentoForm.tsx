@@ -449,49 +449,43 @@ export function RecadastramentoForm({
           </Card>
         )}
 
-        {exibirCarne && (bloquearCarne || sabeNumeroCarne === 'sim' || statusCarne !== null) ? (
-          <div className="grid grid-cols-2 gap-3 sm:gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="numeroCarne">Nº do carnê</Label>
-              <div className="relative">
-                <Input
-                  id="numeroCarne"
-                  inputMode="numeric"
-                  placeholder="Número do carnê"
-                  disabled={bloquearCarne || sabeNumeroCarne === 'nao'}
-                  className={buscandoCarne || gerandoCarne ? 'pr-9' : undefined}
-                  {...register('numeroCarne')}
-                />
-                {(buscandoCarne || gerandoCarne) && (
-                  <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                  </span>
-                )}
-              </div>
-              {errors.numeroCarne && <p className="text-xs text-destructive">{errors.numeroCarne.message}</p>}
+        {exibirCarne && (bloquearCarne || sabeNumeroCarne === 'sim' || statusCarne !== null) && (
+          <div className="space-y-1.5">
+            <Label htmlFor="numeroCarne">Nº do carnê</Label>
+            <div className="relative">
+              <Input
+                id="numeroCarne"
+                inputMode="numeric"
+                placeholder="Número impresso no carnê"
+                disabled={bloquearCarne || sabeNumeroCarne === 'nao'}
+                className={buscandoCarne || gerandoCarne ? 'pr-9' : undefined}
+                {...register('numeroCarne')}
+              />
+              {(buscandoCarne || gerandoCarne) && (
+                <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                </span>
+              )}
             </div>
-            {campoDataNascimento}
+            {errors.numeroCarne && <p className="text-xs text-destructive">{errors.numeroCarne.message}</p>}
+            {!errors.numeroCarne && !buscandoCarne && statusCarne === 'encontrado' && (
+              <p className="text-xs text-success">
+                Carnê encontrado! Confira os dados abaixo e atualize o que for necessário.
+              </p>
+            )}
+            {!errors.numeroCarne && !buscandoCarne && statusCarne === 'novo' && (
+              <p className="text-xs text-muted-foreground">
+                Nenhum cadastro encontrado para este carnê — preencha os dados abaixo.
+              </p>
+            )}
+            {!errors.numeroCarne && !gerandoCarne && statusCarne === 'gerado' && (
+              <p className={buscaSemResultado ? 'text-sm font-semibold text-success' : 'text-xs text-success'}>
+                {buscaSemResultado
+                  ? 'Não encontramos um cadastro com esses dados — mas não se preocupe: geramos um novo número de carnê. Anote-o, é com ele que se acessa o site.'
+                  : 'Anote este número: ele será usado para acompanhar o dízimo.'}
+              </p>
+            )}
           </div>
-        ) : (
-          campoDataNascimento
-        )}
-
-        {exibirCarne && !errors.numeroCarne && !buscandoCarne && statusCarne === 'encontrado' && (
-          <p className="text-xs text-success">
-            Carnê encontrado! Confira os dados abaixo e atualize o que for necessário.
-          </p>
-        )}
-        {exibirCarne && !errors.numeroCarne && !buscandoCarne && statusCarne === 'novo' && (
-          <p className="text-xs text-muted-foreground">
-            Nenhum cadastro encontrado para este carnê — preencha os dados abaixo.
-          </p>
-        )}
-        {exibirCarne && !errors.numeroCarne && !gerandoCarne && statusCarne === 'gerado' && (
-          <p className={buscaSemResultado ? 'text-sm font-semibold text-success' : 'text-xs text-success'}>
-            {buscaSemResultado
-              ? 'Não encontramos um cadastro com esses dados — mas não se preocupe: geramos um novo número de carnê. Anote-o, é com ele que se acessa o site.'
-              : 'Anote este número: ele será usado para acompanhar o dízimo.'}
-          </p>
         )}
 
         <div className="space-y-1.5">
@@ -500,22 +494,25 @@ export function RecadastramentoForm({
           {errors.nomeCompleto && <p className="text-xs text-destructive">{errors.nomeCompleto.message}</p>}
         </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="telefone">Telefone/WhatsApp</Label>
-          <Controller
-            control={control}
-            name="telefone"
-            render={({ field }) => (
-              <Input
-                id="telefone"
-                inputMode="numeric"
-                autoComplete="tel"
-                value={field.value}
-                onChange={(e) => field.onChange(maskTelefone(e.target.value))}
-              />
-            )}
-          />
-          {errors.telefone && <p className="text-xs text-destructive">{errors.telefone.message}</p>}
+        <div className="grid gap-4 sm:grid-cols-2">
+          {campoDataNascimento}
+          <div className="space-y-1.5">
+            <Label htmlFor="telefone">Telefone/WhatsApp</Label>
+            <Controller
+              control={control}
+              name="telefone"
+              render={({ field }) => (
+                <Input
+                  id="telefone"
+                  inputMode="numeric"
+                  autoComplete="tel"
+                  value={field.value}
+                  onChange={(e) => field.onChange(maskTelefone(e.target.value))}
+                />
+              )}
+            />
+            {errors.telefone && <p className="text-xs text-destructive">{errors.telefone.message}</p>}
+          </div>
         </div>
       </div>
 

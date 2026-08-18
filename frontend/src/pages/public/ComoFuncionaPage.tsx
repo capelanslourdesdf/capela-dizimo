@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ArrowRight, CreditCard, FileCheck2, QrCode, UserPlus } from 'lucide-react'
+import { ArrowRight, CheckCircle2, IdCard, UserPlus } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -8,33 +8,31 @@ import { ROUTES } from '@/constants/routes'
 
 const etapas = [
   {
+    icone: IdCard,
+    titulo: '1. Informe seu carnê',
+    descricao: 'Digite o número do carnê que você já possui. Não sabe o número? Buscamos pelo seu nome e data de nascimento.',
+  },
+  {
     icone: UserPlus,
-    titulo: '1. Recadastre-se',
-    descricao:
-      'Informe o número do carnê que você já possui e atualize seus dados — nome, nascimento, endereço, telefone e família.',
+    titulo: '2. Atualize seus dados',
+    descricao: 'Confirme ou corrija seu nome completo, data de nascimento e telefone/WhatsApp.',
   },
   {
-    icone: QrCode,
-    titulo: '2. Contribua via Pix',
-    descricao: 'Entre com seu carnê e o dia/mês do seu nascimento e gere um Pix para contribuir a qualquer momento.',
-  },
-  {
-    icone: FileCheck2,
-    titulo: '3. Acompanhe tudo em um só lugar',
-    descricao: 'Consulte o número do seu carnê e o histórico de pagamentos do mês a qualquer momento.',
-  },
-  {
-    icone: CreditCard,
-    titulo: '4. Receba a confirmação',
-    descricao: 'Assim que o Pix é identificado, o pagamento aparece confirmado no seu histórico.',
+    icone: CheckCircle2,
+    titulo: '3. Pronto!',
+    descricao: 'Seus dados ficam atualizados junto à Pastoral do Dízimo da Capela.',
   },
 ]
 
 const perguntas = [
   {
-    pergunta: 'Preciso pagar alguma taxa para usar a plataforma?',
+    pergunta: 'O que dá para fazer no site hoje?',
+    resposta: 'Por enquanto, o site serve só para o recadastramento dos dizimistas junto à Pastoral do Dízimo.',
+  },
+  {
+    pergunta: 'Como faço para contribuir com o dízimo?',
     resposta:
-      'Não. O uso do Meu Dízimo Digital é gratuito para os dizimistas. Eventuais taxas de processamento de pagamento seguem as praticadas pelos meios de pagamento utilizados.',
+      'A contribuição continua pelos canais de sempre da Pastoral do Dízimo. O site, por enquanto, não processa pagamentos nem faz consultas — ele é só para recadastramento.',
   },
   {
     pergunta: 'Não sei o número do meu carnê, o que eu faço?',
@@ -45,11 +43,6 @@ const perguntas = [
     resposta:
       'Seus dados são utilizados exclusivamente pela Pastoral do Dízimo para a gestão das contribuições e não são compartilhados com terceiros.',
   },
-  {
-    pergunta: 'Ainda posso contribuir em dinheiro na Capela?',
-    resposta:
-      'Com certeza. A plataforma é um canal a mais de contribuição — a forma presencial continua disponível para quem preferir.',
-  },
 ]
 
 export function ComoFuncionaPage() {
@@ -58,16 +51,16 @@ export function ComoFuncionaPage() {
       <section className="bg-secondary/40">
         <div className="container flex flex-col items-center gap-4 py-14 text-center sm:py-20">
           <h1 className="max-w-xl text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-            Como funciona o Meu Dízimo Digital
+            Como funciona o recadastramento
           </h1>
           <p className="max-w-lg text-muted-foreground sm:text-lg">
-            Um caminho simples entre você e a Pastoral do Dízimo, do cadastro à confirmação da sua contribuição.
+            Atualize seus dados junto à Pastoral do Dízimo com poucos toques, direto do celular.
           </p>
         </div>
       </section>
 
       <section className="container py-14 sm:py-20">
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
           {etapas.map((etapa) => (
             <Card key={etapa.titulo}>
               <CardContent className="flex gap-4">
@@ -103,7 +96,7 @@ export function ComoFuncionaPage() {
       <section className="container py-14 text-center sm:py-20">
         <h2 className="text-2xl font-semibold text-foreground sm:text-3xl">Pronto para começar?</h2>
         <p className="mx-auto mt-2 max-w-md text-muted-foreground">
-          Junte-se às famílias que já contribuem com organização e transparência.
+          Junte-se às famílias que já se recadastraram junto à Pastoral do Dízimo.
         </p>
         <Button asChild size="lg" className="mt-6">
           <Link to={ROUTES.recadastramento}>

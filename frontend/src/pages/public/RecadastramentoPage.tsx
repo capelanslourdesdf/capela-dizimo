@@ -16,10 +16,9 @@ export function RecadastramentoPage() {
 
     // Permanece na própria página: o usuário volta ao topo e vê a confirmação.
     window.scrollTo({ top: 0, behavior: 'smooth' })
-    toast.success(
-      `Recadastramento concluído! Use o carnê nº ${numeroCarneInformado} e o dia/mês do seu nascimento para entrar.`,
-      { duration: 8000 },
-    )
+    toast.success(`Recadastramento concluído! Guarde o número do seu carnê: ${numeroCarneInformado}.`, {
+      duration: 8000,
+    })
   }
 
   return (

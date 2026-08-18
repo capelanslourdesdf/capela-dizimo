@@ -10,7 +10,6 @@ import { cn } from '@/lib/utils'
 
 const links = [
   { label: 'Início', href: ROUTES.home },
-  { label: 'Dízimo', href: ROUTES.dizimo },
   { label: 'Como funciona', href: ROUTES.comoFunciona },
   { label: 'Recadastramento', href: ROUTES.recadastramento },
 ]

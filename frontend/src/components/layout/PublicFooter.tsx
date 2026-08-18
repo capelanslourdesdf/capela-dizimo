@@ -26,13 +26,13 @@ export function PublicFooter() {
                 </Link>
               </li>
               <li>
-                <Link to={ROUTES.dizimo} className="hover:text-foreground">
-                  Dízimo
+                <Link to={ROUTES.comoFunciona} className="hover:text-foreground">
+                  Como funciona
                 </Link>
               </li>
               <li>
-                <Link to={ROUTES.comoFunciona} className="hover:text-foreground">
-                  Como funciona
+                <Link to={ROUTES.recadastramento} className="hover:text-foreground">
+                  Recadastramento
                 </Link>
               </li>
             </ul>

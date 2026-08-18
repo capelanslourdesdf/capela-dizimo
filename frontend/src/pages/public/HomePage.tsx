@@ -21,8 +21,8 @@ export function HomePage() {
         </p>
 
         <Button asChild size="lg">
-          <Link to={ROUTES.dizimo}>
-            Dízimo
+          <Link to={ROUTES.recadastramento}>
+            Recadastramento
             <ArrowRight className="h-4 w-4" />
           </Link>
         </Button>

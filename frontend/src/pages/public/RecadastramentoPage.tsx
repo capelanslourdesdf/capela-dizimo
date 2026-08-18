@@ -29,14 +29,14 @@ export function RecadastramentoPage() {
         </div>
         <h1 className="mt-3 text-2xl font-semibold text-foreground">Recadastramento</h1>
         <p className="mt-1 max-w-md text-sm text-muted-foreground">
-          Atualize seus dados usando o número do carnê que você já possui.
+          Atualize seus dados usando o número do carnê.
         </p>
       </div>
 
       <Card className="w-full">
         <CardHeader className="sm:hidden">
           <CardTitle className="text-xl">Recadastramento</CardTitle>
-          <CardDescription>Atualize seus dados usando o número do carnê que você já possui.</CardDescription>
+          <CardDescription>Atualize seus dados usando o número do carnê.</CardDescription>
         </CardHeader>
         <CardContent>
           <RecadastramentoForm onSalvar={handleSalvar} limparAposSalvar />

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ArrowRight, HandCoins, Users } from 'lucide-react'
+import { HandCoins, Users } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { ROUTES } from '@/constants/routes'
@@ -22,12 +22,6 @@ export function DizimoPage() {
         </p>
 
         <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-          <Button asChild size="lg" className="w-full sm:w-auto">
-            <Link to={ROUTES.entrar}>
-              Acompanhar meu dízimo
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </Button>
           <Button asChild size="lg" variant="outline" className="w-full sm:w-auto">
             <Link to={ROUTES.pastoral.entrar}>
               <Users className="h-4 w-4" />

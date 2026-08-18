@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { Link } from 'react-router-dom'
-import { ClipboardList, IdCard, Phone, User } from 'lucide-react'
+import { ClipboardList, IdCard, Phone } from 'lucide-react'
 
 import { PageHeader } from '@/components/layout/PageHeader'
 import { FiltroBar } from '@/components/pastoral/FiltroBar'
@@ -45,9 +45,7 @@ export function RecadastramentosPage() {
     if (!termo) return todos
 
     return todos.filter((d) =>
-      [d.nomeCompleto, d.numeroCarne, d.responsavelRecadastramento].some((campo) =>
-        (campo ?? '').toLowerCase().includes(termo),
-      ),
+      [d.nomeCompleto, d.numeroCarne].some((campo) => (campo ?? '').toLowerCase().includes(termo)),
     )
   }, [todos, busca])
 
@@ -61,7 +59,7 @@ export function RecadastramentosPage() {
       <FiltroBar
         busca={busca}
         onBuscaChange={setBusca}
-        placeholder="Buscar por nome, nº do carnê ou responsável..."
+        placeholder="Buscar por nome ou nº do carnê..."
       />
 
       {carregando ? (
@@ -85,7 +83,6 @@ export function RecadastramentosPage() {
                   <TableHead>Dizimista</TableHead>
                   <TableHead>Nº do carnê</TableHead>
                   <TableHead>Telefone</TableHead>
-                  <TableHead>Responsável</TableHead>
                   <TableHead>Data</TableHead>
                   <TableHead className="text-right">Ação</TableHead>
                 </TableRow>
@@ -96,9 +93,6 @@ export function RecadastramentosPage() {
                     <TableCell className="font-medium">{d.nomeCompleto}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{d.numeroCarne}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{d.telefone || '—'}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {d.responsavelRecadastramento || '—'}
-                    </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {formatDate(dataRecadastro(d).slice(0, 10))}
                     </TableCell>
@@ -131,10 +125,6 @@ export function RecadastramentosPage() {
                     <p className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Phone className="h-3 w-3" />
                       {d.telefone || '—'}
-                    </p>
-                    <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <User className="h-3 w-3" />
-                      Responsável: {d.responsavelRecadastramento || '—'}
                     </p>
                   </CardContent>
                 </Card>

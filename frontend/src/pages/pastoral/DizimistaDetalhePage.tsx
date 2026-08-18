@@ -1,17 +1,6 @@
 import * as React from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import {
-  ArrowLeft,
-  ArrowLeftRight,
-  Mail,
-  MapPin,
-  Pencil,
-  Phone,
-  Receipt,
-  Trash2,
-  User,
-  UsersRound,
-} from 'lucide-react'
+import { ArrowLeft, ArrowLeftRight, Pencil, Phone, Receipt, Trash2, UsersRound } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { EmptyState } from '@/components/dashboard/EmptyState'
@@ -21,7 +10,7 @@ import { DevolucaoForm } from '@/components/forms/DevolucaoForm'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -35,28 +24,10 @@ import {
   listarDevolucoes,
   type DadosDevolucao,
 } from '@/services/devolucaoService'
-import type {
-  DadosCadastraisDizimista,
-  Devolucao,
-  Dizimista,
-  Endereco,
-  PagamentoPix,
-  StatusPagamento,
-} from '@/types'
+import type { DadosCadastraisDizimista, Devolucao, Dizimista, PagamentoPix, StatusPagamento } from '@/types'
 import { formatCurrency, formatDate, formatCompetencia, getIniciais } from '@/utils/format'
 import { formaPagamentoLabel } from '@/constants/devolucao'
 import { ROUTES } from '@/constants/routes'
-
-/** Monta o endereço em uma linha, pulando as partes que não foram preenchidas. */
-function formatarEndereco(endereco: Endereco): string {
-  const logradouroComNumero = [endereco.logradouro, endereco.numero].filter(Boolean).join(', ')
-  const cidadeUf = [endereco.cidade, endereco.estado].filter(Boolean).join('/')
-
-  const partes = [logradouroComNumero, endereco.complemento, endereco.bairro, cidadeUf, endereco.cep]
-  const texto = partes.filter((parte) => !!parte?.trim()).join(' · ')
-
-  return texto || 'Endereço não informado'
-}
 
 const STATUS_CONFIG: Record<StatusPagamento, { label: string; variant: 'success' | 'warning' | 'destructive' }> = {
   aprovado: { label: 'Pago', variant: 'success' },
@@ -160,24 +131,13 @@ export function DizimistaDetalhePage() {
             <div>
               <h1 className="text-lg font-semibold text-foreground sm:text-xl">{dizimista.nomeCompleto}</h1>
               <p className="mt-1 text-sm text-muted-foreground">Carnê nº {dizimista.numeroCarne}</p>
-              {dizimista.email && (
-                <p className="mt-0.5 flex items-center gap-1.5 text-sm text-muted-foreground">
-                  <Mail className="h-3.5 w-3.5" />
-                  {dizimista.email}
-                </p>
-              )}
               <p className="mt-0.5 flex items-center gap-1.5 text-sm text-muted-foreground">
                 <Phone className="h-3.5 w-3.5" />
                 {dizimista.telefone}
               </p>
-              <p className="mt-0.5 flex items-start gap-1.5 text-sm text-muted-foreground">
-                <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                <span>{formatarEndereco(dizimista.endereco)}</span>
-              </p>
-              {dizimista.responsavelRecadastramento && (
-                <p className="mt-0.5 flex items-center gap-1.5 text-sm text-muted-foreground">
-                  <User className="h-3.5 w-3.5" />
-                  Recadastrado por {dizimista.responsavelRecadastramento}
+              {(dizimista.recadastradoEm || dizimista.atualizadoEm) && (
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  Recadastrado em {formatDate((dizimista.recadastradoEm ?? dizimista.atualizadoEm).slice(0, 10))}
                 </p>
               )}
             </div>
@@ -207,7 +167,6 @@ export function DizimistaDetalhePage() {
         <TabsList>
           <TabsTrigger value="pagamentos">Pagamentos</TabsTrigger>
           <TabsTrigger value="devolucoes">Devoluções</TabsTrigger>
-          <TabsTrigger value="familia">Família</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pagamentos">
@@ -261,42 +220,6 @@ export function DizimistaDetalhePage() {
               ))}
             </div>
           )}
-        </TabsContent>
-
-        <TabsContent value="familia">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Cônjuge e filhos</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {!dizimista.conjuge && dizimista.filhos.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Nenhum familiar cadastrado.</p>
-              ) : (
-                <>
-                  {dizimista.conjuge && (
-                    <div>
-                      <p className="text-xs font-medium uppercase text-muted-foreground">Cônjuge</p>
-                      <Badge variant="outline" className="mt-1">
-                        {dizimista.conjuge.nomeCompleto}
-                      </Badge>
-                    </div>
-                  )}
-                  {dizimista.filhos.length > 0 && (
-                    <div>
-                      <p className="text-xs font-medium uppercase text-muted-foreground">Filhos</p>
-                      <div className="mt-1 flex flex-wrap gap-2">
-                        {dizimista.filhos.map((f, i) => (
-                          <Badge key={i} variant="outline">
-                            {f.nomeCompleto}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-            </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
 

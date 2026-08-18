@@ -29,6 +29,7 @@ import { DizimistasPage } from '@/pages/pastoral/DizimistasPage'
 import { DizimistaDetalhePage } from '@/pages/pastoral/DizimistaDetalhePage'
 import { RecadastramentosPage } from '@/pages/pastoral/RecadastramentosPage'
 import { MembrosPastoralPage } from '@/pages/pastoral/MembrosPage'
+import { LancamentoLotePage } from '@/pages/pastoral/LancamentoLotePage'
 
 import { ROUTES } from '@/constants/routes'
 
@@ -65,6 +66,7 @@ function App() {
                   <Route path={ROUTES.pastoral.root} element={<DizimistasPage />} />
                   <Route path="/pastoral/dizimistas/:numeroCarne" element={<DizimistaDetalhePage />} />
                   <Route path={ROUTES.pastoral.recadastramentos} element={<RecadastramentosPage />} />
+                  <Route path={ROUTES.pastoral.lancamentoLote} element={<LancamentoLotePage />} />
                   <Route path={ROUTES.pastoral.membros} element={<MembrosPastoralPage />} />
                 </Route>
               </Route>

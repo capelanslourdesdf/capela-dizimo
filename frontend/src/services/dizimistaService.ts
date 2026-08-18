@@ -106,26 +106,38 @@ export async function buscarCarnePorNomeENascimento(nome: string, diaMes: string
     .slice(0, 8)
 }
 
+/**
+ * O formulário de recadastramento hoje só coleta nome, nascimento e telefone — endereço, e-mail,
+ * cônjuge, filhos e responsável ficaram só em registros antigos. Por isso só entram no payload
+ * (e sobrescrevem o que já existe, via merge) quando de fato vierem preenchidos; do contrário o
+ * `merge: true` do Firestore preserva o que já estava salvo.
+ */
 function montarPayload(dados: DadosCadastraisDizimista, agora: string) {
-  return {
-    ...dados,
+  const payload: Record<string, unknown> = {
+    nomeCompleto: dados.nomeCompleto,
+    dataNascimento: dados.dataNascimento,
     // Mantido em sincronia com a data completa: é por ele que o login confere o nascimento
     // (registros importados da planilha antiga não têm o ano).
     diaMesNascimento: isoParaDiaMes(dados.dataNascimento),
-    // O Firestore rejeita "undefined" em qualquer campo — campos opcionais do formulário
-    // (ex.: complemento em branco) precisam virar string vazia/null antes de gravar.
-    endereco: {
-      ...dados.endereco,
-      complemento: dados.endereco.complemento || '',
-    },
-    email: dados.email?.trim() || null,
-    conjuge: dados.conjuge ?? null,
-    filhos: dados.filhos ?? [],
-    responsavelRecadastramento: dados.responsavelRecadastramento?.trim() || null,
+    telefone: dados.telefone,
     // Data de referência do dizimista no site: a partir dela é que os meses passam a ser
     // cobrados/acompanhados. Atualizada a cada recadastramento.
     atualizadoEm: agora,
   }
+
+  if (dados.endereco) {
+    // O Firestore rejeita "undefined" em qualquer campo — complemento em branco precisa virar
+    // string vazia antes de gravar.
+    payload.endereco = { ...dados.endereco, complemento: dados.endereco.complemento || '' }
+  }
+  if (dados.email !== undefined) payload.email = dados.email?.trim() || null
+  if (dados.conjuge !== undefined) payload.conjuge = dados.conjuge ?? null
+  if (dados.filhos !== undefined) payload.filhos = dados.filhos
+  if (dados.responsavelRecadastramento !== undefined) {
+    payload.responsavelRecadastramento = dados.responsavelRecadastramento?.trim() || null
+  }
+
+  return payload
 }
 
 /**

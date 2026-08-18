@@ -47,9 +47,6 @@ export function PublicHeader() {
           <Button asChild variant="ghost">
             <Link to={ROUTES.pastoral.entrar}>Área da Pastoral</Link>
           </Button>
-          <Button asChild>
-            <Link to={ROUTES.entrar}>Acompanhar meu dízimo</Link>
-          </Button>
         </div>
 
         <Sheet open={open} onOpenChange={setOpen}>
@@ -80,11 +77,6 @@ export function PublicHeader() {
             <div className="mt-6 flex flex-col gap-2">
               <SheetClose asChild>
                 <Button asChild size="lg">
-                  <Link to={ROUTES.entrar}>Acompanhar meu dízimo</Link>
-                </Button>
-              </SheetClose>
-              <SheetClose asChild>
-                <Button asChild variant="outline" size="lg">
                   <Link to={ROUTES.pastoral.entrar}>Área da Pastoral</Link>
                 </Button>
               </SheetClose>

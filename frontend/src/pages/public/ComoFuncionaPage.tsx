@@ -106,8 +106,8 @@ export function ComoFuncionaPage() {
           Junte-se às famílias que já contribuem com organização e transparência.
         </p>
         <Button asChild size="lg" className="mt-6">
-          <Link to={ROUTES.entrar}>
-            Acompanhar meu dízimo
+          <Link to={ROUTES.recadastramento}>
+            Fazer meu recadastramento
             <ArrowRight className="h-4 w-4" />
           </Link>
         </Button>

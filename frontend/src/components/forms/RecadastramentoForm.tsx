@@ -1,18 +1,16 @@
 import * as React from 'react'
-import { useFieldArray, useForm, Controller } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Loader2, Plus, Save, Search, Trash2 } from 'lucide-react'
+import { Loader2, Save, Search } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Checkbox } from '@/components/ui/checkbox'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
 import type { DadosCadastraisDizimista, Dizimista } from '@/types'
-import { buscarEnderecoPorCep } from '@/services/cepService'
 import {
   buscarCarnePorNomeENascimento,
   buscarDizimistaPorCarne,
@@ -24,7 +22,6 @@ import {
   dataBrParaIso,
   dataIsoParaBr,
   diaMesEhValido,
-  maskCep,
   maskDataBr,
   maskDiaMes,
   maskTelefone,
@@ -35,61 +32,24 @@ import { aguardarPeloMenos } from '@/utils/async'
 /** Tempo mínimo (ms) que um spinner de busca fica visível, para não parecer estático. */
 const DURACAO_MINIMA_LOADING_MS = 500
 
-const MAX_FILHOS = 4
-
 const dataNascimentoSchema = z
   .string()
   .regex(/^\d{2}\/\d{2}\/\d{4}$/, 'Use o formato dd/mm/aaaa.')
   .refine((valor) => dataBrEhValida(valor), 'Informe uma data válida.')
 
-const familiarSchema = z.object({
-  nomeCompleto: z.string().min(3, 'Informe o nome completo.'),
-  dataNascimento: dataNascimentoSchema,
-})
-
 function createSchema(exigirCarne: boolean) {
-  return z
-    .object({
-      numeroCarne: exigirCarne ? z.string().trim().min(1, 'Informe o número do carnê.') : z.string().optional(),
-      sabeNumeroCarne: z.enum(['sim', 'nao']),
-      nomeCompleto: z.string().min(3, 'Informe o nome completo.'),
-      dataNascimento: dataNascimentoSchema,
-      cep: z.union([z.string().regex(/^\d{5}-\d{3}$/, 'Informe um CEP válido.'), z.literal('')]),
-      logradouro: z.string().min(1, 'Informe o endereço.'),
-      numero: z.string().optional(),
-      semNumero: z.boolean(),
-      complemento: z.string().optional(),
-      bairro: z.string().min(1, 'Informe o bairro.'),
-      cidade: z.string().min(1, 'Informe a cidade.'),
-      estado: z.string().min(2, 'Informe o estado (UF).').max(2),
-      telefone: z.string().min(14, 'Informe um telefone válido.'),
-      email: z.union([z.string().email('Informe um e-mail válido.'), z.literal('')]),
-      temConjuge: z.boolean(),
-      conjugeNome: z.string().optional(),
-      conjugeDataNascimento: z.string().optional(),
-      filhos: z.array(familiarSchema).max(MAX_FILHOS, `No máximo ${MAX_FILHOS} filhos.`),
-      responsavelRecadastramento: z.string().trim().min(3, 'Informe quem preencheu este recadastramento.'),
-    })
-    .refine((data) => !data.temConjuge || (data.conjugeNome?.trim().length ?? 0) >= 3, {
-      message: 'Informe o nome completo do cônjuge.',
-      path: ['conjugeNome'],
-    })
-    .refine((data) => !data.temConjuge || dataBrEhValida(data.conjugeDataNascimento ?? ''), {
-      message: 'Informe a data de nascimento do cônjuge no formato dd/mm/aaaa.',
-      path: ['conjugeDataNascimento'],
-    })
-    .refine((data) => data.semNumero || !!data.numero?.trim(), {
-      message: 'Informe o número ou marque "Sem número".',
-      path: ['numero'],
-    })
+  return z.object({
+    numeroCarne: exigirCarne ? z.string().trim().min(1, 'Informe o número do carnê.') : z.string().optional(),
+    sabeNumeroCarne: z.enum(['sim', 'nao']),
+    nomeCompleto: z.string().min(3, 'Informe o nome completo.'),
+    dataNascimento: dataNascimentoSchema,
+    telefone: z.string().min(14, 'Informe um telefone válido.'),
+  })
 }
-
-/** Valor gravado no endereço quando o imóvel não tem número. */
-const SEM_NUMERO = 'S/N'
 
 type FormValues = z.infer<ReturnType<typeof createSchema>>
 
-/** Achata o objeto de erros do react-hook-form em caminhos ("filhos.0.nomeCompleto"). */
+/** Achata o objeto de erros do react-hook-form em caminhos ("nomeCompleto"). */
 function caminhosComErro(erros: unknown, prefixo = ''): string[] {
   if (!erros || typeof erros !== 'object') return []
   if ('message' in (erros as Record<string, unknown>) && prefixo) return [prefixo]
@@ -99,10 +59,7 @@ function caminhosComErro(erros: unknown, prefixo = ''): string[] {
   )
 }
 
-/**
- * Leva o usuário até o primeiro campo inválido. Os inputs usam `id` igual ao nome do campo, e a
- * ordem é decidida pela posição real no DOM — assim funciona também para os filhos (array).
- */
+/** Leva o usuário até o primeiro campo inválido. Os inputs usam `id` igual ao nome do campo. */
 function irParaPrimeiroErro(erros: unknown) {
   const elementos = caminhosComErro(erros)
     .map((caminho) => document.getElementById(caminho))
@@ -140,23 +97,7 @@ function valoresDoFormulario(dizimista?: Dizimista): FormValues {
     sabeNumeroCarne: 'sim',
     nomeCompleto: dizimista?.nomeCompleto ?? '',
     dataNascimento: dizimista?.dataNascimento ? dataIsoParaBr(dizimista.dataNascimento) : '',
-    cep: dizimista?.endereco.cep ?? '',
-    logradouro: dizimista?.endereco.logradouro ?? '',
-    numero: dizimista?.endereco.numero === SEM_NUMERO ? '' : (dizimista?.endereco.numero ?? ''),
-    semNumero: dizimista?.endereco.numero === SEM_NUMERO,
-    complemento: dizimista?.endereco.complemento ?? '',
-    bairro: dizimista?.endereco.bairro ?? '',
-    cidade: dizimista?.endereco.cidade ?? '',
-    estado: dizimista?.endereco.estado ?? '',
     telefone: dizimista?.telefone ?? '',
-    email: dizimista?.email ?? '',
-    temConjuge: !!dizimista?.conjuge,
-    conjugeNome: dizimista?.conjuge?.nomeCompleto ?? '',
-    conjugeDataNascimento: dizimista?.conjuge?.dataNascimento
-      ? dataIsoParaBr(dizimista.conjuge.dataNascimento)
-      : '',
-    filhos: (dizimista?.filhos ?? []).map((f) => ({ ...f, dataNascimento: dataIsoParaBr(f.dataNascimento) })),
-    responsavelRecadastramento: dizimista?.responsavelRecadastramento ?? '',
   }
 }
 
@@ -186,7 +127,7 @@ export function RecadastramentoForm({
 
   /**
    * Registra um campo de texto normalizando para MAIÚSCULAS enquanto o usuário digita, para que
-   * os dados fiquem uniformes na base (nomes, endereço, familiares...).
+   * os dados fiquem uniformes na base.
    */
   function registrarMaiusculo(nome: Parameters<typeof register>[0]) {
     const campo = register(nome)
@@ -199,19 +140,13 @@ export function RecadastramentoForm({
     }
   }
 
-  const { fields, append, remove } = useFieldArray({ control, name: 'filhos' })
-  const temConjuge = watch('temConjuge')
-  const semNumero = watch('semNumero')
-  const cep = watch('cep')
   const numeroCarneDigitado = watch('numeroCarne')
   const sabeNumeroCarne = watch('sabeNumeroCarne')
-  const [buscandoCep, setBuscandoCep] = React.useState(false)
-  const [cepNaoEncontrado, setCepNaoEncontrado] = React.useState(false)
   const [buscandoCarne, setBuscandoCarne] = React.useState(false)
   const [gerandoCarne, setGerandoCarne] = React.useState(false)
   const [statusCarne, setStatusCarne] = React.useState<'encontrado' | 'novo' | 'gerado' | null>(null)
 
-  // Busca do carnê por nome + mês/ano de nascimento (opção "não sei o número").
+  // Busca do carnê por nome + dia/mês de nascimento (opção "não sei o número").
   const [nomeBusca, setNomeBusca] = React.useState('')
   const [diaMesBusca, setDiaMesBusca] = React.useState('')
   const [buscandoPorNome, setBuscandoPorNome] = React.useState(false)
@@ -246,25 +181,7 @@ export function RecadastramentoForm({
         numeroCarne: encontrado.numeroCarne,
         nomeCompleto: encontrado.nomeCompleto,
         dataNascimento: dataIsoParaBr(encontrado.dataNascimento),
-        cep: encontrado.endereco?.cep ?? '',
-        logradouro: encontrado.endereco?.logradouro ?? '',
-        numero: encontrado.endereco?.numero === SEM_NUMERO ? '' : (encontrado.endereco?.numero ?? ''),
-        semNumero: encontrado.endereco?.numero === SEM_NUMERO,
-        complemento: encontrado.endereco?.complemento ?? '',
-        bairro: encontrado.endereco?.bairro ?? '',
-        cidade: encontrado.endereco?.cidade ?? '',
-        estado: encontrado.endereco?.estado ?? '',
         telefone: encontrado.telefone ?? '',
-        email: encontrado.email ?? '',
-        temConjuge: !!encontrado.conjuge,
-        conjugeNome: encontrado.conjuge?.nomeCompleto ?? '',
-        conjugeDataNascimento: encontrado.conjuge?.dataNascimento
-          ? dataIsoParaBr(encontrado.conjuge.dataNascimento)
-          : '',
-        filhos: (encontrado.filhos ?? []).map((f) => ({
-          nomeCompleto: f.nomeCompleto,
-          dataNascimento: dataIsoParaBr(f.dataNascimento),
-        })),
       })
       setStatusCarne('encontrado')
       setCandidatos(null)
@@ -373,24 +290,7 @@ export function RecadastramentoForm({
         numeroCarne: carne,
         nomeCompleto: encontrado.nomeCompleto,
         dataNascimento: dataIsoParaBr(encontrado.dataNascimento),
-        cep: encontrado.endereco.cep ?? '',
-        logradouro: encontrado.endereco.logradouro ?? '',
-        numero: encontrado.endereco.numero ?? '',
-        complemento: encontrado.endereco.complemento ?? '',
-        bairro: encontrado.endereco.bairro ?? '',
-        cidade: encontrado.endereco.cidade ?? '',
-        estado: encontrado.endereco.estado ?? '',
         telefone: encontrado.telefone ?? '',
-        email: encontrado.email ?? '',
-        temConjuge: !!encontrado.conjuge,
-        conjugeNome: encontrado.conjuge?.nomeCompleto ?? '',
-        conjugeDataNascimento: encontrado.conjuge?.dataNascimento
-          ? dataIsoParaBr(encontrado.conjuge.dataNascimento)
-          : '',
-        filhos: (encontrado.filhos ?? []).map((f) => ({
-          nomeCompleto: f.nomeCompleto,
-          dataNascimento: dataIsoParaBr(f.dataNascimento),
-        })),
       })
     }, 600)
 
@@ -399,39 +299,6 @@ export function RecadastramentoForm({
       clearTimeout(timer)
     }
   }, [numeroCarneDigitado, deveBuscarPorCarne, reset, getValues])
-
-  React.useEffect(() => {
-    const digitos = cep.replace(/\D/g, '')
-    if (digitos.length !== 8) {
-      setCepNaoEncontrado(false)
-      return
-    }
-
-    let cancelado = false
-    setBuscandoCep(true)
-    setCepNaoEncontrado(false)
-    const inicio = Date.now()
-
-    buscarEnderecoPorCep(digitos).then(async (endereco) => {
-      await aguardarPeloMenos(inicio, DURACAO_MINIMA_LOADING_MS)
-      if (cancelado) return
-      setBuscandoCep(false)
-
-      if (!endereco) {
-        setCepNaoEncontrado(true)
-        return
-      }
-
-      setValue('logradouro', endereco.logradouro.toUpperCase(), { shouldValidate: true })
-      setValue('bairro', endereco.bairro.toUpperCase(), { shouldValidate: true })
-      setValue('cidade', endereco.cidade.toUpperCase(), { shouldValidate: true })
-      setValue('estado', endereco.estado.toUpperCase(), { shouldValidate: true })
-    })
-
-    return () => {
-      cancelado = true
-    }
-  }, [cep, setValue])
 
   async function onSubmit(values: FormValues) {
     setErro(null)
@@ -443,28 +310,7 @@ export function RecadastramentoForm({
       const dados: DadosCadastraisDizimista = {
         nomeCompleto: emMaiusculas(values.nomeCompleto),
         dataNascimento: dataBrParaIso(values.dataNascimento),
-        endereco: {
-          cep: values.cep,
-          logradouro: emMaiusculas(values.logradouro),
-          numero: values.semNumero ? SEM_NUMERO : emMaiusculas(values.numero),
-          complemento: emMaiusculas(values.complemento) || undefined,
-          bairro: emMaiusculas(values.bairro),
-          cidade: emMaiusculas(values.cidade),
-          estado: emMaiusculas(values.estado),
-        },
         telefone: values.telefone,
-        email: values.email?.trim() || undefined,
-        conjuge: values.temConjuge
-          ? {
-              nomeCompleto: emMaiusculas(values.conjugeNome),
-              dataNascimento: dataBrParaIso(values.conjugeDataNascimento!),
-            }
-          : null,
-        filhos: values.filhos.map((f) => ({
-          nomeCompleto: emMaiusculas(f.nomeCompleto),
-          dataNascimento: dataBrParaIso(f.dataNascimento),
-        })),
-        responsavelRecadastramento: emMaiusculas(values.responsavelRecadastramento),
       }
 
       await onSalvar(dados, (values.numeroCarne ?? '').trim(), {
@@ -480,7 +326,6 @@ export function RecadastramentoForm({
         setErroBusca(null)
         setCandidatos(null)
         setBuscaSemResultado(false)
-        setCepNaoEncontrado(false)
       }
     } catch (err) {
       setErro(err instanceof Error ? err.message : 'Não foi possível salvar. Tente novamente.')
@@ -623,7 +468,6 @@ export function RecadastramentoForm({
           </div>
         )}
 
-
         <div className="space-y-1.5">
           <Label htmlFor="nomeCompleto">Nome completo</Label>
           <Input id="nomeCompleto" autoComplete="name" {...registrarMaiusculo('nomeCompleto')} />
@@ -649,7 +493,7 @@ export function RecadastramentoForm({
             {errors.dataNascimento && <p className="text-xs text-destructive">{errors.dataNascimento.message}</p>}
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="telefone">Telefone</Label>
+            <Label htmlFor="telefone">Telefone/WhatsApp</Label>
             <Controller
               control={control}
               name="telefone"
@@ -657,7 +501,6 @@ export function RecadastramentoForm({
                 <Input
                   id="telefone"
                   inputMode="numeric"
-                  // placeholder="(61) 99999-9999"
                   autoComplete="tel"
                   value={field.value}
                   onChange={(e) => field.onChange(maskTelefone(e.target.value))}
@@ -667,220 +510,6 @@ export function RecadastramentoForm({
             {errors.telefone && <p className="text-xs text-destructive">{errors.telefone.message}</p>}
           </div>
         </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="email">E-mail (opcional)</Label>
-          <Input id="email" type="email" autoComplete="email" placeholder="exemplo@gmail.com" {...register('email')} />
-          {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        <h2 className="text-sm font-semibold text-foreground">Endereço</h2>
-
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="space-y-1.5 sm:col-span-1">
-            <Label htmlFor="cep">CEP (opcional)</Label>
-            <div className="relative">
-              <Controller
-                control={control}
-                name="cep"
-                render={({ field }) => (
-                  <Input
-                    id="cep"
-                    inputMode="numeric"
-                    className={buscandoCep ? 'pr-9' : undefined}
-                    value={field.value}
-                    onChange={(e) => field.onChange(maskCep(e.target.value))}
-                  />
-                )}
-              />
-              {buscandoCep && (
-                <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                </span>
-              )}
-            </div>
-            {errors.cep && <p className="text-xs text-destructive">{errors.cep.message}</p>}
-            {!errors.cep && cepNaoEncontrado && (
-              <p className="text-xs text-muted-foreground">CEP não encontrado, preencha o endereço manualmente.</p>
-            )}
-          </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="logradouro">Endereço</Label>
-            <Input id="logradouro" {...registrarMaiusculo('logradouro')} />
-            {errors.logradouro && <p className="text-xs text-destructive">{errors.logradouro.message}</p>}
-          </div>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="numero">Número</Label>
-            <Input
-              id="numero"
-              inputMode="numeric"
-              disabled={semNumero}
-              placeholder={semNumero ? SEM_NUMERO : undefined}
-              {...register('numero')}
-            />
-            <div className="flex items-center gap-2">
-              <Controller
-                control={control}
-                name="semNumero"
-                render={({ field }) => (
-                  <Checkbox
-                    id="semNumero"
-                    checked={field.value}
-                    onCheckedChange={(v) => {
-                      const marcado = v === true
-                      field.onChange(marcado)
-                      if (marcado) setValue('numero', '', { shouldValidate: true })
-                    }}
-                  />
-                )}
-              />
-              <Label htmlFor="semNumero" className="text-xs font-normal text-muted-foreground">
-                Sem número
-              </Label>
-            </div>
-            {errors.numero && <p className="text-xs text-destructive">{errors.numero.message}</p>}
-          </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="complemento">Complemento (opcional)</Label>
-            <Input id="complemento" {...registrarMaiusculo('complemento')} />
-          </div>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="bairro">Bairro</Label>
-            <Input id="bairro" {...registrarMaiusculo('bairro')} />
-            {errors.bairro && <p className="text-xs text-destructive">{errors.bairro.message}</p>}
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="estado">UF</Label>
-            <Input id="estado" maxLength={2} className="uppercase" {...register('estado')} />
-            {errors.estado && <p className="text-xs text-destructive">{errors.estado.message}</p>}
-          </div>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="cidade">Cidade</Label>
-          <Input id="cidade" {...registrarMaiusculo('cidade')} />
-          {errors.cidade && <p className="text-xs text-destructive">{errors.cidade.message}</p>}
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        <div className="flex items-center gap-2.5">
-          <Controller
-            control={control}
-            name="temConjuge"
-            render={({ field }) => (
-              <Checkbox id="temConjuge" checked={field.value} onCheckedChange={(v) => field.onChange(v === true)} />
-            )}
-          />
-          <Label htmlFor="temConjuge" className="text-sm font-normal">
-            Possuo cônjuge
-          </Label>
-        </div>
-
-        {temConjuge && (
-          <Card>
-            <CardContent className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="conjugeNome">Nome completo do cônjuge</Label>
-                <Input id="conjugeNome" {...registrarMaiusculo('conjugeNome')} />
-                {errors.conjugeNome && <p className="text-xs text-destructive">{errors.conjugeNome.message}</p>}
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="conjugeDataNascimento">Data de nascimento</Label>
-                <Controller
-                  control={control}
-                  name="conjugeDataNascimento"
-                  render={({ field }) => (
-                    <Input
-                      id="conjugeDataNascimento"
-                      inputMode="numeric"
-                      placeholder="dd/mm/aaaa"
-                      value={field.value ?? ''}
-                      onChange={(e) => field.onChange(maskDataBr(e.target.value))}
-                    />
-                  )}
-                />
-                {errors.conjugeDataNascimento && (
-                  <p className="text-xs text-destructive">{errors.conjugeDataNascimento.message}</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-foreground">Filhos (até {MAX_FILHOS})</h2>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={fields.length >= MAX_FILHOS}
-            onClick={() => append({ nomeCompleto: '', dataNascimento: '' })}
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Adicionar filho
-          </Button>
-        </div>
-
-        {fields.length === 0 && <p className="text-sm text-muted-foreground">Nenhum filho adicionado.</p>}
-
-        {fields.map((field, index) => (
-          <Card key={field.id}>
-            <CardContent className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-              <div className="space-y-1.5">
-                <Label htmlFor={`filhos.${index}.nomeCompleto`}>Nome completo</Label>
-                <Input id={`filhos.${index}.nomeCompleto`} {...registrarMaiusculo(`filhos.${index}.nomeCompleto`)} />
-                {errors.filhos?.[index]?.nomeCompleto && (
-                  <p className="text-xs text-destructive">{errors.filhos[index]?.nomeCompleto?.message}</p>
-                )}
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor={`filhos.${index}.dataNascimento`}>Data de nascimento</Label>
-                <Controller
-                  control={control}
-                  name={`filhos.${index}.dataNascimento`}
-                  render={({ field }) => (
-                    <Input
-                      id={`filhos.${index}.dataNascimento`}
-                      inputMode="numeric"
-                      placeholder="dd/mm/aaaa"
-                      value={field.value ?? ''}
-                      onChange={(e) => field.onChange(maskDataBr(e.target.value))}
-                    />
-                  )}
-                />
-                {errors.filhos?.[index]?.dataNascimento && (
-                  <p className="text-xs text-destructive">{errors.filhos[index]?.dataNascimento?.message}</p>
-                )}
-              </div>
-              <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} aria-label="Remover filho">
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <div className="space-y-1.5">
-        <Label htmlFor="responsavelRecadastramento">Responsável pelo recadastramento</Label>
-        <Input
-          id="responsavelRecadastramento"
-          placeholder="Nome de quem preencheu"
-          {...registrarMaiusculo('responsavelRecadastramento')}
-        />
-        {errors.responsavelRecadastramento && (
-          <p className="text-xs text-destructive">{errors.responsavelRecadastramento.message}</p>
-        )}
       </div>
 
       <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>

@@ -28,13 +28,17 @@ export interface Dizimista {
    * é derivado dela.
    */
   diaMesNascimento?: string
-  endereco: Endereco
+  /** Legado: coletado em recadastramentos antigos. O formulário atual não pede mais endereço. */
+  endereco?: Endereco
   telefone: string
+  /** Legado: o formulário atual não pede mais e-mail. */
   email?: string | null
+  /** Legado: o formulário atual não pede mais cônjuge. */
   conjuge?: FamiliarBasico | null
-  filhos: FamiliarBasico[]
+  /** Legado: o formulário atual não pede mais filhos. */
+  filhos?: FamiliarBasico[]
   origem: OrigemCadastro
-  /** Nome de quem preencheu o recadastramento (pode ser um familiar ou voluntário). */
+  /** Legado: o formulário atual não pede mais responsável pelo recadastramento. */
   responsavelRecadastramento?: string
   /**
    * Quando o dizimista se recadastrou no site. É a data de referência para cobrar/acompanhar as

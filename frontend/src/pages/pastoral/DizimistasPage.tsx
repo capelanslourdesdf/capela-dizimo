@@ -176,9 +176,9 @@ export function DizimistasPage() {
         </div>
       ) : (
         <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <StatCard label="Dizimistas ativos" value={String(totalAtivos)} icon={Users} />
-          <StatCard label="Dizimistas inativos" value={String(totalInativos)} icon={Users} />
-          <StatCard label="Total de dizimistas" value={String(dizimistas.length)} icon={Users} />
+          <StatCard label="Ativos" value={String(totalAtivos)} icon={Users} />
+          <StatCard label="Inativos" value={String(totalInativos)} icon={Users} />
+          <StatCard label="Total" value={String(dizimistas.length)} icon={Users} />
           <StatCard label={`Arrecadado em ${anoAtual}`} value={formatCurrency(totalAnoAtual)} icon={Wallet} />
         </div>
       )}

@@ -117,10 +117,17 @@ export function DizimistaDetalhePage() {
 
   const anoAtual = new Date().getFullYear()
   const inicioAno = `${anoAtual}-01`
-  const inicioContagemAno = registro && registro > inicioAno ? registro : inicioAno
-  const competenciasDoAno = competenciasEntre(inicioContagemAno, competenciaAtual())
-  const mesesDevolvidosNoAno = competenciasDoAno.filter((c) => competenciasPagas.has(c)).length
-  const mesesPendentesNoAno = competenciasDoAno.length - mesesDevolvidosNoAno
+  const fimAno = `${anoAtual}-12`
+
+  // "Devolvidos" conta qualquer devolução do ano, mesmo lançada pra um mês anterior ao
+  // recadastramento (ex.: lançamento retroativo em lote) — mesmo critério do MesesGrid, senão a
+  // devolução aparece lá mas não entra nessa contagem. "Pendentes" só considera os meses em que o
+  // dizimista já era acompanhado (a partir do recadastramento), já que antes disso não conta contra ele.
+  const mesesDevolvidosNoAno = competenciasEntre(inicioAno, fimAno).filter((c) => competenciasPagas.has(c)).length
+
+  const inicioContagemPendente = registro && registro > inicioAno ? registro : inicioAno
+  const mesesAplicaveisPendente = competenciasEntre(inicioContagemPendente, competenciaAtual())
+  const mesesPendentesNoAno = mesesAplicaveisPendente.filter((c) => !competenciasPagas.has(c)).length
 
   return (
     <div>
@@ -177,8 +184,8 @@ export function DizimistaDetalhePage() {
           icon={CalendarCheck}
         />
         <StatCard label="Total devolvido" value={formatCurrency(totalDevolvido)} icon={Wallet} />
-        <StatCard label={`Meses devolvidos em ${anoAtual}`} value={String(mesesDevolvidosNoAno)} icon={ArrowLeftRight} />
-        <StatCard label={`Meses pendentes em ${anoAtual}`} value={String(mesesPendentesNoAno)} icon={CalendarCheck} />
+        <StatCard label={`Devolvidos em ${anoAtual}`} value={String(mesesDevolvidosNoAno)} icon={ArrowLeftRight} />
+        <StatCard label={`Pendentes em ${anoAtual}`} value={String(mesesPendentesNoAno)} icon={CalendarCheck} />
       </div>
 
       <Card className="mb-6">
@@ -194,7 +201,7 @@ export function DizimistaDetalhePage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Devoluções lançadas</CardTitle>
-          <CardDescription>Agrupadas por mês — um dizimista pode devolver mais de uma vez no mesmo mês.</CardDescription>
+          <CardDescription>Agrupadas por mês</CardDescription>
         </CardHeader>
         <CardContent>
           <DevolucoesAgrupadas devolucoes={devolucoes} vazioTitulo="Nenhuma devolução lançada" />

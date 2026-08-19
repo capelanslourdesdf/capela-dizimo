@@ -19,8 +19,11 @@ export function MesesGrid({ ano, registro, competenciasPagas }: MesesGridProps) 
       <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
         {NOMES_MESES.map((nome, indice) => {
           const competencia = `${ano}-${String(indice + 1).padStart(2, '0')}`
-          const aplicavel = (!registro || competencia >= registro) && competencia <= competenciaHoje
           const pago = competenciasPagas.has(competencia)
+          // Um mês com devolução lançada aparece como "Devolvido" mesmo fora da janela normal
+          // (ex.: devolução retroativa a um mês anterior ao recadastramento) — a lançada por lote
+          // ou avulsa não fica escondida só porque, em tese, "não contaria" no cálculo de status.
+          const aplicavel = pago || ((!registro || competencia >= registro) && competencia <= competenciaHoje)
 
           return (
             <div

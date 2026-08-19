@@ -18,6 +18,7 @@
     "typecheck:api": "tsc -p tsconfig.api.json",
     "importar:dizimistas": "node scripts/importar-dizimistas.mjs",
     "normalizar:maiusculas": "node scripts/normalizar-maiusculas.mjs",
+    "corrigir:ano-nascimento": "node scripts/corrigir-ano-nascimento-1999.mjs",
     "gerar:hash-senha": "node scripts/gerar-hash-senha.mjs"
   },
   "devDependencies": {

@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 
 import { PageHeader } from '@/components/layout/PageHeader'
 import { FiltroBar } from '@/components/pastoral/FiltroBar'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { EmptyState } from '@/components/dashboard/EmptyState'
 import { StatCard } from '@/components/dashboard/StatCard'
 import { StatusBadge } from '@/components/dashboard/StatusBadge'
@@ -219,34 +220,46 @@ export function DizimistasPage() {
 
       {!carregando && (
         <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Cake className="h-4 w-4 text-primary" />
-              Aniversariantes de {nomeMesAtual}
-            </CardTitle>
-            <CardDescription>Dizimistas que fazem aniversário este mês.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {aniversariantesDoMes.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhum aniversariante este mês.</p>
-            ) : (
-              <ul className="divide-y divide-border">
-                {aniversariantesDoMes.map(({ dizimista: d, diaMes }) => (
-                  <li key={d.numeroCarne} className="flex items-center gap-3 py-2.5">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-sm font-semibold text-primary">
-                      {diaMes.slice(0, 2)}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-foreground">{d.nomeCompleto}</p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        Carnê nº {d.numeroCarne} · {d.telefone || '—'}
-                      </p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
+          <Accordion type="single" collapsible>
+            <AccordionItem value="aniversariantes" className="border-b-0">
+              <AccordionTrigger className="px-5 py-5 hover:no-underline sm:px-6 sm:py-6">
+                <div className="flex items-center gap-2 text-left">
+                  <Cake className="h-4 w-4 shrink-0 text-primary" />
+                  <div>
+                    <p className="font-semibold leading-none tracking-tight text-foreground">
+                      Aniversariantes de {nomeMesAtual}
+                    </p>
+                    <p className="mt-1.5 text-sm font-normal text-muted-foreground">
+                      {aniversariantesDoMes.length === 0
+                        ? 'Nenhum dizimista faz aniversário este mês.'
+                        : `${aniversariantesDoMes.length} dizimista(s) fazem aniversário este mês.`}
+                    </p>
+                  </div>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="px-5 pb-5 sm:px-6 sm:pb-6">
+                {aniversariantesDoMes.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nenhum aniversariante este mês.</p>
+                ) : (
+                  <ul className="divide-y divide-border">
+                    {aniversariantesDoMes.map(({ dizimista: d, diaMes }) => (
+                      <li key={d.numeroCarne} className="flex items-center gap-3 py-2.5">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-sm font-semibold text-primary">
+                          {diaMes.slice(0, 2)}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-foreground">{d.nomeCompleto}</p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            Carnê nº {d.numeroCarne} · {d.telefone || '—'}
+                          </p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </Card>
       )}
 

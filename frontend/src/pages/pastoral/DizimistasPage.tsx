@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Download, IdCard, Phone, Trash2, UserPlus, Users, Wallet } from 'lucide-react'
+import { Cake, Download, IdCard, Phone, Trash2, UserPlus, Users, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -18,7 +18,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
-import { criarDizimistaAdmin, excluirDizimista, listarDizimistas } from '@/services/dizimistaService'
+import { criarDizimistaAdmin, diaMesDoRegistro, excluirDizimista, listarDizimistas } from '@/services/dizimistaService'
 import { competenciaDaDevolucao, listarTodasDevolucoesPorCarne } from '@/services/devolucaoService'
 import { obterMinimoMesesAtivos } from '@/services/configuracaoService'
 import type { DadosCadastraisDizimista, Devolucao, Dizimista } from '@/types'
@@ -105,6 +105,21 @@ export function DizimistasPage() {
 
   const anoAtual = String(new Date().getFullYear())
   const totalAnoAtual = totalPorAno.find(([ano]) => ano === anoAtual)?.[1] ?? 0
+
+  /** Dizimistas que fazem aniversário no mês atual, ordenados pelo dia. */
+  const aniversariantesDoMes = React.useMemo(() => {
+    const mesAtual = String(new Date().getMonth() + 1).padStart(2, '0')
+
+    return dizimistas
+      .map((d) => ({ dizimista: d, diaMes: diaMesDoRegistro(d) }))
+      .filter(({ diaMes }) => /^\d{2}\/\d{2}$/.test(diaMes) && diaMes.slice(3, 5) === mesAtual)
+      .sort((a, b) => Number(a.diaMes.slice(0, 2)) - Number(b.diaMes.slice(0, 2)))
+  }, [dizimistas])
+
+  const nomeMesAtual = React.useMemo(() => {
+    const nome = new Date().toLocaleDateString('pt-BR', { month: 'long' })
+    return nome.charAt(0).toUpperCase() + nome.slice(1)
+  }, [])
 
   const dizimistasFiltrados = React.useMemo(() => {
     const termo = busca.trim().toLowerCase()
@@ -198,6 +213,39 @@ export function DizimistasPage() {
                 </li>
               ))}
             </ul>
+          </CardContent>
+        </Card>
+      )}
+
+      {!carregando && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Cake className="h-4 w-4 text-primary" />
+              Aniversariantes de {nomeMesAtual}
+            </CardTitle>
+            <CardDescription>Dizimistas que fazem aniversário este mês.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {aniversariantesDoMes.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhum aniversariante este mês.</p>
+            ) : (
+              <ul className="divide-y divide-border">
+                {aniversariantesDoMes.map(({ dizimista: d, diaMes }) => (
+                  <li key={d.numeroCarne} className="flex items-center gap-3 py-2.5">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-sm font-semibold text-primary">
+                      {diaMes.slice(0, 2)}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-foreground">{d.nomeCompleto}</p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        Carnê nº {d.numeroCarne} · {d.telefone || '—'}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
           </CardContent>
         </Card>
       )}

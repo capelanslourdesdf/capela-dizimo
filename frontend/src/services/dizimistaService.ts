@@ -62,7 +62,7 @@ export interface CandidatoCarne {
  * Dia/mês de nascimento do registro ("dd/mm"). Os importados da planilha guardam só isso; os
  * recadastrados têm a data completa, da qual o dia/mês é derivado.
  */
-function diaMesDoRegistro(d: Dizimista): string {
+export function diaMesDoRegistro(d: Dizimista): string {
   return d.diaMesNascimento?.trim() || isoParaDiaMes(d.dataNascimento ?? '')
 }
 

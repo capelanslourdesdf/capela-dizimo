@@ -200,18 +200,26 @@ export function DizimistasPage() {
         }
       />
 
+      {/*
+        No mobile as três contagens (ativos, inativos e total) dividem uma única linha em cards
+        compactos, e o valor arrecadado — que é o texto mais longo — ocupa a linha inteira abaixo,
+        para não quebrar. No desktop tudo volta para as quatro colunas de sempre.
+      */}
       {carregando ? (
-        <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 w-full rounded-xl" />
+        <div className="mb-6 grid grid-cols-3 gap-3 lg:grid-cols-4 lg:gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-20 w-full rounded-xl lg:h-24" />
           ))}
+          <Skeleton className="col-span-3 h-20 w-full rounded-xl lg:col-span-1 lg:h-24" />
         </div>
       ) : (
-        <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <StatCard label="Ativos" value={String(totalAtivos)} icon={Users} />
-          <StatCard label="Inativos" value={String(totalInativos)} icon={Users} />
-          <StatCard label="Total" value={String(dizimistas.length)} icon={Users} />
-          <StatCard label={`Arrecadado em ${anoAtual}`} value={formatCurrency(totalAnoAtual)} icon={Wallet} />
+        <div className="mb-6 grid grid-cols-3 gap-3 lg:grid-cols-4 lg:gap-4">
+          <StatCard compact label="Ativos" value={String(totalAtivos)} icon={Users} />
+          <StatCard compact label="Inativos" value={String(totalInativos)} icon={Users} />
+          <StatCard compact label="Total" value={String(dizimistas.length)} icon={Users} />
+          <div className="col-span-3 lg:col-span-1">
+            <StatCard label={`Arrecadado em ${anoAtual}`} value={formatCurrency(totalAnoAtual)} icon={Wallet} />
+          </div>
         </div>
       )}
 

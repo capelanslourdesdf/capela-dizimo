@@ -27,7 +27,15 @@ export const dizimistaNav: NavItem[] = [
   { label: 'Minhas devoluções', href: ROUTES.dizimista.devolucoes, icon: ArrowLeftRight },
 ]
 
-export const dizimistaMobileNav: NavItem[] = dizimistaNav
+/**
+ * Menu inferior do mobile: ícone e rótulo ficam na mesma linha, então os textos precisam ser
+ * curtos o bastante para caber em uma coluna estreita.
+ */
+export const dizimistaMobileNav: NavItem[] = [
+  { label: 'Início', href: ROUTES.dizimista.root, icon: Home, end: true },
+  { label: 'Cadastro', href: ROUTES.dizimista.cadastro, icon: IdCard },
+  { label: 'Devoluções', href: ROUTES.dizimista.devolucoes, icon: ArrowLeftRight },
+]
 
 export const pastoralNav: NavItem[] = [
   { label: 'Dizimistas', href: ROUTES.pastoral.root, icon: Users, end: true },

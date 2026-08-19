@@ -18,13 +18,13 @@ export function MobileBottomNav({ navItems }: MobileBottomNavProps) {
             end={item.end}
             className={({ isActive }) =>
               cn(
-                'flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium text-muted-foreground transition-colors',
+                'flex items-center justify-center gap-1.5 px-1 py-3 text-[11px] font-medium text-muted-foreground transition-colors',
                 isActive && 'text-primary',
               )
             }
           >
-            <item.icon className="h-5 w-5" />
-            {item.label}
+            <item.icon className="h-4 w-4 shrink-0" />
+            <span className="truncate">{item.label}</span>
           </NavLink>
         ))}
       </div>

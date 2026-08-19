@@ -1,6 +1,18 @@
 import * as React from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, ArrowLeftRight, CalendarCheck, Pencil, Phone, Trash2, UsersRound, Wallet } from 'lucide-react'
+import {
+  ArrowLeft,
+  ArrowLeftRight,
+  Cake,
+  CalendarCheck,
+  IdCard,
+  Pencil,
+  Phone,
+  Trash2,
+  UsersRound,
+  Wallet,
+  type LucideIcon,
+} from 'lucide-react'
 import { toast } from 'sonner'
 
 import { EmptyState } from '@/components/dashboard/EmptyState'
@@ -17,7 +29,12 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
-import { buscarDizimistaPorCarne, excluirDizimista, salvarRecadastramento } from '@/services/dizimistaService'
+import {
+  buscarDizimistaPorCarne,
+  diaMesDoRegistro,
+  excluirDizimista,
+  salvarRecadastramento,
+} from '@/services/dizimistaService'
 import { obterMinimoMesesAtivos } from '@/services/configuracaoService'
 import {
   atualizarDevolucao,
@@ -26,7 +43,14 @@ import {
   type DadosDevolucao,
 } from '@/services/devolucaoService'
 import type { DadosCadastraisDizimista, Devolucao, Dizimista } from '@/types'
-import { formatCurrency, formatCompetencia, competenciaAtual, competenciasEntre, getIniciais } from '@/utils/format'
+import {
+  formatCurrency,
+  formatCompetencia,
+  formatDate,
+  competenciaAtual,
+  competenciasEntre,
+  getIniciais,
+} from '@/utils/format'
 import {
   calcularStatusDizimista,
   competenciaDeRegistro,
@@ -34,6 +58,25 @@ import {
   MINIMO_MESES_ATIVOS_PADRAO,
 } from '@/utils/statusDizimista'
 import { ROUTES } from '@/constants/routes'
+
+interface FichaItemProps {
+  icon: LucideIcon
+  rotulo: string
+  valor?: string
+}
+
+/** Um campo do cadastro no cabeçalho do perfil. Sem valor preenchido, mostra um traço. */
+function FichaItem({ icon: Icon, rotulo, valor }: FichaItemProps) {
+  return (
+    <div className="flex items-start gap-2.5">
+      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+      <div className="min-w-0">
+        <dt className="text-xs text-muted-foreground">{rotulo}</dt>
+        <dd className="break-words text-sm font-medium text-foreground">{valor?.trim() || '—'}</dd>
+      </div>
+    </div>
+  )
+}
 
 export function DizimistaDetalhePage() {
   const { numeroCarne } = useParams<{ numeroCarne: string }>()
@@ -124,6 +167,12 @@ export function DizimistaDetalhePage() {
     )
   }
 
+  // Nem todo registro tem a data completa: os importados da planilha antiga trazem só o dia/mês.
+  // Exibe o que houver, para a Pastoral enxergar o que ainda falta preencher.
+  const nascimentoExibido = dizimista.dataNascimento
+    ? formatDate(dizimista.dataNascimento)
+    : diaMesDoRegistro(dizimista)
+
   const registro = competenciaDeRegistro(dizimista)
   const competenciasPagas = competenciasPagasDoDizimista(devolucoes)
   const status = calcularStatusDizimista(registro, competenciasPagas, minimoMesesAtivos)
@@ -153,7 +202,7 @@ export function DizimistaDetalhePage() {
       <Card className="mb-6">
         <CardContent className="flex flex-col gap-4">
           <div className="flex items-center gap-4">
-            <Avatar className="h-16 w-16">
+            <Avatar className="h-16 w-16 shrink-0">
               <AvatarFallback className="text-xl">{getIniciais(dizimista.nomeCompleto)}</AvatarFallback>
             </Avatar>
             <div className="min-w-0">
@@ -161,13 +210,15 @@ export function DizimistaDetalhePage() {
                 <h1 className="text-lg font-semibold text-foreground sm:text-xl">{dizimista.nomeCompleto}</h1>
                 <StatusBadge label={status === 'ativo' ? 'Ativo' : 'Inativo'} variant={status === 'ativo' ? 'success' : 'muted'} />
               </div>
-              <p className="mt-1 text-sm text-muted-foreground">Carnê nº {dizimista.numeroCarne}</p>
-              <p className="mt-0.5 flex items-center gap-1.5 text-sm text-muted-foreground">
-                <Phone className="h-3.5 w-3.5" />
-                {dizimista.telefone}
-              </p>
             </div>
           </div>
+
+          {/* Ficha completa do cadastro, para a Pastoral conferir tudo sem abrir o formulário. */}
+          <dl className="grid gap-3 sm:grid-cols-3">
+            <FichaItem icon={IdCard} rotulo="Nº do carnê" valor={dizimista.numeroCarne} />
+            <FichaItem icon={Cake} rotulo="Data de nascimento" valor={nascimentoExibido} />
+            <FichaItem icon={Phone} rotulo="Telefone" valor={dizimista.telefone} />
+          </dl>
 
           <div className="flex flex-nowrap items-center justify-end gap-2">
             <Button
@@ -185,21 +236,33 @@ export function DizimistaDetalhePage() {
             </Button>
             <Button size="sm" onClick={() => setModalDevolucao(true)}>
               <ArrowLeftRight className="h-4 w-4" />
-              <span className="hidden sm:inline">Lançar devolução</span>
+              Lançar devolução
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      {/* `compact` some com o ícone no mobile: sem ele "R$ 1.234,56" e "Agosto de 2026" cabem em uma linha. */}
+      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
         <StatCard
+          compact
           label="Dizimista desde"
           value={registro ? formatCompetencia(registro) : '—'}
           icon={CalendarCheck}
         />
-        <StatCard label="Total devolvido" value={formatCurrency(totalDevolvido)} icon={Wallet} />
-        <StatCard label={`Devolvidos em ${anoAtual}`} value={String(mesesDevolvidosNoAno)} icon={ArrowLeftRight} />
-        <StatCard label={`Pendentes em ${anoAtual}`} value={String(mesesPendentesNoAno)} icon={CalendarCheck} />
+        <StatCard compact label="Total devolvido" value={formatCurrency(totalDevolvido)} icon={Wallet} />
+        <StatCard
+          compact
+          label={`Meses devolvidos em ${anoAtual}`}
+          value={String(mesesDevolvidosNoAno)}
+          icon={ArrowLeftRight}
+        />
+        <StatCard
+          compact
+          label={`Meses pendentes em ${anoAtual}`}
+          value={String(mesesPendentesNoAno)}
+          icon={CalendarCheck}
+        />
       </div>
 
       <Card className="mb-6">
@@ -231,7 +294,7 @@ export function DizimistaDetalhePage() {
           <DialogHeader>
             <DialogTitle>Editar dizimista</DialogTitle>
           </DialogHeader>
-          <RecadastramentoForm dizimista={dizimista} bloquearCarne onSalvar={handleSalvarEdicao} />
+          <RecadastramentoForm dizimista={dizimista} bloquearCarne camposOpcionais onSalvar={handleSalvarEdicao} />
         </DialogContent>
       </Dialog>
 

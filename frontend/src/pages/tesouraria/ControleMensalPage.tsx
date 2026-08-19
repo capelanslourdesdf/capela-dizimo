@@ -243,7 +243,7 @@ export function ControleMensalPage() {
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-xl font-semibold capitalize tracking-tight text-foreground sm:text-2xl">
+            <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
               {formatCompetencia(controle.competencia)}
             </h1>
             <StatusBadge label={STATUS_CONTROLE_TESOURARIA[statusExibido]} variant={statusExibido === 'fechado' ? 'muted' : 'success'} />

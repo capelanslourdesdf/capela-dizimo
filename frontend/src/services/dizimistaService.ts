@@ -111,19 +111,27 @@ export async function buscarCarnePorNomeENascimento(nome: string, diaMes: string
  * cônjuge, filhos e responsável ficaram só em registros antigos. Por isso só entram no payload
  * (e sobrescrevem o que já existe, via merge) quando de fato vierem preenchidos; do contrário o
  * `merge: true` do Firestore preserva o que já estava salvo.
+ *
+ * Nascimento e telefone seguem a mesma regra: na edição pela Pastoral eles são opcionais, e
+ * gravar "" apagaria o que já está na base — inclusive o `diaMesNascimento` dos registros
+ * importados da planilha, que é justamente o dado com que o dizimista entra no site. Campo em
+ * branco, portanto, significa "não mexer", não "limpar".
  */
 function montarPayload(dados: DadosCadastraisDizimista, agora: string) {
   const payload: Record<string, unknown> = {
     nomeCompleto: dados.nomeCompleto,
-    dataNascimento: dados.dataNascimento,
-    // Mantido em sincronia com a data completa: é por ele que o login confere o nascimento
-    // (registros importados da planilha antiga não têm o ano).
-    diaMesNascimento: isoParaDiaMes(dados.dataNascimento),
-    telefone: dados.telefone,
     // Data de referência do dizimista no site: a partir dela é que os meses passam a ser
     // cobrados/acompanhados. Atualizada a cada recadastramento.
     atualizadoEm: agora,
   }
+
+  if (dados.dataNascimento) {
+    payload.dataNascimento = dados.dataNascimento
+    // Mantido em sincronia com a data completa: é por ele que o login confere o nascimento
+    // (registros importados da planilha antiga não têm o ano).
+    payload.diaMesNascimento = isoParaDiaMes(dados.dataNascimento)
+  }
+  if (dados.telefone) payload.telefone = dados.telefone
 
   if (dados.endereco) {
     // O Firestore rejeita "undefined" em qualquer campo — complemento em branco precisa virar

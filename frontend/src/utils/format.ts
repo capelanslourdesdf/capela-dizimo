@@ -239,14 +239,14 @@ export function diaMesEhValido(valor: string): boolean {
   return dia <= diasNoMes[mes - 1]
 }
 
-/** "aaaa-mm-dd" -> "dd/mm" */
-export function isoParaDiaMes(valorIso: string): string {
-  const match = valorIso.match(/^\d{4}-(\d{2})-(\d{2})$/)
+/** "aaaa-mm-dd" -> "dd/mm". Aceita ausente/vazio: nem todo registro tem a data completa. */
+export function isoParaDiaMes(valorIso?: string): string {
+  const match = (valorIso ?? '').match(/^\d{4}-(\d{2})-(\d{2})$/)
   return match ? `${match[2]}/${match[1]}` : ''
 }
 
-export function dataIsoParaBr(valorIso: string): string {
-  const match = valorIso.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+export function dataIsoParaBr(valorIso?: string): string {
+  const match = (valorIso ?? '').match(/^(\d{4})-(\d{2})-(\d{2})$/)
   if (!match) return ''
   const [, ano, mes, dia] = match
   return `${dia}/${mes}/${ano}`

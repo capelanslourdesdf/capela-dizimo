@@ -49,7 +49,7 @@ export function AppTopbar({ navItems, areaLabel, userMenu }: AppTopbarProps) {
                     )
                   }
                 >
-                  <item.icon className="h-[18px] w-[18px]" />
+                  <item.icon className="h-[18px] w-[18px] shrink-0" />
                   {item.label}
                 </NavLink>
               </SheetClose>

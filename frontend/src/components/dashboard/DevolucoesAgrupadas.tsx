@@ -37,7 +37,7 @@ export function DevolucoesAgrupadas({
       {grupos.map((grupo) => (
         <div key={grupo.competencia}>
           <div className="mb-2 flex items-baseline justify-between gap-2">
-            <h3 className="text-sm font-semibold capitalize text-foreground">{formatCompetencia(grupo.competencia)}</h3>
+            <h3 className="text-sm font-semibold text-foreground">{formatCompetencia(grupo.competencia)}</h3>
             <span className="shrink-0 text-xs text-muted-foreground">
               {grupo.devolucoes.length > 1 ? `${grupo.devolucoes.length} devoluções · ` : ''}
               {formatCurrency(grupo.total)}

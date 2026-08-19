@@ -37,13 +37,27 @@ const dataNascimentoSchema = z
   .regex(/^\d{2}\/\d{2}\/\d{4}$/, 'Use o formato dd/mm/aaaa.')
   .refine((valor) => dataBrEhValida(valor), 'Informe uma data válida.')
 
-function createSchema(exigirCarne: boolean) {
+/**
+ * Mesmas regras, porém aceitando o campo em branco: boa parte da base veio da planilha antiga
+ * com apenas nome e carnê, e a Pastoral precisa conseguir completar um dado de cada vez sem que
+ * os campos ainda desconhecidos travem a gravação.
+ */
+const dataNascimentoOpcionalSchema = z
+  .string()
+  .refine((valor) => !valor.trim() || /^\d{2}\/\d{2}\/\d{4}$/.test(valor), 'Use o formato dd/mm/aaaa.')
+  .refine((valor) => !valor.trim() || dataBrEhValida(valor), 'Informe uma data válida.')
+
+const telefoneOpcionalSchema = z
+  .string()
+  .refine((valor) => !valor.trim() || valor.trim().length >= 14, 'Informe um telefone válido.')
+
+function createSchema(exigirCarne: boolean, camposOpcionais: boolean) {
   return z.object({
     numeroCarne: exigirCarne ? z.string().trim().min(1, 'Informe o número do carnê.') : z.string().optional(),
     sabeNumeroCarne: z.enum(['sim', 'nao']),
     nomeCompleto: z.string().min(3, 'Informe o nome completo.'),
-    dataNascimento: dataNascimentoSchema,
-    telefone: z.string().min(14, 'Informe um telefone válido.'),
+    dataNascimento: camposOpcionais ? dataNascimentoOpcionalSchema : dataNascimentoSchema,
+    telefone: camposOpcionais ? telefoneOpcionalSchema : z.string().min(14, 'Informe um telefone válido.'),
   })
 }
 
@@ -81,6 +95,12 @@ interface RecadastramentoFormProps {
   /** false no cadastro feito pelo admin: o nº do carnê é gerado ao salvar, não informado no form. */
   exibirCarne?: boolean
   bloquearCarne?: boolean
+  /**
+   * true na edição feita pela Pastoral: nascimento e telefone deixam de ser obrigatórios, para
+   * permitir preencher um campo sem ter em mãos os outros. Campos deixados em branco não apagam
+   * o que já estava salvo (ver `montarPayload` em services/dizimistaService).
+   */
+  camposOpcionais?: boolean
   /** true no recadastramento público: após salvar, limpa tudo para permitir outro em seguida. */
   limparAposSalvar?: boolean
   onSalvar: (
@@ -105,11 +125,15 @@ export function RecadastramentoForm({
   dizimista,
   exibirCarne = true,
   bloquearCarne = false,
+  camposOpcionais = false,
   limparAposSalvar = false,
   onSalvar,
 }: RecadastramentoFormProps) {
   const [erro, setErro] = React.useState<string | null>(null)
-  const schema = React.useMemo(() => createSchema(exibirCarne), [exibirCarne])
+  const schema = React.useMemo(
+    () => createSchema(exibirCarne, camposOpcionais),
+    [exibirCarne, camposOpcionais],
+  )
 
   const {
     register,
@@ -302,7 +326,7 @@ export function RecadastramentoForm({
 
   const campoDataNascimento = (
     <div className="space-y-1.5">
-      <Label htmlFor="dataNascimento">Data de nascimento</Label>
+      <Label htmlFor="dataNascimento">Data de nascimento{camposOpcionais && ' (opcional)'}</Label>
       <Controller
         control={control}
         name="dataNascimento"
@@ -497,7 +521,7 @@ export function RecadastramentoForm({
         <div className="grid gap-4 sm:grid-cols-2">
           {campoDataNascimento}
           <div className="space-y-1.5">
-            <Label htmlFor="telefone">Telefone/WhatsApp</Label>
+            <Label htmlFor="telefone">Telefone/WhatsApp{camposOpcionais && ' (opcional)'}</Label>
             <Controller
               control={control}
               name="telefone"

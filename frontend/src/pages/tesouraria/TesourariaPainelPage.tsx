@@ -126,7 +126,7 @@ export function TesourariaPainelPage() {
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     <ArrowLeftRight className="h-4 w-4 shrink-0 text-primary" />
-                    <span className="font-medium capitalize text-foreground">{formatCompetencia(c.competencia)}</span>
+                    <span className="font-medium text-foreground">{formatCompetencia(c.competencia)}</span>
                     <StatusBadge
                       label={STATUS_CONTROLE_TESOURARIA[c.status]}
                       variant={c.status === 'fechado' ? 'muted' : 'success'}

@@ -1,29 +1,28 @@
 import * as React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Download, IdCard, Phone, Settings, Trash2, UserPlus, Users } from 'lucide-react'
+import { Download, IdCard, Phone, Trash2, UserPlus, Users, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { PageHeader } from '@/components/layout/PageHeader'
 import { FiltroBar } from '@/components/pastoral/FiltroBar'
 import { EmptyState } from '@/components/dashboard/EmptyState'
+import { StatCard } from '@/components/dashboard/StatCard'
 import { StatusBadge } from '@/components/dashboard/StatusBadge'
 import { RecadastramentoForm } from '@/components/forms/RecadastramentoForm'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 import { criarDizimistaAdmin, excluirDizimista, listarDizimistas } from '@/services/dizimistaService'
-import { listarTodasDevolucoesPorCarne } from '@/services/devolucaoService'
-import { obterMesesParaInativo, salvarMesesParaInativo } from '@/services/configuracaoService'
+import { competenciaDaDevolucao, listarTodasDevolucoesPorCarne } from '@/services/devolucaoService'
+import { obterMinimoMesesAtivos } from '@/services/configuracaoService'
 import type { DadosCadastraisDizimista, Devolucao, Dizimista } from '@/types'
-import { getIniciais } from '@/utils/format'
+import { formatCurrency, getIniciais } from '@/utils/format'
 import { baixarArquivoTexto } from '@/utils/download'
 import {
   calcularStatusDizimista,
@@ -42,26 +41,23 @@ export function DizimistasPage() {
   const navigate = useNavigate()
   const [dizimistas, setDizimistas] = React.useState<Dizimista[]>([])
   const [devolucoesPorCarne, setDevolucoesPorCarne] = React.useState<Record<string, Devolucao[]>>({})
-  const [mesesParaInativo, setMesesParaInativo] = React.useState<number | null>(null)
+  const [minimoMesesAtivos, setMinimoMesesAtivos] = React.useState<number | null>(null)
   const [carregando, setCarregando] = React.useState(true)
   const [busca, setBusca] = React.useState('')
   const [filtroStatus, setFiltroStatus] = React.useState<StatusDizimista | 'todos'>('todos')
   const [modalAberto, setModalAberto] = React.useState(false)
-  const [modalConfig, setModalConfig] = React.useState(false)
-  const [mesesInput, setMesesInput] = React.useState('')
-  const [salvandoConfig, setSalvandoConfig] = React.useState(false)
   const [dizimistaParaExcluir, setDizimistaParaExcluir] = React.useState<Dizimista | null>(null)
 
   const carregar = React.useCallback(async () => {
     setCarregando(true)
-    const [todos, devolucoes, meses] = await Promise.all([
+    const [todos, devolucoes, minimo] = await Promise.all([
       listarDizimistas(),
       listarTodasDevolucoesPorCarne(),
-      obterMesesParaInativo(),
+      obterMinimoMesesAtivos(),
     ])
     setDizimistas(todos)
     setDevolucoesPorCarne(devolucoes)
-    setMesesParaInativo(meses)
+    setMinimoMesesAtivos(minimo)
     setCarregando(false)
   }, [])
 
@@ -71,19 +67,44 @@ export function DizimistasPage() {
 
   const statusPorCarne = React.useMemo(() => {
     const mapa = new Map<string, StatusDizimista>()
-    if (mesesParaInativo === null) return mapa
+    if (minimoMesesAtivos === null) return mapa
 
     for (const d of dizimistas) {
       const devolucoes = devolucoesPorCarne[d.numeroCarne] ?? []
       const status = calcularStatusDizimista(
         competenciaDeRegistro(d),
         competenciasPagasDoDizimista(devolucoes),
-        mesesParaInativo,
+        minimoMesesAtivos,
       )
       mapa.set(d.numeroCarne, status)
     }
     return mapa
-  }, [dizimistas, devolucoesPorCarne, mesesParaInativo])
+  }, [dizimistas, devolucoesPorCarne, minimoMesesAtivos])
+
+  const totalAtivos = React.useMemo(
+    () => [...statusPorCarne.values()].filter((s) => s === 'ativo').length,
+    [statusPorCarne],
+  )
+  const totalInativos = React.useMemo(
+    () => [...statusPorCarne.values()].filter((s) => s === 'inativo').length,
+    [statusPorCarne],
+  )
+
+  /** Soma de todas as devoluções (de todos os dizimistas) agrupada por ano, do mais recente pro mais antigo. */
+  const totalPorAno = React.useMemo(() => {
+    const mapa = new Map<string, number>()
+    for (const devolucoes of Object.values(devolucoesPorCarne)) {
+      for (const d of devolucoes) {
+        const ano = competenciaDaDevolucao(d).slice(0, 4)
+        if (!ano) continue
+        mapa.set(ano, (mapa.get(ano) ?? 0) + d.valor)
+      }
+    }
+    return [...mapa.entries()].sort((a, b) => (a[0] < b[0] ? 1 : -1))
+  }, [devolucoesPorCarne])
+
+  const anoAtual = String(new Date().getFullYear())
+  const totalAnoAtual = totalPorAno.find(([ano]) => ano === anoAtual)?.[1] ?? 0
 
   const dizimistasFiltrados = React.useMemo(() => {
     const termo = busca.trim().toLowerCase()
@@ -128,31 +149,6 @@ export function DizimistasPage() {
     toast.success(`${ativos.length} carnê(s) exportado(s).`)
   }
 
-  function abrirConfig() {
-    setMesesInput(String(mesesParaInativo ?? ''))
-    setModalConfig(true)
-  }
-
-  async function handleSalvarConfig() {
-    const valor = Number(mesesInput)
-    if (!Number.isInteger(valor) || valor <= 0) {
-      toast.error('Informe um número inteiro maior que zero.')
-      return
-    }
-
-    setSalvandoConfig(true)
-    try {
-      await salvarMesesParaInativo(valor)
-      setMesesParaInativo(valor)
-      setModalConfig(false)
-      toast.success('Configuração salva.')
-    } catch {
-      toast.error('Não foi possível salvar. Tente novamente.')
-    } finally {
-      setSalvandoConfig(false)
-    }
-  }
-
   return (
     <div>
       <PageHeader
@@ -160,9 +156,6 @@ export function DizimistasPage() {
         description={`${dizimistasFiltrados.length} dizimista(s) encontrado(s)`}
         actions={
           <>
-            <Button variant="outline" size="icon" onClick={abrirConfig} aria-label="Configurações de status">
-              <Settings className="h-4 w-4" />
-            </Button>
             <Button variant="outline" onClick={handleExportarAtivos}>
               <Download className="h-4 w-4" />
               Exportar ativos
@@ -174,6 +167,40 @@ export function DizimistasPage() {
           </>
         }
       />
+
+      {carregando ? (
+        <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-24 w-full rounded-xl" />
+          ))}
+        </div>
+      ) : (
+        <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <StatCard label="Dizimistas ativos" value={String(totalAtivos)} icon={Users} />
+          <StatCard label="Dizimistas inativos" value={String(totalInativos)} icon={Users} />
+          <StatCard label="Total de dizimistas" value={String(dizimistas.length)} icon={Users} />
+          <StatCard label={`Arrecadado em ${anoAtual}`} value={formatCurrency(totalAnoAtual)} icon={Wallet} />
+        </div>
+      )}
+
+      {!carregando && totalPorAno.length > 0 && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="text-base">Total arrecadado por ano</CardTitle>
+            <CardDescription>Soma de todas as devoluções lançadas em cada ano.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="divide-y divide-border">
+              {totalPorAno.map(([ano, total]) => (
+                <li key={ano} className="flex items-center justify-between py-2.5 text-sm">
+                  <span className="font-medium text-foreground">{ano}</span>
+                  <span className="text-foreground">{formatCurrency(total)}</span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
 
       <FiltroBar busca={busca} onBuscaChange={setBusca} placeholder="Buscar por nome ou nº do carnê...">
         <Select value={filtroStatus} onValueChange={(v) => setFiltroStatus(v as StatusDizimista | 'todos')}>
@@ -305,40 +332,6 @@ export function DizimistasPage() {
             <DialogTitle>Cadastrar novo dizimista</DialogTitle>
           </DialogHeader>
           <RecadastramentoForm exibirCarne={false} onSalvar={handleCadastrar} />
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={modalConfig} onOpenChange={setModalConfig}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Status ativo/inativo</DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="mesesParaInativo">Meses seguidos sem devolução para considerar inativo</Label>
-            <Input
-              id="mesesParaInativo"
-              type="number"
-              min={1}
-              inputMode="numeric"
-              value={mesesInput}
-              onChange={(e) => setMesesInput(e.target.value)}
-              autoFocus
-            />
-            <p className="text-xs text-muted-foreground">
-              Dizimistas com esse número de meses seguidos sem devolução (contados a partir do recadastramento)
-              ficam com status Inativo. Quem devolveu em algum mês mais recente que esse fica Ativo.
-            </p>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setModalConfig(false)} disabled={salvandoConfig}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSalvarConfig} disabled={salvandoConfig}>
-              {salvandoConfig ? 'Salvando...' : 'Salvar'}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 

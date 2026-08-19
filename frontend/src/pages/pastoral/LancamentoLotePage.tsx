@@ -18,8 +18,6 @@ import { lancarDevolucao } from '@/services/devolucaoService'
 import { listarMembrosPastoral } from '@/services/membroPastoralService'
 import type { FormaPagamentoDevolucao, MembroPastoral } from '@/types'
 import {
-  competenciaAtual,
-  competenciaParaMesAno,
   finalizarMoeda,
   formatCurrency,
   maskMesAno,
@@ -54,7 +52,7 @@ const MAX_LINHAS_POR_VEZ = 50
 
 function valoresIniciais(): FormValues {
   return {
-    competencia: competenciaParaMesAno(competenciaAtual()),
+    competencia: '',
     formaPagamento: 'pix',
     lancadoPor: '',
     linhas: [{ ...linhaVazia }],
@@ -288,7 +286,11 @@ export function LancamentoLotePage() {
               </div>
 
               {fields.map((field, index) => (
-                <div key={field.id} className="grid grid-cols-[1fr_1fr_auto] items-end gap-3">
+                <div
+                  key={field.id}
+                  className="grid grid-cols-[1fr_1fr_auto] items-end gap-3"
+                  onFocus={(e) => e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+                >
                   <div className="space-y-1.5">
                     {index === 0 && <Label htmlFor={`linhas.${index}.numeroCarne`}>Nº do carnê</Label>}
                     <Controller

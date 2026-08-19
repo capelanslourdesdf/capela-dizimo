@@ -1,16 +1,17 @@
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 
 import { db } from '@/lib/firebase'
-import { MESES_PARA_INATIVO_PADRAO } from '@/utils/statusDizimista'
+import { MINIMO_MESES_ATIVOS_PADRAO } from '@/utils/statusDizimista'
 
 const REF = doc(db, 'configuracoes', 'geral')
 
-export async function obterMesesParaInativo(): Promise<number> {
+/** Mínimo de meses com devolução, dos últimos 6, para o dizimista ser considerado ativo. */
+export async function obterMinimoMesesAtivos(): Promise<number> {
   const snap = await getDoc(REF)
-  const valor = snap.exists() ? (snap.data() as { mesesParaInativo?: number }).mesesParaInativo : undefined
-  return typeof valor === 'number' && Number.isInteger(valor) && valor > 0 ? valor : MESES_PARA_INATIVO_PADRAO
+  const valor = snap.exists() ? (snap.data() as { minimoMesesAtivos?: number }).minimoMesesAtivos : undefined
+  return typeof valor === 'number' && Number.isInteger(valor) && valor > 0 ? valor : MINIMO_MESES_ATIVOS_PADRAO
 }
 
-export async function salvarMesesParaInativo(valor: number): Promise<void> {
-  await setDoc(REF, { mesesParaInativo: valor }, { merge: true })
+export async function salvarMinimoMesesAtivos(valor: number): Promise<void> {
+  await setDoc(REF, { minimoMesesAtivos: valor }, { merge: true })
 }

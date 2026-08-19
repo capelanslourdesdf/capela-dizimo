@@ -196,7 +196,7 @@ export function DevolucaoForm({ onSalvar, onCancelar }: DevolucaoFormProps) {
         {!carregandoMembros && membros.length === 0 && (
           <p className="text-xs text-muted-foreground">
             Nenhum membro cadastrado.{' '}
-            <Link to={ROUTES.pastoral.membros} className="font-medium text-primary hover:underline">
+            <Link to={ROUTES.pastoral.configuracoes} className="font-medium text-primary hover:underline">
               Cadastrar membros da Pastoral
             </Link>
           </p>

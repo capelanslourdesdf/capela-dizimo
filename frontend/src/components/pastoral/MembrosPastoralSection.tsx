@@ -2,7 +2,6 @@ import * as React from 'react'
 import { Pencil, Trash2, UserPlus, Users } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { PageHeader } from '@/components/layout/PageHeader'
 import { EmptyState } from '@/components/dashboard/EmptyState'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -10,13 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
 import {
   atualizarMembroPastoral,
@@ -26,7 +19,8 @@ import {
 } from '@/services/membroPastoralService'
 import type { MembroPastoral } from '@/types'
 
-export function MembrosPastoralPage() {
+/** Controle de quem pode ser indicado como responsável por um lançamento de devolução. */
+export function MembrosPastoralSection() {
   const [membros, setMembros] = React.useState<MembroPastoral[]>([])
   const [carregando, setCarregando] = React.useState(true)
   const [modalAberto, setModalAberto] = React.useState(false)
@@ -99,16 +93,16 @@ export function MembrosPastoralPage() {
 
   return (
     <div>
-      <PageHeader
-        title="Membros da Pastoral"
-        description="Quem pode ser indicado como responsável por um lançamento de devolução."
-        actions={
-          <Button onClick={abrirNovo}>
-            <UserPlus className="h-4 w-4" />
-            Novo membro
-          </Button>
-        }
-      />
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold text-foreground">Membros da Pastoral</h2>
+          <p className="text-xs text-muted-foreground">Quem pode ser indicado como responsável por um lançamento de devolução.</p>
+        </div>
+        <Button size="sm" onClick={abrirNovo}>
+          <UserPlus className="h-4 w-4" />
+          Novo membro
+        </Button>
+      </div>
 
       {carregando ? (
         <div className="space-y-3">

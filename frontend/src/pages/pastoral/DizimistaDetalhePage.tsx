@@ -18,11 +18,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 import { buscarDizimistaPorCarne, excluirDizimista, salvarRecadastramento } from '@/services/dizimistaService'
-import { obterMesesParaInativo } from '@/services/configuracaoService'
+import { obterMinimoMesesAtivos } from '@/services/configuracaoService'
 import { lancarDevolucao, listarDevolucoes, type DadosDevolucao } from '@/services/devolucaoService'
 import type { DadosCadastraisDizimista, Devolucao, Dizimista } from '@/types'
 import { formatCurrency, formatCompetencia, competenciaAtual, competenciasEntre, getIniciais } from '@/utils/format'
-import { calcularStatusDizimista, competenciaDeRegistro, competenciasPagasDoDizimista } from '@/utils/statusDizimista'
+import {
+  calcularStatusDizimista,
+  competenciaDeRegistro,
+  competenciasPagasDoDizimista,
+  MINIMO_MESES_ATIVOS_PADRAO,
+} from '@/utils/statusDizimista'
 import { ROUTES } from '@/constants/routes'
 
 export function DizimistaDetalhePage() {
@@ -30,7 +35,7 @@ export function DizimistaDetalhePage() {
   const navigate = useNavigate()
   const [dizimista, setDizimista] = React.useState<Dizimista | null>(null)
   const [devolucoes, setDevolucoes] = React.useState<Devolucao[]>([])
-  const [mesesParaInativo, setMesesParaInativo] = React.useState(5)
+  const [minimoMesesAtivos, setMinimoMesesAtivos] = React.useState(MINIMO_MESES_ATIVOS_PADRAO)
   const [carregando, setCarregando] = React.useState(true)
   const [modalEdicao, setModalEdicao] = React.useState(false)
   const [modalDevolucao, setModalDevolucao] = React.useState(false)
@@ -39,14 +44,14 @@ export function DizimistaDetalhePage() {
   const carregar = React.useCallback(async () => {
     if (!numeroCarne) return
     setCarregando(true)
-    const [d, dev, meses] = await Promise.all([
+    const [d, dev, minimo] = await Promise.all([
       buscarDizimistaPorCarne(numeroCarne),
       listarDevolucoes(numeroCarne),
-      obterMesesParaInativo(),
+      obterMinimoMesesAtivos(),
     ])
     setDizimista(d)
     setDevolucoes(dev)
-    setMesesParaInativo(meses)
+    setMinimoMesesAtivos(minimo)
     setCarregando(false)
   }, [numeroCarne])
 
@@ -107,7 +112,7 @@ export function DizimistaDetalhePage() {
 
   const registro = competenciaDeRegistro(dizimista)
   const competenciasPagas = competenciasPagasDoDizimista(devolucoes)
-  const status = calcularStatusDizimista(registro, competenciasPagas, mesesParaInativo)
+  const status = calcularStatusDizimista(registro, competenciasPagas, minimoMesesAtivos)
   const totalDevolvido = devolucoes.reduce((soma, d) => soma + d.valor, 0)
 
   const anoAtual = new Date().getFullYear()

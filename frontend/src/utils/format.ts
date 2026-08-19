@@ -176,6 +176,13 @@ export function competenciaAtual(): string {
   return `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`
 }
 
+/** Competência ("aaaa-mm") `meses` antes de `competencia`. `subtrairMeses('2026-02', 3) -> '2025-11'`. */
+export function subtrairMeses(competencia: string, meses: number): string {
+  const [ano, mes] = competencia.split('-').map(Number)
+  const data = new Date(ano, mes - 1 - meses, 1)
+  return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}`
+}
+
 /**
  * Lista as competências ("aaaa-mm") de `inicio` até `fim`, inclusive. Usada para descobrir os
  * meses que o dizimista deveria ter devolvido desde que se recadastrou.

@@ -1,4 +1,4 @@
-import { ArrowLeftRight, ClipboardList, Home, IdCard, Layers, UserCog, Users, type LucideIcon } from 'lucide-react'
+import { ArrowLeftRight, ClipboardList, Home, IdCard, Layers, Settings, Users, type LucideIcon } from 'lucide-react'
 
 import { ROUTES } from '@/constants/routes'
 
@@ -21,5 +21,5 @@ export const pastoralNav: NavItem[] = [
   { label: 'Dizimistas', href: ROUTES.pastoral.root, icon: Users, end: true },
   { label: 'Recadastramentos', href: ROUTES.pastoral.recadastramentos, icon: ClipboardList },
   { label: 'Lançar devoluções em lote', href: ROUTES.pastoral.lancamentoLote, icon: Layers },
-  { label: 'Membros da Pastoral', href: ROUTES.pastoral.membros, icon: UserCog },
+  { label: 'Configurações', href: ROUTES.pastoral.configuracoes, icon: Settings },
 ]

@@ -23,7 +23,7 @@ export const ROUTES = {
     root: '/pastoral',
     dizimistaDetalhe: (numeroCarne: string) => `/pastoral/dizimistas/${numeroCarne}`,
     recadastramentos: '/pastoral/recadastramentos',
-    membros: '/pastoral/membros',
+    configuracoes: '/pastoral/configuracoes',
     lancamentoLote: '/pastoral/devolucoes/lote',
   },
 } as const

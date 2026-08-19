@@ -100,23 +100,48 @@ export function dataBrParaIso(valorBr: string): string {
 }
 
 /**
- * Máscara monetária no padrão brasileiro: os dígitos digitados são lidos como centavos e
- * formatados com ponto nos milhares e vírgula nos centavos ("1234567" -> "12.345,67").
+ * Máscara monetária no padrão brasileiro, para digitação ao vivo (onChange). Na maioria das
+ * devoluções o valor é fechado (sem centavos), então sem vírgula digitada o número é tratado
+ * como reais inteiros — só ganha ponto de milhar ("1234" -> "1.234"), sem completar ",00" ainda
+ * (isso fica pra `finalizarMoeda`, no blur, pra não embaralhar o que a pessoa está digitando).
+ * Ao digitar uma vírgula, os centavos passam a ser exatamente o que vier depois dela (até 2
+ * dígitos), sem completar com zero — é o sinal de que a pessoa quer especificar os centavos.
  */
 export function maskMoeda(valor: string): string {
-  const digitos = valor.replace(/\D/g, '').slice(0, 11)
-  if (!digitos) return ''
+  let limpo = valor.replace(/[^\d,]/g, '')
 
-  return (Number(digitos) / 100).toLocaleString('pt-BR', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
+  const primeiraVirgula = limpo.indexOf(',')
+  if (primeiraVirgula !== -1) {
+    limpo = limpo.slice(0, primeiraVirgula + 1) + limpo.slice(primeiraVirgula + 1).replace(/,/g, '')
+  }
+
+  const [parteInteira, parteDecimal] = limpo.split(',')
+  const inteiroFormatado = parteInteira.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+
+  return parteDecimal === undefined ? inteiroFormatado : `${inteiroFormatado},${parteDecimal.slice(0, 2)}`
 }
 
-/** Converte o texto mascarado ("12.345,67") no número correspondente (12345.67). */
+/**
+ * Finaliza o valor ao sair do campo (blur): fecha em ",00" quando nenhuma vírgula foi digitada,
+ * ou completa os centavos digitados para 2 dígitos ("100" -> "100,00", "100,5" -> "100,50").
+ */
+export function finalizarMoeda(valor: string): string {
+  if (!valor) return valor
+  const [parteInteira, parteDecimal] = valor.split(',')
+  const inteiro = parteInteira || '0'
+  return `${inteiro},${(parteDecimal ?? '').padEnd(2, '0').slice(0, 2)}`
+}
+
+/**
+ * Converte o texto mascarado no número correspondente. Interpreta tanto valores já finalizados
+ * ("1.234,56") quanto ainda sem vírgula ("1.234", tratado como reais inteiros).
+ */
 export function moedaParaNumero(valor: string): number {
-  const digitos = valor.replace(/\D/g, '')
-  return digitos ? Number(digitos) / 100 : 0
+  if (!valor) return 0
+  const [parteInteira, parteDecimal] = valor.split(',')
+  const inteiro = parteInteira.replace(/\D/g, '') || '0'
+  const decimal = (parteDecimal ?? '').replace(/\D/g, '').padEnd(2, '0').slice(0, 2)
+  return Number(`${inteiro}${decimal}`) / 100
 }
 
 export function maskMesAno(valor: string): string {

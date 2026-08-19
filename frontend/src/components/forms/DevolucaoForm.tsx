@@ -18,6 +18,7 @@ import type { MembroPastoral } from '@/types'
 import {
   competenciaAtual,
   competenciaParaMesAno,
+  finalizarMoeda,
   maskMesAno,
   maskMoeda,
   mesAnoEhValido,
@@ -114,11 +115,12 @@ export function DevolucaoForm({ onSalvar, onCancelar }: DevolucaoFormProps) {
               render={({ field }) => (
                 <Input
                   id="valor"
-                  inputMode="numeric"
+                  inputMode="decimal"
                   placeholder="0,00"
                   className="pl-9"
                   value={field.value ?? ''}
                   onChange={(e) => field.onChange(maskMoeda(e.target.value))}
+                  onBlur={() => field.onChange(finalizarMoeda(field.value ?? ''))}
                 />
               )}
             />

@@ -20,6 +20,7 @@ import type { FormaPagamentoDevolucao, MembroPastoral } from '@/types'
 import {
   competenciaAtual,
   competenciaParaMesAno,
+  finalizarMoeda,
   formatCurrency,
   maskMesAno,
   maskMoeda,
@@ -48,6 +49,9 @@ type FormValues = z.infer<typeof schema>
 
 const linhaVazia = { numeroCarne: '', valor: '' }
 
+/** Limite defensivo para o "adicionar N linhas de uma vez", evitando travar a tela por engano. */
+const MAX_LINHAS_POR_VEZ = 50
+
 function valoresIniciais(): FormValues {
   return {
     competencia: competenciaParaMesAno(competenciaAtual()),
@@ -71,6 +75,7 @@ export function LancamentoLotePage() {
   const [processando, setProcessando] = React.useState(false)
   const [membros, setMembros] = React.useState<MembroPastoral[]>([])
   const [carregandoMembros, setCarregandoMembros] = React.useState(true)
+  const [quantidadeParaAdicionar, setQuantidadeParaAdicionar] = React.useState('5')
 
   const {
     control,
@@ -84,6 +89,11 @@ export function LancamentoLotePage() {
   })
 
   const { fields, append, remove, replace } = useFieldArray({ control, name: 'linhas' })
+
+  function handleAdicionarLinhas() {
+    const quantidade = Math.min(Math.max(Math.trunc(Number(quantidadeParaAdicionar)) || 1, 1), MAX_LINHAS_POR_VEZ)
+    append(Array.from({ length: quantidade }, () => ({ ...linhaVazia })))
+  }
 
   React.useEffect(() => {
     listarMembrosPastoral()
@@ -257,12 +267,24 @@ export function LancamentoLotePage() {
             </div>
 
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-sm font-semibold text-foreground">Dizimistas</h2>
-                <Button type="button" variant="outline" size="sm" onClick={() => append({ ...linhaVazia })}>
-                  <Plus className="h-3.5 w-3.5" />
-                  Adicionar linha
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min={1}
+                    max={MAX_LINHAS_POR_VEZ}
+                    inputMode="numeric"
+                    value={quantidadeParaAdicionar}
+                    onChange={(e) => setQuantidadeParaAdicionar(e.target.value)}
+                    className="w-16"
+                    aria-label="Quantidade de linhas para adicionar"
+                  />
+                  <Button type="button" variant="outline" size="sm" onClick={handleAdicionarLinhas}>
+                    <Plus className="h-3.5 w-3.5" />
+                    Adicionar linhas
+                  </Button>
+                </div>
               </div>
 
               {fields.map((field, index) => (
@@ -289,11 +311,12 @@ export function LancamentoLotePage() {
                         render={({ field: f }) => (
                           <Input
                             id={`linhas.${index}.valor`}
-                            inputMode="numeric"
+                            inputMode="decimal"
                             placeholder="0,00"
                             className="pl-9"
                             value={f.value}
                             onChange={(e) => f.onChange(maskMoeda(e.target.value))}
+                            onBlur={() => f.onChange(finalizarMoeda(f.value ?? ''))}
                           />
                         )}
                       />

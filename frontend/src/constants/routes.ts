@@ -25,5 +25,11 @@ export const ROUTES = {
     recadastramentos: '/pastoral/recadastramentos',
     configuracoes: '/pastoral/configuracoes',
     lancamentoLote: '/pastoral/devolucoes/lote',
+    tesouraria: {
+      entrar: '/pastoral/tesouraria/entrar',
+      root: '/pastoral/tesouraria',
+      eventos: '/pastoral/tesouraria/eventos',
+      controle: (competencia: string) => `/pastoral/tesouraria/${competencia}`,
+    },
   },
 } as const

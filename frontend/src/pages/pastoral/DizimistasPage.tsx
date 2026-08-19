@@ -9,10 +9,11 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { EmptyState } from '@/components/dashboard/EmptyState'
 import { StatCard } from '@/components/dashboard/StatCard'
 import { StatusBadge } from '@/components/dashboard/StatusBadge'
+import { GraficoEvolucaoMensal } from '@/components/dashboard/GraficoEvolucaoMensal'
 import { RecadastramentoForm } from '@/components/forms/RecadastramentoForm'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -106,6 +107,21 @@ export function DizimistasPage() {
 
   const anoAtual = String(new Date().getFullYear())
   const totalAnoAtual = totalPorAno.find(([ano]) => ano === anoAtual)?.[1] ?? 0
+  const totalGeral = React.useMemo(() => totalPorAno.reduce((soma, [, valor]) => soma + valor, 0), [totalPorAno])
+
+  /** Total arrecadado em cada mês do ano atual, na ordem Jan..Dez — para o gráfico de evolução. */
+  const evolucaoMensalAnoAtual = React.useMemo(() => {
+    const porMes = Array(12).fill(0)
+    for (const devolucoes of Object.values(devolucoesPorCarne)) {
+      for (const d of devolucoes) {
+        const competencia = competenciaDaDevolucao(d)
+        if (!competencia.startsWith(anoAtual)) continue
+        const indiceMes = Number(competencia.slice(5, 7)) - 1
+        if (indiceMes >= 0 && indiceMes < 12) porMes[indiceMes] += d.valor
+      }
+    }
+    return porMes
+  }, [devolucoesPorCarne, anoAtual])
 
   /** Dizimistas que fazem aniversário no mês atual, ordenados pelo dia. */
   const aniversariantesDoMes = React.useMemo(() => {
@@ -201,20 +217,35 @@ export function DizimistasPage() {
 
       {!carregando && totalPorAno.length > 0 && (
         <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="text-base">Total arrecadado por ano</CardTitle>
-            <CardDescription>Soma de todas as devoluções lançadas em cada ano.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ul className="divide-y divide-border">
-              {totalPorAno.map(([ano, total]) => (
-                <li key={ano} className="flex items-center justify-between py-2.5 text-sm">
-                  <span className="font-medium text-foreground">{ano}</span>
-                  <span className="text-foreground">{formatCurrency(total)}</span>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
+          <Accordion type="single" collapsible>
+            <AccordionItem value="total-por-ano" className="border-b-0">
+              <AccordionTrigger className="px-5 py-5 hover:no-underline sm:px-6 sm:py-6">
+                <div className="flex items-center gap-2 text-left">
+                  <Wallet className="h-4 w-4 shrink-0 text-primary" />
+                  <div>
+                    <p className="font-semibold leading-none tracking-tight text-foreground">Total arrecadado por ano</p>
+                    <p className="mt-1.5 text-sm font-normal text-muted-foreground">
+                      Total geral: {formatCurrency(totalGeral)}
+                    </p>
+                  </div>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="px-5 pb-5 sm:px-6 sm:pb-6">
+                <div className="mb-5">
+                  <p className="mb-3 text-sm font-medium text-foreground">Evolução mensal em {anoAtual}</p>
+                  <GraficoEvolucaoMensal valoresPorMes={evolucaoMensalAnoAtual} />
+                </div>
+                <ul className="divide-y divide-border">
+                  {totalPorAno.map(([ano, total]) => (
+                    <li key={ano} className="flex items-center justify-between py-2.5 text-sm">
+                      <span className="font-medium text-foreground">{ano}</span>
+                      <span className="text-foreground">{formatCurrency(total)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </Card>
       )}
 

@@ -1,7 +1,8 @@
-import { ArrowLeftRight } from 'lucide-react'
+import { ArrowLeftRight, Pencil } from 'lucide-react'
 
 import { EmptyState } from '@/components/dashboard/EmptyState'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { agruparDevolucoesPorCompetencia } from '@/services/devolucaoService'
 import type { Devolucao } from '@/types'
@@ -11,6 +12,8 @@ import { formatCompetencia, formatCurrency, formatDate } from '@/utils/format'
 interface DevolucoesAgrupadasProps {
   devolucoes: Devolucao[]
   vazioTitulo?: string
+  /** Só informado na área da Pastoral — quando presente, mostra o botão de editar cada lançamento. */
+  onEditar?: (devolucao: Devolucao) => void
 }
 
 /**
@@ -18,7 +21,11 @@ interface DevolucoesAgrupadasProps {
  * mês — agrupar deixa isso visível (quantas e quanto naquele mês) em vez de uma lista corrida
  * onde repetições no mesmo mês pareceriam estranhas.
  */
-export function DevolucoesAgrupadas({ devolucoes, vazioTitulo = 'Nenhuma devolução registrada' }: DevolucoesAgrupadasProps) {
+export function DevolucoesAgrupadas({
+  devolucoes,
+  vazioTitulo = 'Nenhuma devolução registrada',
+  onEditar,
+}: DevolucoesAgrupadasProps) {
   if (devolucoes.length === 0) {
     return <EmptyState icon={ArrowLeftRight} title={vazioTitulo} />
   }
@@ -48,9 +55,14 @@ export function DevolucoesAgrupadas({ devolucoes, vazioTitulo = 'Nenhuma devolu�
                     </p>
                     {d.observacao && <p className="mt-1 text-xs text-muted-foreground">{d.observacao}</p>}
                   </div>
-                  <Badge variant="outline" className="shrink-0">
-                    {formaPagamentoLabel(d.formaPagamento)}
-                  </Badge>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Badge variant="outline">{formaPagamentoLabel(d.formaPagamento)}</Badge>
+                    {onEditar && (
+                      <Button variant="ghost" size="icon" onClick={() => onEditar(d)} aria-label="Editar devolução">
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             ))}

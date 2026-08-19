@@ -20,7 +20,7 @@ interface UserMenuProps {
 export function UserMenu({ nome, subtitulo, onSair }: UserMenuProps) {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex items-center gap-2 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <DropdownMenuTrigger className="flex h-11 w-11 items-center justify-center gap-2 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring">
         <Avatar className="h-9 w-9 border border-border">
           <AvatarFallback>{getIniciais(nome)}</AvatarFallback>
         </Avatar>

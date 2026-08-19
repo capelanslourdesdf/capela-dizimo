@@ -19,7 +19,12 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 import { buscarDizimistaPorCarne, excluirDizimista, salvarRecadastramento } from '@/services/dizimistaService'
 import { obterMinimoMesesAtivos } from '@/services/configuracaoService'
-import { lancarDevolucao, listarDevolucoes, type DadosDevolucao } from '@/services/devolucaoService'
+import {
+  atualizarDevolucao,
+  lancarDevolucao,
+  listarDevolucoes,
+  type DadosDevolucao,
+} from '@/services/devolucaoService'
 import type { DadosCadastraisDizimista, Devolucao, Dizimista } from '@/types'
 import { formatCurrency, formatCompetencia, competenciaAtual, competenciasEntre, getIniciais } from '@/utils/format'
 import {
@@ -39,6 +44,7 @@ export function DizimistaDetalhePage() {
   const [carregando, setCarregando] = React.useState(true)
   const [modalEdicao, setModalEdicao] = React.useState(false)
   const [modalDevolucao, setModalDevolucao] = React.useState(false)
+  const [devolucaoEmEdicao, setDevolucaoEmEdicao] = React.useState<Devolucao | null>(null)
   const [modalExclusao, setModalExclusao] = React.useState(false)
 
   const carregar = React.useCallback(async () => {
@@ -72,6 +78,14 @@ export function DizimistaDetalhePage() {
     await lancarDevolucao(numeroCarne, dados)
     setModalDevolucao(false)
     toast.success('Devolução lançada com sucesso.')
+    carregar()
+  }
+
+  async function handleAtualizarDevolucao(dados: DadosDevolucao) {
+    if (!numeroCarne || !devolucaoEmEdicao) return
+    await atualizarDevolucao(numeroCarne, devolucaoEmEdicao.id, dados)
+    setDevolucaoEmEdicao(null)
+    toast.success('Devolução atualizada com sucesso.')
     carregar()
   }
 
@@ -204,7 +218,11 @@ export function DizimistaDetalhePage() {
           <CardDescription>Agrupadas por mês</CardDescription>
         </CardHeader>
         <CardContent>
-          <DevolucoesAgrupadas devolucoes={devolucoes} vazioTitulo="Nenhuma devolução lançada" />
+          <DevolucoesAgrupadas
+            devolucoes={devolucoes}
+            vazioTitulo="Nenhuma devolução lançada"
+            onEditar={setDevolucaoEmEdicao}
+          />
         </CardContent>
       </Card>
 
@@ -218,11 +236,27 @@ export function DizimistaDetalhePage() {
       </Dialog>
 
       <Dialog open={modalDevolucao} onOpenChange={setModalDevolucao}>
-        <DialogContent>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Lançar devolução</DialogTitle>
           </DialogHeader>
           <DevolucaoForm onSalvar={handleLancarDevolucao} onCancelar={() => setModalDevolucao(false)} />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!devolucaoEmEdicao} onOpenChange={(open) => !open && setDevolucaoEmEdicao(null)}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar devolução</DialogTitle>
+          </DialogHeader>
+          {devolucaoEmEdicao && (
+            <DevolucaoForm
+              key={devolucaoEmEdicao.id}
+              devolucao={devolucaoEmEdicao}
+              onSalvar={handleAtualizarDevolucao}
+              onCancelar={() => setDevolucaoEmEdicao(null)}
+            />
+          )}
         </DialogContent>
       </Dialog>
 

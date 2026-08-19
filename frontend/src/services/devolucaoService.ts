@@ -1,4 +1,4 @@
-import { addDoc, collection, collectionGroup, getDocs, orderBy, query } from 'firebase/firestore'
+import { addDoc, collection, collectionGroup, doc, getDocs, orderBy, query, updateDoc } from 'firebase/firestore'
 
 import { db } from '@/lib/firebase'
 import type { Devolucao, FormaPagamentoDevolucao } from '@/types'
@@ -85,5 +85,21 @@ export async function lancarDevolucao(numeroCarne: string, dados: DadosDevolucao
     observacao: dados.observacao?.trim() || null,
     // Data em que a Pastoral registrou o lançamento (diferente da competência).
     criadoEm: new Date().toISOString(),
+  })
+}
+
+/**
+ * Corrige os dados de uma devolução já lançada. Só a área da Pastoral tem acesso a essa tela —
+ * o dizimista só consulta o próprio histórico, nunca edita.
+ */
+export async function atualizarDevolucao(
+  numeroCarne: string,
+  devolucaoId: string,
+  dados: DadosDevolucao,
+): Promise<void> {
+  const ref = doc(db, 'dizimistas', numeroCarne, 'devolucoes', devolucaoId)
+  await updateDoc(ref, {
+    ...dados,
+    observacao: dados.observacao?.trim() || null,
   })
 }

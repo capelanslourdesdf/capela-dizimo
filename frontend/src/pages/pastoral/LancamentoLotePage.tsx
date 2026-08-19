@@ -288,7 +288,7 @@ export function LancamentoLotePage() {
               {fields.map((field, index) => (
                 <div
                   key={field.id}
-                  className="grid grid-cols-[1fr_1fr_auto] items-end gap-3"
+                  className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
                   onFocus={(e) => e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'center' })}
                 >
                   <div className="space-y-1.5">
@@ -328,6 +328,7 @@ export function LancamentoLotePage() {
                     type="button"
                     variant="ghost"
                     size="icon"
+                    className="justify-self-end sm:justify-self-auto"
                     disabled={fields.length <= 1}
                     onClick={() => remove(index)}
                     aria-label="Remover linha"

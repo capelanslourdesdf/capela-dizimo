@@ -12,9 +12,9 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import type { DadosDevolucao } from '@/services/devolucaoService'
+import { competenciaDaDevolucao, type DadosDevolucao } from '@/services/devolucaoService'
 import { listarMembrosPastoral } from '@/services/membroPastoralService'
-import type { MembroPastoral } from '@/types'
+import type { Devolucao, MembroPastoral } from '@/types'
 import {
   competenciaAtual,
   competenciaParaMesAno,
@@ -24,6 +24,7 @@ import {
   mesAnoEhValido,
   mesAnoParaCompetencia,
   moedaParaNumero,
+  numeroParaMoeda,
 } from '@/utils/format'
 import { FORMAS_PAGAMENTO_DEVOLUCAO } from '@/constants/devolucao'
 import { ROUTES } from '@/constants/routes'
@@ -42,14 +43,17 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>
 
 interface DevolucaoFormProps {
+  /** Presente só na edição — quando ausente, o form lança uma devolução nova. */
+  devolucao?: Devolucao
   onSalvar: (dados: DadosDevolucao) => Promise<void>
   onCancelar: () => void
 }
 
-export function DevolucaoForm({ onSalvar, onCancelar }: DevolucaoFormProps) {
+export function DevolucaoForm({ devolucao, onSalvar, onCancelar }: DevolucaoFormProps) {
   const [erro, setErro] = React.useState<string | null>(null)
   const [membros, setMembros] = React.useState<MembroPastoral[]>([])
   const [carregandoMembros, setCarregandoMembros] = React.useState(true)
+  const editando = !!devolucao
 
   const {
     register,
@@ -59,9 +63,13 @@ export function DevolucaoForm({ onSalvar, onCancelar }: DevolucaoFormProps) {
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      formaPagamento: 'pix',
-      competencia: competenciaParaMesAno(competenciaAtual()),
-      lancadoPor: '',
+      valor: devolucao ? numeroParaMoeda(devolucao.valor) : '',
+      formaPagamento: devolucao?.formaPagamento ?? 'pix',
+      competencia: devolucao
+        ? competenciaParaMesAno(competenciaDaDevolucao(devolucao))
+        : competenciaParaMesAno(competenciaAtual()),
+      lancadoPor: devolucao?.lancadoPor ?? '',
+      observacao: devolucao?.observacao ?? '',
     },
   })
 
@@ -88,7 +96,8 @@ export function DevolucaoForm({ onSalvar, onCancelar }: DevolucaoFormProps) {
         observacao: values.observacao,
       })
     } catch (err) {
-      const mensagem = err instanceof Error ? err.message : 'Não foi possível lançar a devolução.'
+      const mensagem =
+        err instanceof Error ? err.message : `Não foi possível ${editando ? 'salvar' : 'lançar'} a devolução.`
       setErro(mensagem)
       toast.error(mensagem)
     }
@@ -214,7 +223,13 @@ export function DevolucaoForm({ onSalvar, onCancelar }: DevolucaoFormProps) {
         </Button>
         <Button type="submit" disabled={isSubmitting}>
           <ArrowLeftRight className="h-4 w-4" />
-          {isSubmitting ? 'Lançando...' : 'Lançar devolução'}
+          {editando
+            ? isSubmitting
+              ? 'Salvando...'
+              : 'Salvar alterações'
+            : isSubmitting
+              ? 'Lançando...'
+              : 'Lançar devolução'}
         </Button>
       </div>
     </form>

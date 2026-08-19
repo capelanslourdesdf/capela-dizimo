@@ -22,6 +22,13 @@ export function formatCompetencia(competencia: string): string {
   return texto.charAt(0).toUpperCase() + texto.slice(1)
 }
 
+/** "aaaa-mm" -> "ago/26", usado em rótulos compactos de gráfico. */
+export function competenciaCurta(competencia: string): string {
+  const [ano, mes] = competencia.split('-')
+  const data = new Date(Number(ano), Number(mes) - 1, 1)
+  return data.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }).replace('.', '')
+}
+
 export function formatPercent(valor: number): string {
   return `${valor.toFixed(0)}%`
 }
@@ -142,6 +149,11 @@ export function moedaParaNumero(valor: string): number {
   const inteiro = parteInteira.replace(/\D/g, '') || '0'
   const decimal = (parteDecimal ?? '').replace(/\D/g, '').padEnd(2, '0').slice(0, 2)
   return Number(`${inteiro}${decimal}`) / 100
+}
+
+/** Caminho inverso de `moedaParaNumero`: usado pra pré-preencher o campo de valor ao editar. */
+export function numeroParaMoeda(valor: number): string {
+  return valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 export function maskMesAno(valor: string): string {

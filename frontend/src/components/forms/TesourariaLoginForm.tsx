@@ -10,18 +10,17 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { useAdminSessao } from '@/hooks/useAdminSessao'
+import { useTesourariaSessao } from '@/hooks/useTesourariaSessao'
 import { ROUTES } from '@/constants/routes'
 
 const schema = z.object({
-  usuario: z.string().min(1, 'Informe o usuário.'),
   senha: z.string().min(1, 'Informe a senha.'),
 })
 
 type FormValues = z.infer<typeof schema>
 
-export function AdminLoginForm() {
-  const { entrar } = useAdminSessao()
+export function TesourariaLoginForm() {
+  const { entrar } = useTesourariaSessao()
   const navigate = useNavigate()
   const [erro, setErro] = React.useState<string | null>(null)
   const [mostrarSenha, setMostrarSenha] = React.useState(false)
@@ -35,9 +34,9 @@ export function AdminLoginForm() {
   async function onSubmit(values: FormValues) {
     setErro(null)
     try {
-      await entrar(values.usuario, values.senha)
-      toast.success('Bem-vindo(a) à Pastoral do Dízimo.')
-      navigate(ROUTES.pastoral.root)
+      await entrar(values.senha)
+      toast.success('Bem-vindo(a) à Tesouraria.')
+      navigate(ROUTES.pastoral.tesouraria.root)
     } catch (err) {
       setErro(err instanceof Error ? err.message : 'Não foi possível entrar. Tente novamente.')
     }
@@ -52,13 +51,7 @@ export function AdminLoginForm() {
       )}
 
       <div className="space-y-1.5">
-        <Label htmlFor="usuario">Usuário</Label>
-        <Input id="usuario" autoComplete="username" {...register('usuario')} />
-        {errors.usuario && <p className="text-xs text-destructive">{errors.usuario.message}</p>}
-      </div>
-
-      <div className="space-y-1.5">
-        <Label htmlFor="senha">Senha</Label>
+        <Label htmlFor="senha">Senha da Tesouraria</Label>
         <div className="relative">
           <Input
             id="senha"

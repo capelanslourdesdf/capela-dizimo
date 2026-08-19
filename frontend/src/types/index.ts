@@ -90,3 +90,59 @@ export interface MembroPastoral {
   nome: string
   criadoEm: string
 }
+
+export type CategoriaEntradaTesouraria =
+  | 'dizimo'
+  | 'coleta'
+  | 'bazar'
+  | 'lojinha'
+  | 'eventos'
+  | 'acao_solidaria'
+  | 'doacoes'
+
+export interface EntradaTesouraria {
+  id: string
+  categoria: CategoriaEntradaTesouraria
+  valor: number
+  observacao?: string
+}
+
+export interface SaidaTesouraria {
+  id: string
+  /** Data "aaaa-mm-dd" em que a saída ocorreu. */
+  dia: string
+  solicitante: string
+  /** Empresa ou prestador de serviço que recebeu o pagamento. */
+  prestador: string
+  valor: number
+  observacao?: string
+}
+
+export type StatusControleTesouraria = 'em_andamento' | 'fechado'
+
+/**
+ * Controle financeiro de um mês/ano da Tesouraria. Um documento por competência
+ * (id = "aaaa-mm"), com entradas e saídas embutidas no próprio documento — o volume é baixo
+ * (uma paróquia, poucos lançamentos por mês) e isso permite editar tudo de uma vez só (rascunho
+ * na tela, salva tudo junto), em vez de sincronizar subcoleções lançamento a lançamento.
+ */
+export interface ControleTesouraria {
+  competencia: string
+  status: StatusControleTesouraria
+  entradas: EntradaTesouraria[]
+  saidas: SaidaTesouraria[]
+  criadoEm: string
+  atualizadoEm: string
+}
+
+/** Visão simplificada por evento (só o total arrecadado e a despesa, sem detalhar categorias). */
+export interface EventoTesouraria {
+  id: string
+  nome: string
+  ano: number
+  arrecadado: number
+  despesa: number
+  observacao?: string
+  criadoEm: string
+  atualizadoEm: string
+}

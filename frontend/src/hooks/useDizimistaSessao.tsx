@@ -3,7 +3,7 @@ import * as React from 'react'
 import type { Dizimista } from '@/types'
 import { buscarDizimistaPorCarne } from '@/services/dizimistaService'
 import { STORAGE_KEYS } from '@/constants/storage'
-import { isoParaDiaMes } from '@/utils/format'
+import { dataBrParaIso } from '@/utils/format'
 
 const SESSAO_TTL_MS = 30 * 24 * 60 * 60 * 1000 // 30 dias
 
@@ -16,31 +16,29 @@ interface DizimistaSessaoContextValue {
   numeroCarne: string | null
   dizimista: Dizimista | null
   carregando: boolean
-  entrar: (numeroCarne: string, diaMesNascimento: string) => Promise<Dizimista>
+  entrar: (numeroCarne: string, dataNascimentoBr: string) => Promise<Dizimista>
   sair: () => void
   recarregar: () => Promise<void>
 }
 
 const DizimistaSessaoContext = React.createContext<DizimistaSessaoContextValue | undefined>(undefined)
 
-function diaMesDe(dataNascimento?: string, diaMesNascimento?: string): string {
-  return diaMesNascimento?.trim() || isoParaDiaMes(dataNascimento || '')
-}
-
 /**
- * Dias/meses aceitos no login deste carnê. Registros importados da planilha antiga não têm o ano,
- * então guardam `diaMesNascimento`; os demais derivam da data completa.
+ * Datas de nascimento ("aaaa-mm-dd") aceitas no login deste carnê. Só a data completa vale — não
+ * basta dia/mês, diferente da busca de carnê esquecido (ver `diaMesDoRegistro`/`buscarCarnePorNomeENascimento`
+ * em dizimistaService). Registros importados da planilha antiga sem ano completo (`dataNascimento`
+ * vazia) simplesmente não conseguem entrar por aqui.
  *
  * Um mesmo carnê pertence à família: na planilha de origem o cônjuge (e às vezes filhos) aparecem
- * no mesmo número. Por isso qualquer membro pode entrar usando o próprio dia/mês.
+ * no mesmo número. Por isso qualquer membro pode entrar usando a própria data.
  */
-function diasMesesDo(dizimista: Dizimista): string[] {
+function datasNascimentoDo(dizimista: Dizimista): string[] {
   const membros = [
-    diaMesDe(dizimista.dataNascimento, dizimista.diaMesNascimento),
-    diaMesDe(dizimista.conjuge?.dataNascimento, dizimista.conjuge?.diaMesNascimento),
-    ...(dizimista.filhos ?? []).map((f) => diaMesDe(f.dataNascimento, f.diaMesNascimento)),
+    dizimista.dataNascimento,
+    dizimista.conjuge?.dataNascimento,
+    ...(dizimista.filhos ?? []).map((f) => f.dataNascimento),
   ]
-  return membros.filter(Boolean)
+  return membros.filter((data): data is string => !!data)
 }
 
 function lerSessaoArmazenada(): string | null {
@@ -83,12 +81,13 @@ export function DizimistaSessaoProvider({ children }: { children: React.ReactNod
   }, [carregarPerfil])
 
   const entrar = React.useCallback(
-    async (carneInformado: string, diaMesInformado: string) => {
+    async (carneInformado: string, dataNascimentoBr: string) => {
       const carne = carneInformado.trim()
+      const dataIso = dataBrParaIso(dataNascimentoBr.trim())
       const encontrado = await buscarDizimistaPorCarne(carne)
 
-      if (!encontrado || !diasMesesDo(encontrado).includes(diaMesInformado.trim())) {
-        throw new Error('Nº do carnê ou dia/mês de nascimento não conferem.')
+      if (!encontrado || !dataIso || !datasNascimentoDo(encontrado).includes(dataIso)) {
+        throw new Error('Nº do carnê ou data de nascimento não conferem.')
       }
 
       persistirSessao(carne)

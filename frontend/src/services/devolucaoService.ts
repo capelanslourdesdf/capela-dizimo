@@ -47,6 +47,37 @@ export interface DadosDevolucao {
   observacao?: string
 }
 
+export interface GrupoDevolucoesPorMes {
+  competencia: string
+  devolucoes: Devolucao[]
+  total: number
+}
+
+/**
+ * Agrupa devoluções por competência (mês/ano). Um dizimista pode devolver mais de uma vez no
+ * mesmo mês — o agrupamento deixa isso visível (em vez de parecer duplicado numa lista corrida) e
+ * mostra quantas devoluções e quanto foi devolvido em cada mês. Ordenado do mês mais recente para
+ * o mais antigo; dentro do mês, da devolução mais recente para a mais antiga.
+ */
+export function agruparDevolucoesPorCompetencia(devolucoes: Devolucao[]): GrupoDevolucoesPorMes[] {
+  const porCompetencia = new Map<string, Devolucao[]>()
+
+  for (const devolucao of devolucoes) {
+    const competencia = competenciaDaDevolucao(devolucao)
+    const lista = porCompetencia.get(competencia) ?? []
+    lista.push(devolucao)
+    porCompetencia.set(competencia, lista)
+  }
+
+  return Array.from(porCompetencia.entries())
+    .map(([competencia, itens]) => ({
+      competencia,
+      devolucoes: [...itens].sort((a, b) => (a.criadoEm < b.criadoEm ? 1 : -1)),
+      total: itens.reduce((soma, item) => soma + item.valor, 0),
+    }))
+    .sort((a, b) => (a.competencia < b.competencia ? 1 : -1))
+}
+
 export async function lancarDevolucao(numeroCarne: string, dados: DadosDevolucao): Promise<void> {
   const ref = collection(db, 'dizimistas', numeroCarne, 'devolucoes')
   await addDoc(ref, {

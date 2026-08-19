@@ -1,17 +1,14 @@
 import * as React from 'react'
-import { ArrowLeftRight } from 'lucide-react'
 
 import { PageHeader } from '@/components/layout/PageHeader'
-import { EmptyState } from '@/components/dashboard/EmptyState'
 import { MesesGrid } from '@/components/dashboard/MesesGrid'
+import { DevolucoesAgrupadas } from '@/components/dashboard/DevolucoesAgrupadas'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 
 import { useDizimistaSessao } from '@/hooks/useDizimistaSessao'
 import { competenciaDaDevolucao, listarDevolucoes } from '@/services/devolucaoService'
 import type { Devolucao } from '@/types'
-import { formatCurrency, formatDate, formatCompetencia } from '@/utils/format'
-import { formaPagamentoLabel } from '@/constants/devolucao'
 import { competenciaDeRegistro } from '@/utils/statusDizimista'
 
 export function DizimistaDevolucoesPage() {
@@ -52,6 +49,9 @@ export function DizimistaDevolucoesPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Histórico</CardTitle>
+          <CardDescription>
+            Agrupado por mês — se você devolveu mais de uma vez no mesmo mês, todas aparecem juntas.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {carregando ? (
@@ -60,28 +60,8 @@ export function DizimistaDevolucoesPage() {
                 <Skeleton key={i} className="h-16 w-full" />
               ))}
             </div>
-          ) : devolucoes.length === 0 ? (
-            <EmptyState icon={ArrowLeftRight} title="Nenhuma devolução registrada" />
           ) : (
-            <div className="space-y-2.5">
-              {devolucoes.map((d) => (
-                <Card key={d.id}>
-                  <CardContent className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="font-medium text-foreground">{formatCurrency(d.valor)}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Referente a {formatCompetencia(competenciaDaDevolucao(d))} · {formaPagamentoLabel(d.formaPagamento)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Lançado em {formatDate(d.criadoEm.slice(0, 10))}
-                        {d.lancadoPor ? ` por ${d.lancadoPor}` : ''}
-                      </p>
-                      {d.observacao && <p className="mt-1 text-xs text-muted-foreground">{d.observacao}</p>}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            <DevolucoesAgrupadas devolucoes={devolucoes} />
           )}
         </CardContent>
       </Card>

@@ -7,10 +7,10 @@ import { EmptyState } from '@/components/dashboard/EmptyState'
 import { StatCard } from '@/components/dashboard/StatCard'
 import { StatusBadge } from '@/components/dashboard/StatusBadge'
 import { MesesGrid } from '@/components/dashboard/MesesGrid'
+import { DevolucoesAgrupadas } from '@/components/dashboard/DevolucoesAgrupadas'
 import { RecadastramentoForm } from '@/components/forms/RecadastramentoForm'
 import { DevolucaoForm } from '@/components/forms/DevolucaoForm'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -19,16 +19,10 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 import { buscarDizimistaPorCarne, excluirDizimista, salvarRecadastramento } from '@/services/dizimistaService'
 import { obterMesesParaInativo } from '@/services/configuracaoService'
-import {
-  competenciaDaDevolucao,
-  lancarDevolucao,
-  listarDevolucoes,
-  type DadosDevolucao,
-} from '@/services/devolucaoService'
+import { lancarDevolucao, listarDevolucoes, type DadosDevolucao } from '@/services/devolucaoService'
 import type { DadosCadastraisDizimista, Devolucao, Dizimista } from '@/types'
-import { formatCurrency, formatDate, formatCompetencia, competenciaAtual, competenciasEntre, getIniciais } from '@/utils/format'
+import { formatCurrency, formatCompetencia, competenciaAtual, competenciasEntre, getIniciais } from '@/utils/format'
 import { calcularStatusDizimista, competenciaDeRegistro, competenciasPagasDoDizimista } from '@/utils/statusDizimista'
-import { formaPagamentoLabel } from '@/constants/devolucao'
 import { ROUTES } from '@/constants/routes'
 
 export function DizimistaDetalhePage() {
@@ -195,33 +189,10 @@ export function DizimistaDetalhePage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Devoluções lançadas</CardTitle>
+          <CardDescription>Agrupadas por mês — um dizimista pode devolver mais de uma vez no mesmo mês.</CardDescription>
         </CardHeader>
         <CardContent>
-          {devolucoes.length === 0 ? (
-            <EmptyState icon={ArrowLeftRight} title="Nenhuma devolução lançada" />
-          ) : (
-            <div className="space-y-2.5">
-              {devolucoes.map((d) => (
-                <Card key={d.id}>
-                  <CardContent className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="font-medium text-foreground">{formatCurrency(d.valor)}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Referente a {formatCompetencia(competenciaDaDevolucao(d))}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Lançado em {formatDate(d.criadoEm.slice(0, 10))}
-                        {d.lancadoPor ? ` por ${d.lancadoPor}` : ''}
-                      </p>
-                    </div>
-                    <Badge variant="outline" className="shrink-0">
-                      {formaPagamentoLabel(d.formaPagamento)}
-                    </Badge>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+          <DevolucoesAgrupadas devolucoes={devolucoes} vazioTitulo="Nenhuma devolução lançada" />
         </CardContent>
       </Card>
 

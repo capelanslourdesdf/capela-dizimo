@@ -4,13 +4,14 @@ import { AlertCircle, CalendarCheck, CheckCircle2, IdCard, Wallet } from 'lucide
 import { PageHeader } from '@/components/layout/PageHeader'
 import { StatCard } from '@/components/dashboard/StatCard'
 import { MesesGrid } from '@/components/dashboard/MesesGrid'
+import { DevolucoesAgrupadas } from '@/components/dashboard/DevolucoesAgrupadas'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 
 import { useDizimistaSessao } from '@/hooks/useDizimistaSessao'
 import { competenciaDaDevolucao, listarDevolucoes } from '@/services/devolucaoService'
 import type { Devolucao } from '@/types'
-import { competenciaAtual, competenciasEntre, formatCompetencia, formatCurrency, formatDate } from '@/utils/format'
+import { competenciaAtual, competenciasEntre, formatCompetencia, formatCurrency } from '@/utils/format'
 import { competenciaDeRegistro } from '@/utils/statusDizimista'
 
 export function DizimistaDashboardPage() {
@@ -87,7 +88,9 @@ export function DizimistaDashboardPage() {
       <Card className="mt-5">
         <CardHeader>
           <CardTitle className="text-base">Devoluções registradas</CardTitle>
-          <CardDescription>Lançamentos feitos pela Pastoral do Dízimo.</CardDescription>
+          <CardDescription>
+            Agrupadas por mês — se você devolveu mais de uma vez no mesmo mês, todas aparecem juntas.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {carregando ? (
@@ -96,25 +99,8 @@ export function DizimistaDashboardPage() {
                 <Skeleton key={i} className="h-12 w-full" />
               ))}
             </div>
-          ) : devolucoes.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhuma devolução registrada até o momento.</p>
           ) : (
-            <ul className="divide-y divide-border">
-              {devolucoes.map((d) => (
-                <li key={d.id} className="flex items-center justify-between gap-3 py-3">
-                  <div className="min-w-0">
-                    <p className="font-medium text-foreground">{formatCurrency(d.valor)}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Referente a {formatCompetencia(competenciaDaDevolucao(d))}
-                      {d.lancadoPor ? ` · lançado por ${d.lancadoPor}` : ''}
-                    </p>
-                  </div>
-                  <span className="shrink-0 text-xs text-muted-foreground">
-                    {formatDate(d.criadoEm.slice(0, 10))}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <DevolucoesAgrupadas devolucoes={devolucoes} vazioTitulo="Nenhuma devolução registrada até o momento" />
           )}
         </CardContent>
       </Card>

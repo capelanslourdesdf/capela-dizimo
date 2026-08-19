@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { ArrowLeftRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -86,7 +87,9 @@ export function DevolucaoForm({ onSalvar, onCancelar }: DevolucaoFormProps) {
         observacao: values.observacao,
       })
     } catch (err) {
-      setErro(err instanceof Error ? err.message : 'Não foi possível lançar a devolução.')
+      const mensagem = err instanceof Error ? err.message : 'Não foi possível lançar a devolução.'
+      setErro(mensagem)
+      toast.error(mensagem)
     }
   }
 

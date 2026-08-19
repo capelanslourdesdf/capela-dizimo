@@ -2,7 +2,7 @@ import * as React from 'react'
 import { useFieldArray, useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Layers, Loader2, Plus, Trash2 } from 'lucide-react'
+import { AlertTriangle, Layers, Loader2, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -17,7 +17,16 @@ import { buscarDizimistaPorCarne } from '@/services/dizimistaService'
 import { lancarDevolucao } from '@/services/devolucaoService'
 import { listarMembrosPastoral } from '@/services/membroPastoralService'
 import type { FormaPagamentoDevolucao, MembroPastoral } from '@/types'
-import { competenciaAtual, competenciaParaMesAno, maskMesAno, maskMoeda, mesAnoEhValido, mesAnoParaCompetencia, moedaParaNumero } from '@/utils/format'
+import {
+  competenciaAtual,
+  competenciaParaMesAno,
+  formatCurrency,
+  maskMesAno,
+  maskMoeda,
+  mesAnoEhValido,
+  mesAnoParaCompetencia,
+  moedaParaNumero,
+} from '@/utils/format'
 import { FORMAS_PAGAMENTO_DEVOLUCAO } from '@/constants/devolucao'
 
 const linhaSchema = z.object({
@@ -51,12 +60,14 @@ function valoresIniciais(): FormValues {
 interface ResultadoLinha {
   index: number
   numeroCarne: string
+  valor: number
   ok: boolean
   mensagem: string
 }
 
 export function LancamentoLotePage() {
   const [erro, setErro] = React.useState<string | null>(null)
+  const [falhas, setFalhas] = React.useState<ResultadoLinha[]>([])
   const [processando, setProcessando] = React.useState(false)
   const [membros, setMembros] = React.useState<MembroPastoral[]>([])
   const [carregandoMembros, setCarregandoMembros] = React.useState(true)
@@ -82,6 +93,7 @@ export function LancamentoLotePage() {
 
   async function onSubmit(values: FormValues) {
     setErro(null)
+    setFalhas([])
 
     // Linhas totalmente em branco são ignoradas (sobram ao adicionar campos demais); linhas com
     // só um dos dois campos preenchidos são um erro, já que ficaria ambíguo o que processar.
@@ -111,7 +123,7 @@ export function LancamentoLotePage() {
       try {
         const dizimista = await buscarDizimistaPorCarne(numeroCarne)
         if (!dizimista) {
-          resultados.push({ index: linha.index, numeroCarne, ok: false, mensagem: 'Carnê não encontrado.' })
+          resultados.push({ index: linha.index, numeroCarne, valor, ok: false, mensagem: 'Carnê não encontrado.' })
           continue
         }
 
@@ -125,11 +137,18 @@ export function LancamentoLotePage() {
         resultados.push({
           index: linha.index,
           numeroCarne,
+          valor,
           ok: true,
           mensagem: `${dizimista.nomeCompleto} — lançado.`,
         })
       } catch {
-        resultados.push({ index: linha.index, numeroCarne, ok: false, mensagem: 'Falha ao lançar. Tente novamente.' })
+        resultados.push({
+          index: linha.index,
+          numeroCarne,
+          valor,
+          ok: false,
+          mensagem: 'Falha ao lançar. Tente novamente.',
+        })
       }
     }
 
@@ -147,16 +166,13 @@ export function LancamentoLotePage() {
     // Mantém só as linhas que falharam, para corrigir o carnê e reprocessar sem redigitar tudo.
     const linhasRestantes = falha.map((r) => values.linhas[r.index])
     replace(linhasRestantes.length > 0 ? linhasRestantes : [{ ...linhaVazia }])
+    setFalhas(falha)
 
     if (sucesso.length > 0) {
-      toast.success(`${sucesso.length} devolução(ões) lançada(s). ${falha.length} com erro — confira abaixo.`)
+      toast.success(`${sucesso.length} devolução(ões) lançada(s). ${falha.length} não puderam ser lançadas — confira a lista abaixo.`)
     } else {
-      toast.error('Nenhuma devolução foi lançada. Confira os erros abaixo.')
+      toast.error(`Nenhuma devolução foi lançada. ${falha.length} registro(s) com erro — confira a lista abaixo.`)
     }
-
-    setErro(
-      falha.map((r) => `Carnê nº ${r.numeroCarne || '(vazio)'}: ${r.mensagem}`).join(' '),
-    )
   }
 
   return (
@@ -306,6 +322,32 @@ export function LancamentoLotePage() {
           </form>
         </CardContent>
       </Card>
+
+      {falhas.length > 0 && (
+        <Card className="mt-6 max-w-3xl border-destructive/30">
+          <CardContent className="space-y-3 pt-6">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-destructive" />
+              <h2 className="text-sm font-semibold text-foreground">
+                {falhas.length} registro(s) não puderam ser lançados
+              </h2>
+            </div>
+            <ul className="space-y-2">
+              {falhas.map((f, i) => (
+                <li
+                  key={`${f.numeroCarne}-${i}`}
+                  className="flex flex-col gap-1 rounded-lg border border-destructive/20 bg-destructive/5 px-3.5 py-2.5 text-sm sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <span className="min-w-0 truncate">
+                    Carnê nº {f.numeroCarne || '(vazio)'} · {formatCurrency(f.valor)}
+                  </span>
+                  <span className="shrink-0 text-xs text-destructive">{f.mensagem}</span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

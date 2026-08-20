@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Copy, Info, QrCode, RefreshCw, Timer } from 'lucide-react'
+import { Check, Copy, Info, QrCode, RefreshCw, Smartphone, Timer } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -8,18 +8,19 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { cn } from '@/lib/utils'
 
 import {
   competenciaAtual,
   competenciaParaMesAno,
-  finalizarMoeda,
   maskMesAno,
-  maskMoeda,
+  maskMoedaCentavos,
   mesAnoEhValido,
   moedaParaNumero,
 } from '@/utils/format'
 
 const DURACAO_TIMER_SEGUNDOS = 5 * 60
+const DURACAO_COPIADO_MS = 3000
 const TAMANHO_QR = 25
 
 /** Grade fictícia só para parecer um QR code — sem nenhum significado real. */
@@ -65,6 +66,8 @@ export function FazerDevolucaoPage() {
   const [erro, setErro] = React.useState<string | null>(null)
   const [pix, setPix] = React.useState<{ modulos: boolean[][]; codigo: string } | null>(null)
   const [segundosRestantes, setSegundosRestantes] = React.useState(DURACAO_TIMER_SEGUNDOS)
+  const [copiado, setCopiado] = React.useState(false)
+  const timeoutCopiadoRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
 
   React.useEffect(() => {
     if (!pix || segundosRestantes <= 0) return
@@ -72,9 +75,16 @@ export function FazerDevolucaoPage() {
     return () => clearInterval(intervalo)
   }, [pix, segundosRestantes])
 
+  React.useEffect(() => {
+    return () => {
+      if (timeoutCopiadoRef.current) clearTimeout(timeoutCopiadoRef.current)
+    }
+  }, [])
+
   function gerarPix() {
     setPix({ modulos: gerarModulosQrFicticio(TAMANHO_QR), codigo: gerarCodigoPixFicticio() })
     setSegundosRestantes(DURACAO_TIMER_SEGUNDOS)
+    setCopiado(false)
   }
 
   function handleGerar(event: React.FormEvent) {
@@ -97,6 +107,9 @@ export function FazerDevolucaoPage() {
     if (!pix) return
     navigator.clipboard.writeText(pix.codigo)
     toast.success('Código Pix copiado.')
+    setCopiado(true)
+    if (timeoutCopiadoRef.current) clearTimeout(timeoutCopiadoRef.current)
+    timeoutCopiadoRef.current = setTimeout(() => setCopiado(false), DURACAO_COPIADO_MS)
   }
 
   function handleAlterarValor() {
@@ -142,12 +155,11 @@ export function FazerDevolucaoPage() {
                   </span>
                   <Input
                     id="valor"
-                    inputMode="decimal"
+                    inputMode="numeric"
                     placeholder="0,00"
                     className="h-12 pl-10 text-base"
                     value={valor}
-                    onChange={(e) => setValor(maskMoeda(e.target.value))}
-                    onBlur={() => setValor((v) => finalizarMoeda(v))}
+                    onChange={(e) => setValor(maskMoedaCentavos(e.target.value))}
                   />
                 </div>
               </div>
@@ -189,10 +201,23 @@ export function FazerDevolucaoPage() {
               <Input id="copia-cola" readOnly value={pix.codigo} className="h-11 text-xs" />
             </div>
 
-            <Button type="button" size="lg" className="w-full text-base" onClick={handleCopiar} disabled={expirado}>
-              <Copy className="h-5 w-5" />
-              Copiar código Pix
+            <Button
+              type="button"
+              size="lg"
+              className={cn('w-full text-base transition-colors', copiado && 'bg-success text-success-foreground hover:bg-success')}
+              onClick={handleCopiar}
+              disabled={expirado}
+            >
+              {copiado ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
+              {copiado ? 'Copiado!' : 'Copiar código Pix'}
             </Button>
+
+            {!expirado && (
+              <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+                <Smartphone className="h-3.5 w-3.5 shrink-0" />
+                Agora é só abrir o aplicativo do seu banco e colar o código Pix.
+              </p>
+            )}
 
             {expirado ? (
               <Button type="button" variant="outline" size="lg" className="w-full text-base" onClick={gerarPix}>

@@ -125,10 +125,10 @@ export function EventosPage() {
           ))}
         </div>
       ) : (
-        <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-3">
-          <StatCard label="Total arrecadado" value={formatCurrency(totalArrecadado)} icon={TrendingUp} />
-          <StatCard label="Total de despesas" value={formatCurrency(totalDespesa)} icon={TrendingDown} />
-          <StatCard label="Saldo do ano" value={formatCurrency(totalArrecadado - totalDespesa)} icon={Wallet} />
+        <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-3 lg:gap-4">
+          <StatCard compact label="Total arrecadado" value={formatCurrency(totalArrecadado)} icon={TrendingUp} />
+          <StatCard compact label="Total de despesas" value={formatCurrency(totalDespesa)} icon={TrendingDown} />
+          <StatCard compact label="Saldo do ano" value={formatCurrency(totalArrecadado - totalDespesa)} icon={Wallet} />
         </div>
       )}
 

@@ -30,7 +30,6 @@ export function TesourariaLoginForm() {
 
   const {
     control,
-    register,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(schema) })
@@ -80,12 +79,19 @@ export function TesourariaLoginForm() {
       <div className="space-y-1.5">
         <Label htmlFor="senha">Senha</Label>
         <div className="relative">
-          <Input
-            id="senha"
-            type={mostrarSenha ? 'text' : 'password'}
-            autoComplete="current-password"
-            className="pr-10"
-            {...register('senha')}
+          <Controller
+            control={control}
+            name="senha"
+            render={({ field }) => (
+              <Input
+                id="senha"
+                type={mostrarSenha ? 'text' : 'password'}
+                autoComplete="current-password"
+                className="pr-10"
+                value={field.value ?? ''}
+                onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+              />
+            )}
           />
           <button
             type="button"

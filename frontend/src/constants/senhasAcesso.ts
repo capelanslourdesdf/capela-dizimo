@@ -7,20 +7,23 @@ import type { PapelAcesso } from '@/constants/papeisAcesso'
  * usam a mesma senha no login da Pastoral e no login da Tesouraria (é a mesma pessoa entrando em
  * dois portões diferentes); Pastoral do Dízimo e Secretaria Paroquial só existem num dos dois.
  *
+ * Senhas em CAIXA ALTA — o campo de senha já converte tudo pra maiúsculo enquanto a pessoa digita
+ * (ver AdminLoginForm/TesourariaLoginForm), então o hash aqui também precisa ser da versão maiúscula.
+ *
  * Para gerar o hash de uma senha nova:
- *   npm run gerar:hash-senha -- "sua-senha"
+ *   npm run gerar:hash-senha -- "SUA-SENHA"
  */
 
 /** Hash padrão de cada perfil, usado quando a variável de ambiente correspondente não está definida. */
 const HASH_PADRAO: Record<PapelAcesso, string> = {
-  // SHA-256 de "#Dizimo26"
-  pastoral_dizimo: '57adf42f1cbef9042c193000506f29fceee56828465f23b451287532e579ac06',
-  // SHA-256 de "#Lourdes26"
-  coordenadora: '18f5fbc0af375f46d75743f7fda884fe16effed73372bfc101a1e998b9c05221',
-  // SHA-256 de "#Tesouro26"
-  tesoureiro: '64eeae9a43ad0d6fc092420a08ee60864beecdf4251df3fb8c0d8f06ab532f72',
-  // SHA-256 de "#Paroquia26"
-  secretaria_paroquial: 'a3b53782d17f57e713690198a838a1cb12168a12274f66994cc486d58a69ba2a',
+  // SHA-256 de "#DIZIMO26"
+  pastoral_dizimo: '0255b78ca2096d182cfcb8919da2139280bb25f78ca805ccdb089d64ecf16d14',
+  // SHA-256 de "#LOURDES26"
+  coordenadora: '05cc3901de09e94c20c650fb801747f7b803e11e628db1d1e3c83662c1730f5d',
+  // SHA-256 de "#TESOURO26"
+  tesoureiro: 'b765696bb95602df5df8a5bddf0956e468124f4bdcdec1964a2de59f03742e66',
+  // SHA-256 de "#PAROQUIA26"
+  secretaria_paroquial: 'd5452b10ac41076a19ea75c3f24e82baed0098e2c164b990212408868b0b8269',
 }
 
 const ENV_HASH: Record<PapelAcesso, string | undefined> = {

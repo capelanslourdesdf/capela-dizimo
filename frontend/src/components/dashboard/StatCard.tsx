@@ -27,7 +27,7 @@ export function StatCard({ label, value, icon: Icon, trend, helper, compact = fa
           <p className={cn('text-xs text-muted-foreground sm:text-sm', compact && 'text-[11px] sm:text-sm')}>{label}</p>
           <p
             className={cn(
-              'mt-1 truncate text-lg font-semibold leading-tight text-foreground sm:text-xl',
+              'mt-1 text-lg font-semibold leading-tight text-foreground sm:text-xl',
               compact && 'text-base sm:text-xl',
             )}
           >

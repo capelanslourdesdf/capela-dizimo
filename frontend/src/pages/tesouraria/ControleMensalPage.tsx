@@ -308,11 +308,12 @@ export function ControleMensalPage() {
         </div>
       </div>
 
-      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Total de receita" value={formatCurrency(totalReceitas)} icon={TrendingUp} />
-        <StatCard label="Total de despesas" value={formatCurrency(totalDespesas)} icon={TrendingDown} />
-        <StatCard label="Saldo total" value={formatCurrency(saldo)} icon={Wallet} />
+      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+        <StatCard compact label="Total de receita" value={formatCurrency(totalReceitas)} icon={TrendingUp} />
+        <StatCard compact label="Total de despesas" value={formatCurrency(totalDespesas)} icon={TrendingDown} />
+        <StatCard compact label="Saldo total" value={formatCurrency(saldo)} icon={Wallet} />
         <StatCard
+          compact
           label="Variação vs. mês anterior"
           value={variacao === null ? '—' : `${variacao >= 0 ? '+' : '-'}${formatCurrency(Math.abs(variacao))}`}
           icon={IconeVariacao}

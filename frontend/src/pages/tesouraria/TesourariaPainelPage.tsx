@@ -96,11 +96,12 @@ export function TesourariaPainelPage() {
                     variant={controleSelecionado.status === 'fechado' ? 'muted' : 'success'}
                   />
                 </div>
-                <div className="mb-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
-                  <StatCard label="Total em receita" value={formatCurrency(receitaSelecionada)} icon={TrendingUp} />
-                  <StatCard label="Total em despesas" value={formatCurrency(despesaSelecionada)} icon={TrendingDown} />
-                  <StatCard label="Saldo total" value={formatCurrency(saldoSelecionado)} icon={Wallet} />
+                <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+                  <StatCard compact label="Total em receita" value={formatCurrency(receitaSelecionada)} icon={TrendingUp} />
+                  <StatCard compact label="Total em despesas" value={formatCurrency(despesaSelecionada)} icon={TrendingDown} />
+                  <StatCard compact label="Saldo total" value={formatCurrency(saldoSelecionado)} icon={Wallet} />
                   <StatCard
+                    compact
                     label="Variação vs. mês anterior"
                     value={
                       variacaoSelecionada === null

@@ -144,6 +144,18 @@ export function maskMoedaCentavos(valor: string): string {
   return `${inteiroFormatado},${parteDecimal}`
 }
 
+/** Chave de acesso da NF-e: 44 dígitos, exibidos em grupos de 4 pra ficar mais fácil de conferir. */
+export function maskChaveNfe(valor: string): string {
+  return valor
+    .replace(/\D/g, '')
+    .slice(0, 44)
+    .replace(/(\d{4})(?=\d)/g, '$1 ')
+}
+
+export function chaveNfeEhValida(valor: string): boolean {
+  return valor.replace(/\D/g, '').length === 44
+}
+
 /**
  * Finaliza o valor ao sair do campo (blur): fecha em ",00" quando nenhuma vírgula foi digitada,
  * ou completa os centavos digitados para 2 dígitos ("100" -> "100,00", "100,5" -> "100,50").

@@ -1,12 +1,56 @@
 import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, setDoc, updateDoc } from 'firebase/firestore'
 
 import { db } from '@/lib/firebase'
-import type { ControleTesouraria, EntradaTesouraria, EventoTesouraria, SaidaTesouraria, StatusControleTesouraria } from '@/types'
+import type {
+  ControleTesouraria,
+  Devolucao,
+  EntradaTesouraria,
+  EventoTesouraria,
+  FormaPagamentoDevolucao,
+  SaidaTesouraria,
+  StatusControleTesouraria,
+} from '@/types'
+import { competenciaDaDevolucao } from '@/services/devolucaoService'
 import { competenciaAtual, competenciasEntre } from '@/utils/format'
 import { COMPETENCIA_INICIAL_TESOURARIA } from '@/constants/tesouraria'
 
 const COLECAO_CONTROLES = 'tesouraria'
 const COLECAO_EVENTOS = 'tesourariaEventos'
+
+/** Prefixo que identifica uma receita "dízimo" calculada a partir das devoluções — nunca é salva no documento, então nunca aparece como lançamento editável. */
+const PREFIXO_RECEITA_CALCULADA = 'dizimo-devolucoes-'
+
+const ORDEM_FORMAS_DIZIMO: FormaPagamentoDevolucao[] = ['pix', 'cartao', 'dinheiro']
+
+export function ehReceitaCalculada(entradaId: string): boolean {
+  return entradaId.startsWith(PREFIXO_RECEITA_CALCULADA)
+}
+
+/**
+ * Até 3 receitas "dízimo" (uma por forma de pagamento, só quando houve algo naquela forma),
+ * somando as devoluções de dízimo que a Pastoral lançou pra essa competência. Não é um lançamento
+ * manual da Tesouraria — é recalculado toda vez a partir da fonte real (as devoluções), então
+ * nunca sai de sincronia nem duplica se uma devolução for editada ou removida depois.
+ */
+export function receitasDizimoDaCompetencia(competencia: string, todasDevolucoes: Devolucao[]): EntradaTesouraria[] {
+  const doMes = todasDevolucoes.filter((d) => competenciaDaDevolucao(d) === competencia)
+
+  return ORDEM_FORMAS_DIZIMO.map((forma) => {
+    const doMesNaForma = doMes.filter((d) => d.formaPagamento === forma)
+    const total = doMesNaForma.reduce((soma, d) => soma + d.valor, 0)
+    if (total <= 0) return null
+
+    const entrada: EntradaTesouraria = {
+      id: `${PREFIXO_RECEITA_CALCULADA}${forma}`,
+      data: `${competencia}-01`,
+      categoria: 'dizimo',
+      valor: total,
+      formaPagamento: forma,
+      observacao: `Calculado a partir de ${doMesNaForma.length} devolução(ões) de dízimo lançada(s) na área da Pastoral.`,
+    }
+    return entrada
+  }).filter((entrada): entrada is EntradaTesouraria => entrada !== null)
+}
 
 /** Competências ("aaaa-mm") controladas pela Tesouraria: de `COMPETENCIA_INICIAL_TESOURARIA` até o mês vigente. */
 export function competenciasControleTesouraria(): string[] {
@@ -65,6 +109,13 @@ export async function obterOuCriarControleTesouraria(competencia: string): Promi
   }
   await setDoc(ref, novo)
   return { competencia, ...novo }
+}
+
+/** Saldo do controle, contando também receitas calculadas (ex.: dízimo vindo das devoluções) que não estão salvas no documento. */
+export function saldoDoControle(controle: ControleTesouraria, receitasExtras: EntradaTesouraria[] = []): number {
+  const receitas = controle.entradas.reduce((s, e) => s + e.valor, 0) + receitasExtras.reduce((s, e) => s + e.valor, 0)
+  const despesas = controle.saidas.reduce((s, sa) => s + sa.valor, 0)
+  return receitas - despesas
 }
 
 export interface DadosControleTesouraria {

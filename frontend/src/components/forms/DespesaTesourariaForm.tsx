@@ -13,9 +13,11 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import type { SaidaTesouraria } from '@/types'
 import {
+  chaveNfeEhValida,
   dataBrEhValida,
   dataBrParaIso,
   dataIsoParaBr,
+  maskChaveNfe,
   maskDataBr,
   maskMoedaCentavos,
   moedaParaNumero,
@@ -31,6 +33,8 @@ const schema = z.object({
   prestador: z.string().trim().min(1, 'Informe a empresa/prestador.'),
   valor: z.string().min(1, 'Informe o valor.'),
   quitado: z.boolean(),
+  possuiNfe: z.boolean(),
+  chaveNfe: z.string().optional(),
   observacao: z.string().optional(),
 })
 
@@ -42,6 +46,8 @@ export interface DadosDespesaTesouraria {
   prestador: string
   valor: number
   quitado: boolean
+  possuiNfe: boolean
+  chaveNfe?: string
   observacao?: string
 }
 
@@ -59,6 +65,7 @@ export function DespesaTesourariaForm({ despesa, onSalvar, onCancelar }: Despesa
   const {
     register,
     control,
+    watch,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
@@ -69,9 +76,13 @@ export function DespesaTesourariaForm({ despesa, onSalvar, onCancelar }: Despesa
       prestador: despesa?.prestador ?? '',
       valor: despesa ? numeroParaMoeda(despesa.valor) : '',
       quitado: despesa?.quitado ?? false,
+      possuiNfe: despesa?.possuiNfe ?? false,
+      chaveNfe: despesa?.chaveNfe ? maskChaveNfe(despesa.chaveNfe) : '',
       observacao: despesa?.observacao ?? '',
     },
   })
+
+  const possuiNfe = watch('possuiNfe')
 
   /** Registra um campo de texto normalizando para MAIÚSCULAS enquanto o usuário digita. */
   function registrarMaiusculo(nome: 'solicitante' | 'prestador') {
@@ -92,6 +103,10 @@ export function DespesaTesourariaForm({ despesa, onSalvar, onCancelar }: Despesa
       setErro('Informe um valor válido.')
       return
     }
+    if (values.possuiNfe && !chaveNfeEhValida(values.chaveNfe ?? '')) {
+      setErro('Informe os 44 dígitos da chave de acesso da NF-e.')
+      return
+    }
 
     try {
       await onSalvar({
@@ -100,6 +115,8 @@ export function DespesaTesourariaForm({ despesa, onSalvar, onCancelar }: Despesa
         prestador: values.prestador.trim(),
         valor,
         quitado: values.quitado,
+        possuiNfe: values.possuiNfe,
+        chaveNfe: values.possuiNfe ? values.chaveNfe?.replace(/\s/g, '') : undefined,
         observacao: values.observacao,
       })
     } catch (err) {
@@ -183,6 +200,36 @@ export function DespesaTesourariaForm({ despesa, onSalvar, onCancelar }: Despesa
           </label>
         )}
       />
+
+      <Controller
+        control={control}
+        name="possuiNfe"
+        render={({ field }) => (
+          <label className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-input px-3.5 py-3 text-sm has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary/5">
+            <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(v === true)} />
+            Possui NF-e
+          </label>
+        )}
+      />
+
+      {possuiNfe && (
+        <div className="space-y-1.5">
+          <Label htmlFor="chaveNfe">Chave de acesso da NF-e</Label>
+          <Controller
+            control={control}
+            name="chaveNfe"
+            render={({ field }) => (
+              <Input
+                id="chaveNfe"
+                inputMode="numeric"
+                placeholder="0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000"
+                value={field.value ?? ''}
+                onChange={(e) => field.onChange(maskChaveNfe(e.target.value))}
+              />
+            )}
+          />
+        </div>
+      )}
 
       <div className="space-y-1.5">
         <Label htmlFor="observacao">Observação (opcional)</Label>

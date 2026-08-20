@@ -120,6 +120,9 @@ export interface SaidaTesouraria {
   valor: number
   /** Controle de "em dia": true quando a despesa já foi paga ao solicitante/prestador. */
   quitado: boolean
+  possuiNfe: boolean
+  /** Chave de acesso da NF-e (44 dígitos) — só preenchida quando `possuiNfe` é true. */
+  chaveNfe?: string
   observacao?: string
 }
 

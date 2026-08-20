@@ -7,16 +7,21 @@ import { GraficoEntradasSaidas } from '@/components/dashboard/GraficoEntradasSai
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 
-import { listarControlesTesouraria } from '@/services/tesourariaService'
-import type { ControleTesouraria } from '@/types'
+import { listarControlesTesouraria, receitasDizimoDaCompetencia } from '@/services/tesourariaService'
+import { listarTodasDevolucoesPorCarne } from '@/services/devolucaoService'
+import type { ControleTesouraria, Devolucao } from '@/types'
 
 export function EvolucaoTesourariaPage() {
   const [controles, setControles] = React.useState<ControleTesouraria[]>([])
+  const [todasDevolucoes, setTodasDevolucoes] = React.useState<Devolucao[]>([])
   const [carregando, setCarregando] = React.useState(true)
 
   React.useEffect(() => {
-    listarControlesTesouraria()
-      .then(setControles)
+    Promise.all([listarControlesTesouraria(), listarTodasDevolucoesPorCarne()])
+      .then(([lista, porCarne]) => {
+        setControles(lista)
+        setTodasDevolucoes(Object.values(porCarne).flat())
+      })
       .finally(() => setCarregando(false))
   }, [])
 
@@ -26,10 +31,12 @@ export function EvolucaoTesourariaPage() {
         .sort((a, b) => (a.competencia > b.competencia ? 1 : -1))
         .map((c) => ({
           competencia: c.competencia,
-          entradas: c.entradas.reduce((s, e) => s + e.valor, 0),
+          entradas:
+            c.entradas.reduce((s, e) => s + e.valor, 0) +
+            receitasDizimoDaCompetencia(c.competencia, todasDevolucoes).reduce((s, e) => s + e.valor, 0),
           saidas: c.saidas.reduce((s, sa) => s + sa.valor, 0),
         })),
-    [controles],
+    [controles, todasDevolucoes],
   )
 
   return (

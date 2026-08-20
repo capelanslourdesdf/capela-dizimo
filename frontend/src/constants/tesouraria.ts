@@ -25,3 +25,11 @@ export const COMPETENCIA_INICIAL_TESOURARIA = '2026-08'
 
 /** Ano a partir do qual a visão de eventos da Tesouraria começa. */
 export const ANO_INICIAL_EVENTOS_TESOURARIA = 2026
+
+/**
+ * Portal Nacional da NF-e — consulta pública oficial. Não dá pra confiar num parâmetro de URL
+ * pra pré-preencher a chave de acesso (o site normalmente exige digitá-la manualmente após um
+ * captcha), então o botão que usa este link também copia a chave pra área de transferência, pra
+ * colar rápido assim que a página abrir.
+ */
+export const URL_CONSULTA_NFE = 'https://www.nfe.fazenda.gov.br/portal/consultaRecaptcha.aspx?tipoConsulta=resumo&tipoConteudo=7PhJ+gAVw2g='

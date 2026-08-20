@@ -44,13 +44,15 @@ export function gerarExcelControleTesouraria(controle: ControleTesouraria): void
   XLSX.utils.book_append_sheet(wb, receitas, 'Receitas')
 
   const despesas = XLSX.utils.aoa_to_sheet([
-    ['Dia', 'Quem solicitou', 'Empresa/Prestador', 'Valor', 'Quitado', 'Observação'],
+    ['Dia', 'Quem solicitou', 'Empresa/Prestador', 'Valor', 'Quitado', 'Possui NF-e', 'Chave NF-e', 'Observação'],
     ...despesasOrdenadas.map((s) => [
       s.dia ? dataIsoParaBr(s.dia) : '',
       s.solicitante,
       s.prestador,
       s.valor,
       s.quitado ? 'Sim' : 'Não',
+      s.possuiNfe ? 'Sim' : 'Não',
+      s.possuiNfe ? s.chaveNfe || '' : '',
       s.observacao || '',
     ]),
   ])

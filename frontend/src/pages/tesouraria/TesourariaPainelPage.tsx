@@ -10,26 +10,25 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 
-import { listarControlesTesouraria } from '@/services/tesourariaService'
-import type { ControleTesouraria } from '@/types'
+import { listarControlesTesouraria, receitasDizimoDaCompetencia, saldoDoControle } from '@/services/tesourariaService'
+import { listarTodasDevolucoesPorCarne } from '@/services/devolucaoService'
+import type { ControleTesouraria, Devolucao } from '@/types'
 import { COMPETENCIA_INICIAL_TESOURARIA, STATUS_CONTROLE_TESOURARIA } from '@/constants/tesouraria'
 import { formatCompetencia, formatCurrency, subtrairMeses } from '@/utils/format'
 import { ROUTES } from '@/constants/routes'
 
-function saldoDoControle(controle: ControleTesouraria): number {
-  return controle.entradas.reduce((s, e) => s + e.valor, 0) - controle.saidas.reduce((s, sa) => s + sa.valor, 0)
-}
-
 export function TesourariaPainelPage() {
   const navigate = useNavigate()
   const [controles, setControles] = React.useState<ControleTesouraria[]>([])
+  const [todasDevolucoes, setTodasDevolucoes] = React.useState<Devolucao[]>([])
   const [carregando, setCarregando] = React.useState(true)
   const [competenciaSelecionada, setCompetenciaSelecionada] = React.useState('')
 
   React.useEffect(() => {
-    listarControlesTesouraria()
-      .then((lista) => {
+    Promise.all([listarControlesTesouraria(), listarTodasDevolucoesPorCarne()])
+      .then(([lista, porCarne]) => {
         setControles(lista)
+        setTodasDevolucoes(Object.values(porCarne).flat())
         // A lista já vem do mais recente pro mais antigo — o mais recente é o padrão exibido.
         if (lista.length > 0) setCompetenciaSelecionada(lista[0].competencia)
       })
@@ -37,15 +36,25 @@ export function TesourariaPainelPage() {
   }, [])
 
   const controleSelecionado = controles.find((c) => c.competencia === competenciaSelecionada) ?? null
+  const receitasDizimoSelecionada = competenciaSelecionada
+    ? receitasDizimoDaCompetencia(competenciaSelecionada, todasDevolucoes)
+    : []
   const competenciaAnterior = competenciaSelecionada ? subtrairMeses(competenciaSelecionada, 1) : ''
   // O mês antes de agosto/2026 nunca existe (é o início do período controlado) — só aí a
   // variação fica indisponível. Qualquer outro mês anterior conta como saldo zero se ainda não
   // tiver sido aberto por ninguém.
   const mesAnteriorComparavel = competenciaAnterior >= COMPETENCIA_INICIAL_TESOURARIA
   const controleAnteriorSelecionado = controles.find((c) => c.competencia === competenciaAnterior) ?? null
-  const saldoAnteriorSelecionado = mesAnteriorComparavel ? (controleAnteriorSelecionado ? saldoDoControle(controleAnteriorSelecionado) : 0) : null
+  const receitasDizimoAnterior = mesAnteriorComparavel ? receitasDizimoDaCompetencia(competenciaAnterior, todasDevolucoes) : []
+  const saldoAnteriorSelecionado = mesAnteriorComparavel
+    ? controleAnteriorSelecionado
+      ? saldoDoControle(controleAnteriorSelecionado, receitasDizimoAnterior)
+      : receitasDizimoAnterior.reduce((s, e) => s + e.valor, 0)
+    : null
 
-  const receitaSelecionada = controleSelecionado ? controleSelecionado.entradas.reduce((s, e) => s + e.valor, 0) : 0
+  const receitaSelecionada =
+    (controleSelecionado ? controleSelecionado.entradas.reduce((s, e) => s + e.valor, 0) : 0) +
+    receitasDizimoSelecionada.reduce((s, e) => s + e.valor, 0)
   const despesaSelecionada = controleSelecionado ? controleSelecionado.saidas.reduce((s, sa) => s + sa.valor, 0) : 0
   const saldoSelecionado = receitaSelecionada - despesaSelecionada
   const variacaoSelecionada = saldoAnteriorSelecionado !== null ? saldoSelecionado - saldoAnteriorSelecionado : null
@@ -121,7 +130,9 @@ export function TesourariaPainelPage() {
             Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-16 w-full" />)
           ) : (
             controles.map((c) => {
-              const entradasMes = c.entradas.reduce((s, e) => s + e.valor, 0)
+              const entradasMes =
+                c.entradas.reduce((s, e) => s + e.valor, 0) +
+                receitasDizimoDaCompetencia(c.competencia, todasDevolucoes).reduce((s, e) => s + e.valor, 0)
               const saidasMes = c.saidas.reduce((s, sa) => s + sa.valor, 0)
               return (
                 <button

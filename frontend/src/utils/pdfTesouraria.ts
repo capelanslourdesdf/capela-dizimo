@@ -177,7 +177,7 @@ export function gerarPdfControleTesouraria(controle: ControleTesouraria): void {
 
   autoTable(doc, {
     startY: finalY(doc) + 14,
-    head: [['Dia', 'Solicitante', 'Empresa/Prestador', 'Valor', 'Quitado', 'Observação']],
+    head: [['Dia', 'Solicitante', 'Empresa/Prestador', 'Valor', 'Quitado', 'NF-e', 'Observação']],
     body:
       despesasOrdenadas.length > 0
         ? despesasOrdenadas.map((s) => [
@@ -186,13 +186,14 @@ export function gerarPdfControleTesouraria(controle: ControleTesouraria): void {
             s.prestador,
             formatCurrency(s.valor),
             s.quitado ? 'Sim' : 'Não',
+            s.possuiNfe ? 'Sim' : 'Não',
             s.observacao || '—',
           ])
-        : [['Nenhuma despesa lançada neste mês.', '', '', '', '', '']],
+        : [['Nenhuma despesa lançada neste mês.', '', '', '', '', '', '']],
     theme: 'striped',
     headStyles: { fillColor: [51, 65, 85] },
     styles: { fontSize: 9 },
-    columnStyles: { 3: { halign: 'right', cellWidth: 24 } },
+    columnStyles: { 3: { halign: 'right', cellWidth: 22 } },
     margin: { left: margemEsquerda, right: margemEsquerda },
   })
 

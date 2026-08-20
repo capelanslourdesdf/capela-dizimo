@@ -4,6 +4,8 @@ import {
   ArrowDownRight,
   ArrowLeft,
   ArrowUpRight,
+  Eye,
+  ExternalLink,
   FileDown,
   FileSpreadsheet,
   Lock,
@@ -32,16 +34,42 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 import {
   buscarControleTesouraria,
+  ehReceitaCalculada,
   obterOuCriarControleTesouraria,
+  receitasDizimoDaCompetencia,
   salvarControleTesouraria,
+  saldoDoControle,
 } from '@/services/tesourariaService'
-import type { ControleTesouraria, EntradaTesouraria, SaidaTesouraria, StatusControleTesouraria } from '@/types'
-import { CATEGORIAS_ENTRADA_TESOURARIA, COMPETENCIA_INICIAL_TESOURARIA, STATUS_CONTROLE_TESOURARIA, categoriaEntradaLabel } from '@/constants/tesouraria'
+import { listarTodasDevolucoesPorCarne } from '@/services/devolucaoService'
+import type { ControleTesouraria, Devolucao, EntradaTesouraria, SaidaTesouraria, StatusControleTesouraria } from '@/types'
+import {
+  CATEGORIAS_ENTRADA_TESOURARIA,
+  COMPETENCIA_INICIAL_TESOURARIA,
+  STATUS_CONTROLE_TESOURARIA,
+  URL_CONSULTA_NFE,
+  categoriaEntradaLabel,
+} from '@/constants/tesouraria'
 import { formaPagamentoLabel } from '@/constants/devolucao'
 import { gerarPdfControleTesouraria } from '@/utils/pdfTesouraria'
 import { gerarExcelControleTesouraria } from '@/utils/excelTesouraria'
-import { formatCompetencia, formatCurrency, formatDate, subtrairMeses } from '@/utils/format'
+import { formatCompetencia, formatCurrency, formatDate, maskChaveNfe, subtrairMeses } from '@/utils/format'
 import { ROUTES } from '@/constants/routes'
+
+interface CampoDetalheProps {
+  label: string
+  valor: React.ReactNode
+  className?: string
+}
+
+/** Par rótulo/valor usado nos diálogos de "ver detalhes" (visualização, sem edição). */
+function CampoDetalhe({ label, valor, className }: CampoDetalheProps) {
+  return (
+    <div className={className}>
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5 break-words text-sm font-medium text-foreground">{valor}</dd>
+    </div>
+  )
+}
 
 function montarReceita(id: string, dados: DadosReceitaTesouraria): EntradaTesouraria {
   const observacao = dados.observacao?.trim()
@@ -57,6 +85,7 @@ function montarReceita(id: string, dados: DadosReceitaTesouraria): EntradaTesour
 
 function montarDespesa(id: string, dados: DadosDespesaTesouraria): SaidaTesouraria {
   const observacao = dados.observacao?.trim()
+  const chaveNfe = dados.possuiNfe ? dados.chaveNfe?.trim() : undefined
   return {
     id,
     dia: dados.dia,
@@ -64,14 +93,10 @@ function montarDespesa(id: string, dados: DadosDespesaTesouraria): SaidaTesourar
     prestador: dados.prestador,
     valor: dados.valor,
     quitado: dados.quitado,
+    possuiNfe: dados.possuiNfe,
+    ...(chaveNfe ? { chaveNfe } : {}),
     ...(observacao ? { observacao } : {}),
   }
-}
-
-function saldoDoControle(controle: ControleTesouraria): number {
-  const receitas = controle.entradas.reduce((s, e) => s + e.valor, 0)
-  const despesas = controle.saidas.reduce((s, sa) => s + sa.valor, 0)
-  return receitas - despesas
 }
 
 export function ControleMensalPage() {
@@ -81,15 +106,18 @@ export function ControleMensalPage() {
   const [controle, setControle] = React.useState<ControleTesouraria | null>(null)
   const [controleAnterior, setControleAnterior] = React.useState<ControleTesouraria | null>(null)
   const [mesAnteriorComparavel, setMesAnteriorComparavel] = React.useState(false)
+  const [todasDevolucoes, setTodasDevolucoes] = React.useState<Devolucao[]>([])
   const [carregando, setCarregando] = React.useState(true)
 
   const [modalReceita, setModalReceita] = React.useState(false)
   const [receitaEmEdicao, setReceitaEmEdicao] = React.useState<EntradaTesouraria | null>(null)
   const [receitaParaRemover, setReceitaParaRemover] = React.useState<EntradaTesouraria | null>(null)
+  const [receitaEmVisualizacao, setReceitaEmVisualizacao] = React.useState<EntradaTesouraria | null>(null)
 
   const [modalDespesa, setModalDespesa] = React.useState(false)
   const [despesaEmEdicao, setDespesaEmEdicao] = React.useState<SaidaTesouraria | null>(null)
   const [despesaParaRemover, setDespesaParaRemover] = React.useState<SaidaTesouraria | null>(null)
+  const [despesaEmVisualizacao, setDespesaEmVisualizacao] = React.useState<SaidaTesouraria | null>(null)
 
   const [modalStatus, setModalStatus] = React.useState(false)
 
@@ -103,13 +131,15 @@ export function ControleMensalPage() {
     // ninguém tenha aberto aquele mês ainda, ele vale como comparação de saldo zero (nada foi
     // lançado ali, não é "sem dado").
     const comparavel = competenciaAnterior >= COMPETENCIA_INICIAL_TESOURARIA
-    const [atual, anterior] = await Promise.all([
+    const [atual, anterior, porCarne] = await Promise.all([
       obterOuCriarControleTesouraria(competencia),
       comparavel ? buscarControleTesouraria(competenciaAnterior) : Promise.resolve(null),
+      listarTodasDevolucoesPorCarne(),
     ])
     setControle(atual)
     setControleAnterior(anterior)
     setMesAnteriorComparavel(comparavel)
+    setTodasDevolucoes(Object.values(porCarne).flat())
     setCarregando(false)
   }, [competencia])
 
@@ -190,6 +220,18 @@ export function ControleMensalPage() {
     toast.success(novoStatus === 'fechado' ? 'Mês marcado como fechado.' : 'Mês reaberto para edição.')
   }
 
+  /**
+   * O Portal Nacional da NF-e não tem um jeito confiável de pré-preencher a chave via link (exige
+   * digitar manualmente após um captcha), então copiamos a chave pra área de transferência ao
+   * abrir a página — cola rápido assim que o site carregar.
+   */
+  function handleConsultarNota(chaveNfe: string) {
+    navigator.clipboard.writeText(chaveNfe.replace(/\D/g, '')).then(
+      () => toast.success('Chave de acesso copiada — cole no site da Receita.'),
+      () => {},
+    )
+  }
+
   if (carregando || !controle) {
     return (
       <div className="space-y-4">
@@ -200,21 +242,32 @@ export function ControleMensalPage() {
     )
   }
 
-  const totalReceitas = controle.entradas.reduce((s, e) => s + e.valor, 0)
+  // Dízimo lançado nas devoluções da Pastoral pra esse mês — nunca é salvo no documento da
+  // Tesouraria, é recalculado toda vez a partir da fonte real (as devoluções).
+  const receitasDizimo = receitasDizimoDaCompetencia(controle.competencia, todasDevolucoes)
+  const todasReceitas = [...controle.entradas, ...receitasDizimo]
+
+  const totalReceitas = todasReceitas.reduce((s, e) => s + e.valor, 0)
   const totalDespesas = controle.saidas.reduce((s, sa) => s + sa.valor, 0)
   const saldo = totalReceitas - totalDespesas
 
-  const saldoAnterior = mesAnteriorComparavel ? (controleAnterior ? saldoDoControle(controleAnterior) : 0) : null
+  let saldoAnterior: number | null = null
+  if (mesAnteriorComparavel) {
+    const receitasDizimoAnterior = receitasDizimoDaCompetencia(subtrairMeses(controle.competencia, 1), todasDevolucoes)
+    saldoAnterior = controleAnterior
+      ? saldoDoControle(controleAnterior, receitasDizimoAnterior)
+      : receitasDizimoAnterior.reduce((s, e) => s + e.valor, 0)
+  }
   const variacao = saldoAnterior !== null ? saldo - saldoAnterior : null
   const IconeVariacao = variacao === null ? Minus : variacao >= 0 ? ArrowUpRight : ArrowDownRight
 
   const totaisPorCategoria = CATEGORIAS_ENTRADA_TESOURARIA.map((cat) => ({
     label: cat.label,
-    total: controle.entradas.filter((e) => e.categoria === cat.value).reduce((s, e) => s + e.valor, 0),
+    total: todasReceitas.filter((e) => e.categoria === cat.value).reduce((s, e) => s + e.valor, 0),
   })).filter((c) => c.total > 0)
 
   // Mais recente primeiro, como no resto do histórico financeiro do app.
-  const receitasOrdenadas = [...controle.entradas].sort((a, b) => (a.data < b.data ? 1 : a.data > b.data ? -1 : 0))
+  const receitasOrdenadas = [...todasReceitas].sort((a, b) => (a.data < b.data ? 1 : a.data > b.data ? -1 : 0))
   const despesasOrdenadas = [...controle.saidas].sort((a, b) => (a.dia < b.dia ? 1 : a.dia > b.dia ? -1 : 0))
 
   return (
@@ -236,11 +289,11 @@ export function ControleMensalPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" onClick={() => gerarPdfControleTesouraria(controle)}>
+          <Button variant="outline" onClick={() => gerarPdfControleTesouraria({ ...controle, entradas: todasReceitas })}>
             <FileDown className="h-4 w-4" />
             Gerar PDF
           </Button>
-          <Button variant="outline" onClick={() => gerarExcelControleTesouraria(controle)}>
+          <Button variant="outline" onClick={() => gerarExcelControleTesouraria({ ...controle, entradas: todasReceitas })}>
             <FileSpreadsheet className="h-4 w-4" />
             Exportar Excel
           </Button>
@@ -321,37 +374,60 @@ export function ControleMensalPage() {
                 {receitasOrdenadas.length === 0 ? (
                   <EmptyState icon={TrendingUp} title="Nenhuma receita lançada neste mês" />
                 ) : (
-                  receitasOrdenadas.map((e) => (
-                    <div
-                      key={e.id}
-                      className="flex flex-col gap-2 rounded-lg border border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-                    >
-                      <div className="min-w-0">
-                        <p className="font-medium text-foreground">{categoriaEntradaLabel(e.categoria)}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {e.data ? formatDate(e.data) : '—'} · {formaPagamentoLabel(e.formaPagamento)}
-                        </p>
-                        {e.observacao && <p className="mt-0.5 text-xs text-muted-foreground">{e.observacao}</p>}
-                      </div>
-                      <div className="flex shrink-0 items-center justify-between gap-1 sm:justify-end">
-                        <p className="font-medium text-success">{formatCurrency(e.valor)}</p>
-                        <div className="flex items-center">
-                          <Button variant="ghost" size="icon" onClick={() => handleEditarReceita(e)} aria-label="Editar receita">
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                            onClick={() => setReceitaParaRemover(e)}
-                            aria-label="Remover receita"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                  receitasOrdenadas.map((e) => {
+                    const calculada = ehReceitaCalculada(e.id)
+                    return (
+                      <div
+                        key={e.id}
+                        className="flex flex-col gap-2 rounded-lg border border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <p className="font-medium text-foreground">{categoriaEntradaLabel(e.categoria)}</p>
+                            {calculada && <StatusBadge label="Calculado" variant="outline" />}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {e.data ? formatDate(e.data) : '—'} · {formaPagamentoLabel(e.formaPagamento)}
+                          </p>
+                          {e.observacao && <p className="mt-0.5 text-xs text-muted-foreground">{e.observacao}</p>}
+                        </div>
+                        <div className="flex shrink-0 flex-wrap items-center justify-between gap-1 sm:justify-end">
+                          <p className="font-medium text-success">{formatCurrency(e.valor)}</p>
+                          <div className="flex items-center">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setReceitaEmVisualizacao(e)}
+                              aria-label="Ver detalhes da receita"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            {!calculada && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleEditarReceita(e)}
+                                  aria-label="Editar receita"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                  onClick={() => setReceitaParaRemover(e)}
+                                  aria-label="Remover receita"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))
+                    )
+                  })
                 )}
               </AccordionContent>
             </AccordionItem>
@@ -402,9 +478,18 @@ export function ControleMensalPage() {
                       <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 sm:justify-end">
                         <div className="flex items-center gap-2">
                           <StatusBadge label={s.quitado ? 'Quitada' : 'Pendente'} variant={s.quitado ? 'success' : 'warning'} />
+                          {s.possuiNfe && <StatusBadge label="Possui NF-e" variant="outline" />}
                           <p className="font-medium text-destructive">{formatCurrency(s.valor)}</p>
                         </div>
                         <div className="flex items-center">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setDespesaEmVisualizacao(s)}
+                            aria-label="Ver detalhes da despesa"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
                           <Button variant="ghost" size="icon" onClick={() => handleEditarDespesa(s)} aria-label="Editar despesa">
                             <Pencil className="h-4 w-4" />
                           </Button>
@@ -453,6 +538,72 @@ export function ControleMensalPage() {
             onSalvar={handleSalvarDespesa}
             onCancelar={() => setModalDespesa(false)}
           />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!receitaEmVisualizacao} onOpenChange={(open) => !open && setReceitaEmVisualizacao(null)}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Detalhes da receita</DialogTitle>
+          </DialogHeader>
+          {receitaEmVisualizacao && (
+            <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <CampoDetalhe label="Categoria" valor={categoriaEntradaLabel(receitaEmVisualizacao.categoria)} />
+              <CampoDetalhe
+                label="Data"
+                valor={receitaEmVisualizacao.data ? formatDate(receitaEmVisualizacao.data) : '—'}
+              />
+              <CampoDetalhe label="Valor" valor={formatCurrency(receitaEmVisualizacao.valor)} />
+              <CampoDetalhe label="Forma de pagamento" valor={formaPagamentoLabel(receitaEmVisualizacao.formaPagamento)} />
+              <CampoDetalhe
+                className="sm:col-span-2"
+                label="Observação"
+                valor={receitaEmVisualizacao.observacao || '—'}
+              />
+            </dl>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!despesaEmVisualizacao} onOpenChange={(open) => !open && setDespesaEmVisualizacao(null)}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Detalhes da despesa</DialogTitle>
+          </DialogHeader>
+          {despesaEmVisualizacao && (
+            <div className="space-y-5">
+              <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <CampoDetalhe label="Empresa/Prestador" valor={despesaEmVisualizacao.prestador} />
+                <CampoDetalhe label="Quem solicitou" valor={despesaEmVisualizacao.solicitante} />
+                <CampoDetalhe label="Data" valor={despesaEmVisualizacao.dia ? formatDate(despesaEmVisualizacao.dia) : '—'} />
+                <CampoDetalhe label="Valor" valor={formatCurrency(despesaEmVisualizacao.valor)} />
+                <CampoDetalhe label="Quitada" valor={despesaEmVisualizacao.quitado ? 'Sim' : 'Não'} />
+                <CampoDetalhe label="Possui NF-e" valor={despesaEmVisualizacao.possuiNfe ? 'Sim' : 'Não'} />
+                {despesaEmVisualizacao.possuiNfe && despesaEmVisualizacao.chaveNfe && (
+                  <CampoDetalhe
+                    className="sm:col-span-2"
+                    label="Chave de acesso"
+                    valor={maskChaveNfe(despesaEmVisualizacao.chaveNfe)}
+                  />
+                )}
+                <CampoDetalhe className="sm:col-span-2" label="Observação" valor={despesaEmVisualizacao.observacao || '—'} />
+              </dl>
+
+              {despesaEmVisualizacao.possuiNfe && despesaEmVisualizacao.chaveNfe && (
+                <Button
+                  asChild
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => handleConsultarNota(despesaEmVisualizacao.chaveNfe ?? '')}
+                >
+                  <a href={URL_CONSULTA_NFE} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-4 w-4" />
+                    Consultar nota fiscal
+                  </a>
+                </Button>
+              )}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

@@ -1,16 +1,20 @@
 import * as React from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ClipboardList, IdCard, Phone } from 'lucide-react'
+import { ClipboardList, IdCard, Phone, UserPlus } from 'lucide-react'
+import { toast } from 'sonner'
 
 import { PageHeader } from '@/components/layout/PageHeader'
 import { FiltroBar } from '@/components/pastoral/FiltroBar'
 import { EmptyState } from '@/components/dashboard/EmptyState'
+import { RecadastramentoForm } from '@/components/forms/RecadastramentoForm'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
-import { listarDizimistas } from '@/services/dizimistaService'
-import type { Dizimista } from '@/types'
+import { listarDizimistas, salvarRecadastramento } from '@/services/dizimistaService'
+import type { DadosCadastraisDizimista, Dizimista } from '@/types'
 import { formatDate } from '@/utils/format'
 import { ROUTES } from '@/constants/routes'
 
@@ -24,9 +28,10 @@ export function RecadastramentosPage() {
   const [todos, setTodos] = React.useState<Dizimista[]>([])
   const [carregando, setCarregando] = React.useState(true)
   const [busca, setBusca] = React.useState('')
+  const [modalRecadastramento, setModalRecadastramento] = React.useState(false)
 
-  React.useEffect(() => {
-    // Carrega uma única vez: a filtragem é local, então digitar na busca não relê a coleção.
+  const carregar = React.useCallback(() => {
+    setCarregando(true)
     listarDizimistas().then((dados) => {
       // Só quem passou pelo formulário de recadastramento (importados da planilha ficam de fora
       // até se recadastrarem). `origem` cobre os recadastramentos feitos antes de `recadastradoEm`
@@ -39,6 +44,21 @@ export function RecadastramentosPage() {
       setCarregando(false)
     })
   }, [])
+
+  // A filtragem da busca é local, então digitar não relê a coleção — só `carregar()` faz isso.
+  React.useEffect(() => {
+    carregar()
+  }, [carregar])
+
+  async function handleSalvarRecadastramento(
+    dados: DadosCadastraisDizimista,
+    numeroCarneInformado: string,
+    opcoes?: { carneGeradoPeloSite?: boolean },
+  ) {
+    await salvarRecadastramento(numeroCarneInformado, dados, { exigirNovo: opcoes?.carneGeradoPeloSite })
+    toast.success(`Recadastramento concluído! Carnê nº ${numeroCarneInformado}.`, { duration: 8000 })
+    carregar()
+  }
 
   const recadastrados = React.useMemo(() => {
     const termo = busca.trim().toLowerCase()
@@ -54,6 +74,12 @@ export function RecadastramentosPage() {
       <PageHeader
         title="Recadastramentos"
         description={`${recadastrados.length} recadastramento(s) realizado(s)`}
+        actions={
+          <Button onClick={() => setModalRecadastramento(true)}>
+            <UserPlus className="h-4 w-4" />
+            Fazer recadastramento
+          </Button>
+        }
       />
 
       <FiltroBar
@@ -131,6 +157,15 @@ export function RecadastramentosPage() {
           </div>
         </>
       )}
+
+      <Dialog open={modalRecadastramento} onOpenChange={setModalRecadastramento}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Fazer recadastramento</DialogTitle>
+          </DialogHeader>
+          <RecadastramentoForm onSalvar={handleSalvarRecadastramento} limparAposSalvar />
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

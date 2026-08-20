@@ -214,10 +214,12 @@ export function DevolucaoForm({ devolucao, competenciaPadrao, onSalvar, onCancel
         )}
       </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="observacao">Observação (opcional)</Label>
-        <Textarea id="observacao" rows={3} {...register('observacao')} />
-      </div>
+      {editando && (
+        <div className="space-y-1.5">
+          <Label htmlFor="observacao">Observação (opcional)</Label>
+          <Textarea id="observacao" rows={3} {...register('observacao')} />
+        </div>
+      )}
 
       <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
         <Button type="button" variant="outline" onClick={onCancelar}>

@@ -129,6 +129,22 @@ export function maskMoeda(valor: string): string {
 }
 
 /**
+ * Máscara monetária "calculadora": os dígitos digitados são sempre os centavos, deslocando pra
+ * esquerda a cada tecla ("1" -> "0,01", "150" -> "1,50") — já sai formatada, sem precisar digitar
+ * vírgula nem completar nada no blur. Usada onde os centavos importam de verdade (Tesouraria),
+ * diferente de `maskMoeda` (pensada pra valores fechados, como as devoluções de dízimo).
+ */
+export function maskMoedaCentavos(valor: string): string {
+  const digitos = valor.replace(/\D/g, '').replace(/^0+(?=\d)/, '')
+  const centavos = digitos.padStart(3, '0')
+  const parteDecimal = centavos.slice(-2)
+  const parteInteira = centavos.slice(0, -2).replace(/^0+(?=\d)/, '') || '0'
+  const inteiroFormatado = parteInteira.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+
+  return `${inteiroFormatado},${parteDecimal}`
+}
+
+/**
  * Finaliza o valor ao sair do campo (blur): fecha em ",00" quando nenhuma vírgula foi digitada,
  * ou completa os centavos digitados para 2 dígitos ("100" -> "100,00", "100,5" -> "100,50").
  */

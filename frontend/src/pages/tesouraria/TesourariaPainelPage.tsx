@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowDownRight, ArrowLeftRight, ArrowUpRight, CalendarRange, Minus, TrendingDown, TrendingUp, Wallet } from 'lucide-react'
+import { ArrowDownRight, ArrowLeftRight, ArrowUpRight, Minus, TrendingDown, TrendingUp, Wallet } from 'lucide-react'
 
 import { PageHeader } from '@/components/layout/PageHeader'
 import { StatCard } from '@/components/dashboard/StatCard'
@@ -12,7 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 import { listarControlesTesouraria } from '@/services/tesourariaService'
 import type { ControleTesouraria } from '@/types'
-import { CATEGORIAS_ENTRADA_TESOURARIA, COMPETENCIA_INICIAL_TESOURARIA, STATUS_CONTROLE_TESOURARIA } from '@/constants/tesouraria'
+import { COMPETENCIA_INICIAL_TESOURARIA, STATUS_CONTROLE_TESOURARIA } from '@/constants/tesouraria'
 import { formatCompetencia, formatCurrency, subtrairMeses } from '@/utils/format'
 import { ROUTES } from '@/constants/routes'
 
@@ -35,26 +35,6 @@ export function TesourariaPainelPage() {
       })
       .finally(() => setCarregando(false))
   }, [])
-
-  const totalEntradas = React.useMemo(
-    () => controles.reduce((soma, c) => soma + c.entradas.reduce((s, e) => s + e.valor, 0), 0),
-    [controles],
-  )
-  const totalSaidas = React.useMemo(
-    () => controles.reduce((soma, c) => soma + c.saidas.reduce((s, sa) => s + sa.valor, 0), 0),
-    [controles],
-  )
-  const saldo = totalEntradas - totalSaidas
-
-  const totaisPorCategoria = React.useMemo(() => {
-    return CATEGORIAS_ENTRADA_TESOURARIA.map((cat) => ({
-      label: cat.label,
-      total: controles.reduce(
-        (soma, c) => soma + c.entradas.filter((e) => e.categoria === cat.value).reduce((s, e) => s + e.valor, 0),
-        0,
-      ),
-    }))
-  }, [controles])
 
   const controleSelecionado = controles.find((c) => c.competencia === competenciaSelecionada) ?? null
   const competenciaAnterior = competenciaSelecionada ? subtrairMeses(competenciaSelecionada, 1) : ''
@@ -128,39 +108,6 @@ export function TesourariaPainelPage() {
                 </Button>
               </>
             )}
-          </CardContent>
-        </Card>
-      )}
-
-      {carregando ? (
-        <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 w-full rounded-xl" />
-          ))}
-        </div>
-      ) : (
-        <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <StatCard label="Total arrecadado" value={formatCurrency(totalEntradas)} icon={TrendingUp} />
-          <StatCard label="Total de saídas" value={formatCurrency(totalSaidas)} icon={TrendingDown} />
-          <StatCard label="Saldo geral" value={formatCurrency(saldo)} icon={Wallet} />
-          <StatCard label="Meses controlados" value={String(controles.length)} icon={CalendarRange} />
-        </div>
-      )}
-
-      {!carregando && (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="text-base">Totais por categoria de receita</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="divide-y divide-border">
-              {totaisPorCategoria.map((c) => (
-                <li key={c.label} className="flex items-center justify-between py-2.5 text-sm">
-                  <span className="font-medium text-foreground">{c.label}</span>
-                  <span className="text-foreground">{formatCurrency(c.total)}</span>
-                </li>
-              ))}
-            </ul>
           </CardContent>
         </Card>
       )}

@@ -16,9 +16,8 @@ import {
   dataBrEhValida,
   dataBrParaIso,
   dataIsoParaBr,
-  finalizarMoeda,
   maskDataBr,
-  maskMoeda,
+  maskMoedaCentavos,
   moedaParaNumero,
   numeroParaMoeda,
 } from '@/utils/format'
@@ -75,6 +74,18 @@ export function DespesaTesourariaForm({ despesa, dataPadrao, onSalvar, onCancela
       observacao: despesa?.observacao ?? '',
     },
   })
+
+  /** Registra um campo de texto normalizando para MAIÚSCULAS enquanto o usuário digita. */
+  function registrarMaiusculo(nome: 'solicitante' | 'prestador') {
+    const campo = register(nome)
+    return {
+      ...campo,
+      onChange: (evento: { target: HTMLInputElement; type?: unknown }) => {
+        evento.target.value = evento.target.value.toUpperCase()
+        return campo.onChange(evento)
+      },
+    }
+  }
 
   async function onSubmit(values: FormValues) {
     setErro(null)
@@ -138,12 +149,11 @@ export function DespesaTesourariaForm({ despesa, dataPadrao, onSalvar, onCancela
               render={({ field }) => (
                 <Input
                   id="valor"
-                  inputMode="decimal"
+                  inputMode="numeric"
                   placeholder="0,00"
                   className="pl-9"
                   value={field.value ?? ''}
-                  onChange={(e) => field.onChange(maskMoeda(e.target.value))}
-                  onBlur={() => field.onChange(finalizarMoeda(field.value ?? ''))}
+                  onChange={(e) => field.onChange(maskMoedaCentavos(e.target.value))}
                 />
               )}
             />
@@ -155,12 +165,12 @@ export function DespesaTesourariaForm({ despesa, dataPadrao, onSalvar, onCancela
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label htmlFor="solicitante">Quem solicitou</Label>
-          <Input id="solicitante" {...register('solicitante')} />
+          <Input id="solicitante" {...registrarMaiusculo('solicitante')} />
           {errors.solicitante && <p className="text-xs text-destructive">{errors.solicitante.message}</p>}
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="prestador">Empresa/Prestador</Label>
-          <Input id="prestador" {...register('prestador')} />
+          <Input id="prestador" {...registrarMaiusculo('prestador')} />
           {errors.prestador && <p className="text-xs text-destructive">{errors.prestador.message}</p>}
         </div>
       </div>

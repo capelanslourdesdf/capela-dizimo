@@ -18,9 +18,8 @@ import {
   dataBrEhValida,
   dataBrParaIso,
   dataIsoParaBr,
-  finalizarMoeda,
   maskDataBr,
-  maskMoeda,
+  maskMoedaCentavos,
   moedaParaNumero,
   numeroParaMoeda,
 } from '@/utils/format'
@@ -136,12 +135,11 @@ export function ReceitaTesourariaForm({ receita, dataPadrao, onSalvar, onCancela
               render={({ field }) => (
                 <Input
                   id="valor"
-                  inputMode="decimal"
+                  inputMode="numeric"
                   placeholder="0,00"
                   className="pl-9"
                   value={field.value ?? ''}
-                  onChange={(e) => field.onChange(maskMoeda(e.target.value))}
-                  onBlur={() => field.onChange(finalizarMoeda(field.value ?? ''))}
+                  onChange={(e) => field.onChange(maskMoedaCentavos(e.target.value))}
                 />
               )}
             />

@@ -18,13 +18,14 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { EmptyState } from '@/components/dashboard/EmptyState'
 import { StatCard } from '@/components/dashboard/StatCard'
 import { StatusBadge } from '@/components/dashboard/StatusBadge'
 import { ReceitaTesourariaForm, type DadosReceitaTesouraria } from '@/components/forms/ReceitaTesourariaForm'
 import { DespesaTesourariaForm, type DadosDespesaTesouraria } from '@/components/forms/DespesaTesourariaForm'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
@@ -277,118 +278,168 @@ export function ControleMensalPage() {
 
       {totaisPorCategoria.length > 0 && (
         <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="text-base">Receitas por categoria</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="divide-y divide-border">
-              {totaisPorCategoria.map((c) => (
-                <li key={c.label} className="flex items-center justify-between py-2.5 text-sm">
-                  <span className="font-medium text-foreground">{c.label}</span>
-                  <span className="text-foreground">{formatCurrency(c.total)}</span>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
+          <Accordion type="single" collapsible>
+            <AccordionItem value="categoria" className="border-b-0">
+              <AccordionTrigger className="px-5 py-5 hover:no-underline sm:px-6 sm:py-6">
+                <div className="flex items-center gap-2 text-left">
+                  <Wallet className="h-4 w-4 shrink-0 text-primary" />
+                  <div>
+                    <p className="font-semibold leading-none tracking-tight text-foreground">Receitas por categoria</p>
+                    <p className="mt-1.5 text-sm font-normal text-muted-foreground">
+                      {totaisPorCategoria.length} categoria(s) com lançamento
+                    </p>
+                  </div>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="px-5 pb-5 sm:px-6 sm:pb-6">
+                <ul className="divide-y divide-border">
+                  {totaisPorCategoria.map((c) => (
+                    <li key={c.label} className="flex items-center justify-between py-2.5 text-sm">
+                      <span className="font-medium text-foreground">{c.label}</span>
+                      <span className="text-foreground">{formatCurrency(c.total)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </Card>
       )}
 
-      <Card className="mb-6">
-        <CardHeader className="flex-row flex-wrap items-center justify-between gap-2 space-y-0">
-          <CardTitle className="text-base">Receitas</CardTitle>
+      <div className="mb-6">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold text-foreground">Receitas</h2>
           <Button size="sm" onClick={handleNovaReceita}>
             <Plus className="h-3.5 w-3.5" />
             Lançar receita
           </Button>
-        </CardHeader>
-        <CardContent className="space-y-2.5">
-          {receitasOrdenadas.length === 0 ? (
-            <EmptyState icon={TrendingUp} title="Nenhuma receita lançada neste mês" />
-          ) : (
-            receitasOrdenadas.map((e) => (
-              <div
-                key={e.id}
-                className="flex flex-col gap-2 rounded-lg border border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="min-w-0">
-                  <p className="font-medium text-foreground">{categoriaEntradaLabel(e.categoria)}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {e.data ? formatDate(e.data) : '—'} · {formaPagamentoLabel(e.formaPagamento)}
-                  </p>
-                  {e.observacao && <p className="mt-0.5 text-xs text-muted-foreground">{e.observacao}</p>}
-                </div>
-                <div className="flex shrink-0 items-center justify-between gap-1 sm:justify-end">
-                  <p className="font-medium text-success">{formatCurrency(e.valor)}</p>
-                  <div className="flex items-center">
-                    <Button variant="ghost" size="icon" onClick={() => handleEditarReceita(e)} aria-label="Editar receita">
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      onClick={() => setReceitaParaRemover(e)}
-                      aria-label="Remover receita"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+        </div>
+        <Card>
+          <Accordion type="single" collapsible>
+            <AccordionItem value="receitas" className="border-b-0">
+              <AccordionTrigger className="px-5 py-5 hover:no-underline sm:px-6 sm:py-6">
+                <div className="flex items-center gap-2 text-left">
+                  <TrendingUp className="h-4 w-4 shrink-0 text-primary" />
+                  <div>
+                    <p className="font-semibold leading-none tracking-tight text-foreground">Lista de receitas do mês</p>
+                    <p className="mt-1.5 text-sm font-normal text-muted-foreground">
+                      {receitasOrdenadas.length === 0
+                        ? 'Nenhuma receita lançada'
+                        : `${receitasOrdenadas.length} receita(s) · ${formatCurrency(totalReceitas)}`}
+                    </p>
                   </div>
                 </div>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
+              </AccordionTrigger>
+              <AccordionContent className="space-y-2.5 px-5 pb-5 sm:px-6 sm:pb-6">
+                {receitasOrdenadas.length === 0 ? (
+                  <EmptyState icon={TrendingUp} title="Nenhuma receita lançada neste mês" />
+                ) : (
+                  receitasOrdenadas.map((e) => (
+                    <div
+                      key={e.id}
+                      className="flex flex-col gap-2 rounded-lg border border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-medium text-foreground">{categoriaEntradaLabel(e.categoria)}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {e.data ? formatDate(e.data) : '—'} · {formaPagamentoLabel(e.formaPagamento)}
+                        </p>
+                        {e.observacao && <p className="mt-0.5 text-xs text-muted-foreground">{e.observacao}</p>}
+                      </div>
+                      <div className="flex shrink-0 items-center justify-between gap-1 sm:justify-end">
+                        <p className="font-medium text-success">{formatCurrency(e.valor)}</p>
+                        <div className="flex items-center">
+                          <Button variant="ghost" size="icon" onClick={() => handleEditarReceita(e)} aria-label="Editar receita">
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            onClick={() => setReceitaParaRemover(e)}
+                            aria-label="Remover receita"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </Card>
+      </div>
 
-      <Card>
-        <CardHeader className="flex-row flex-wrap items-center justify-between gap-2 space-y-0">
-          <CardTitle className="text-base">Despesas</CardTitle>
+      <div>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold text-foreground">Despesas</h2>
           <Button size="sm" onClick={handleNovaDespesa}>
             <Plus className="h-3.5 w-3.5" />
             Lançar despesa
           </Button>
-        </CardHeader>
-        <CardContent className="space-y-2.5">
-          {despesasOrdenadas.length === 0 ? (
-            <EmptyState icon={TrendingDown} title="Nenhuma despesa lançada neste mês" />
-          ) : (
-            despesasOrdenadas.map((s) => (
-              <div
-                key={s.id}
-                className="flex flex-col gap-2 rounded-lg border border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="min-w-0">
-                  <p className="font-medium text-foreground">{s.prestador}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {s.dia ? formatDate(s.dia) : '—'} · Solicitado por {s.solicitante}
-                  </p>
-                  {s.observacao && <p className="mt-0.5 text-xs text-muted-foreground">{s.observacao}</p>}
-                </div>
-                <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 sm:justify-end">
-                  <div className="flex items-center gap-2">
-                    <StatusBadge label={s.quitado ? 'Quitada' : 'Pendente'} variant={s.quitado ? 'success' : 'warning'} />
-                    <p className="font-medium text-destructive">{formatCurrency(s.valor)}</p>
+        </div>
+        <Card>
+          <Accordion type="single" collapsible>
+            <AccordionItem value="despesas" className="border-b-0">
+              <AccordionTrigger className="px-5 py-5 hover:no-underline sm:px-6 sm:py-6">
+                <div className="flex items-center gap-2 text-left">
+                  <TrendingDown className="h-4 w-4 shrink-0 text-primary" />
+                  <div>
+                    <p className="font-semibold leading-none tracking-tight text-foreground">Lista de despesas do mês</p>
+                    <p className="mt-1.5 text-sm font-normal text-muted-foreground">
+                      {despesasOrdenadas.length === 0
+                        ? 'Nenhuma despesa lançada'
+                        : `${despesasOrdenadas.length} despesa(s) · ${formatCurrency(totalDespesas)}`}
+                    </p>
                   </div>
-                  <div className="flex items-center">
-                    <Button variant="ghost" size="icon" onClick={() => handleEditarDespesa(s)} aria-label="Editar despesa">
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      onClick={() => setDespesaParaRemover(s)}
-                      aria-label="Remover despesa"
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="space-y-2.5 px-5 pb-5 sm:px-6 sm:pb-6">
+                {despesasOrdenadas.length === 0 ? (
+                  <EmptyState icon={TrendingDown} title="Nenhuma despesa lançada neste mês" />
+                ) : (
+                  despesasOrdenadas.map((s) => (
+                    <div
+                      key={s.id}
+                      className="flex flex-col gap-2 rounded-lg border border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                     >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
+                      <div className="min-w-0">
+                        <p className="font-medium text-foreground">{s.prestador}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {s.dia ? formatDate(s.dia) : '—'} · Solicitado por {s.solicitante}
+                        </p>
+                        {s.observacao && <p className="mt-0.5 text-xs text-muted-foreground">{s.observacao}</p>}
+                      </div>
+                      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 sm:justify-end">
+                        <div className="flex items-center gap-2">
+                          <StatusBadge label={s.quitado ? 'Quitada' : 'Pendente'} variant={s.quitado ? 'success' : 'warning'} />
+                          <p className="font-medium text-destructive">{formatCurrency(s.valor)}</p>
+                        </div>
+                        <div className="flex items-center">
+                          <Button variant="ghost" size="icon" onClick={() => handleEditarDespesa(s)} aria-label="Editar despesa">
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            onClick={() => setDespesaParaRemover(s)}
+                            aria-label="Remover despesa"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </Card>
+      </div>
 
       <Dialog open={modalReceita} onOpenChange={setModalReceita}>
         <DialogContent className="max-h-[85vh] overflow-y-auto">

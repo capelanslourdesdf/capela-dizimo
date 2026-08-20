@@ -25,6 +25,7 @@ export const ROUTES = {
     recadastramentos: '/pastoral/recadastramentos',
     configuracoes: '/pastoral/configuracoes',
     lancamentoLote: '/pastoral/devolucoes/lote',
+    listaDevolucoes: '/pastoral/devolucoes/lista',
     tesouraria: {
       entrar: '/pastoral/tesouraria/entrar',
       root: '/pastoral/tesouraria',

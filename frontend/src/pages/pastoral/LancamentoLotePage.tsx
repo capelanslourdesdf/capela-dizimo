@@ -26,7 +26,7 @@ import {
   mesAnoParaCompetencia,
   moedaParaNumero,
 } from '@/utils/format'
-import { FORMAS_PAGAMENTO_DEVOLUCAO } from '@/constants/devolucao'
+import { CARNE_AVULSO, FORMAS_PAGAMENTO_DEVOLUCAO } from '@/constants/devolucao'
 
 const linhaSchema = z.object({
   numeroCarne: z.string(),
@@ -129,6 +129,17 @@ export function LancamentoLotePage() {
       const valor = moedaParaNumero(linha.valor)
 
       try {
+        if (numeroCarne === CARNE_AVULSO) {
+          await lancarDevolucao(CARNE_AVULSO, {
+            valor,
+            formaPagamento: values.formaPagamento as FormaPagamentoDevolucao,
+            competencia,
+            lancadoPor: values.lancadoPor,
+          })
+          resultados.push({ index: linha.index, numeroCarne, valor, ok: true, mensagem: 'Devolução avulsa — lançada.' })
+          continue
+        }
+
         const dizimista = await buscarDizimistaPorCarne(numeroCarne)
         if (!dizimista) {
           resultados.push({ index: linha.index, numeroCarne, valor, ok: false, mensagem: 'Carnê não encontrado.' })
@@ -284,6 +295,11 @@ export function LancamentoLotePage() {
                   </Button>
                 </div>
               </div>
+
+              <p className="text-xs text-muted-foreground">
+                Use <span className="font-mono font-medium text-foreground">{CARNE_AVULSO}</span> no nº do carnê pra
+                lançar uma devolução avulsa (sem dizimista cadastrado).
+              </p>
 
               {fields.map((field, index) => (
                 <div

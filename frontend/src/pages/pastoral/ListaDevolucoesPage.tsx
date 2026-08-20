@@ -1,0 +1,175 @@
+import * as React from 'react'
+import { ArrowLeftRight, ChevronLeft, ChevronRight, Pencil } from 'lucide-react'
+import { toast } from 'sonner'
+
+import { PageHeader } from '@/components/layout/PageHeader'
+import { EmptyState } from '@/components/dashboard/EmptyState'
+import { StatusBadge } from '@/components/dashboard/StatusBadge'
+import { DevolucaoForm } from '@/components/forms/DevolucaoForm'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+
+import { listarDizimistas } from '@/services/dizimistaService'
+import {
+  atualizarDevolucao,
+  competenciaDaDevolucao,
+  listarTodasDevolucoesPorCarne,
+  type DadosDevolucao,
+} from '@/services/devolucaoService'
+import type { Devolucao } from '@/types'
+import { CARNE_AVULSO, formaPagamentoLabel } from '@/constants/devolucao'
+import { competenciaAtual, formatCompetencia, formatCurrency, formatDate, subtrairMeses } from '@/utils/format'
+
+interface DevolucaoComCarne extends Devolucao {
+  numeroCarne: string
+}
+
+export function ListaDevolucoesPage() {
+  const [competencia, setCompetencia] = React.useState(competenciaAtual())
+  const [carregando, setCarregando] = React.useState(true)
+  const [todasDevolucoes, setTodasDevolucoes] = React.useState<DevolucaoComCarne[]>([])
+  const [nomesPorCarne, setNomesPorCarne] = React.useState<Map<string, string>>(new Map())
+  const [devolucaoEmEdicao, setDevolucaoEmEdicao] = React.useState<DevolucaoComCarne | null>(null)
+
+  const carregar = React.useCallback(async () => {
+    setCarregando(true)
+    const [porCarne, dizimistas] = await Promise.all([listarTodasDevolucoesPorCarne(), listarDizimistas()])
+    const flat = Object.entries(porCarne).flatMap(([numeroCarne, devs]) => devs.map((d) => ({ ...d, numeroCarne })))
+    setTodasDevolucoes(flat)
+    setNomesPorCarne(new Map(dizimistas.map((d) => [d.numeroCarne, d.nomeCompleto])))
+    setCarregando(false)
+  }, [])
+
+  React.useEffect(() => {
+    carregar()
+  }, [carregar])
+
+  const devolucoesDoMes = React.useMemo(
+    () =>
+      todasDevolucoes
+        .filter((d) => competenciaDaDevolucao(d) === competencia)
+        .sort((a, b) => (a.criadoEm < b.criadoEm ? 1 : -1)),
+    [todasDevolucoes, competencia],
+  )
+
+  const total = devolucoesDoMes.reduce((soma, d) => soma + d.valor, 0)
+
+  async function handleAtualizarDevolucao(dados: DadosDevolucao) {
+    if (!devolucaoEmEdicao) return
+    await atualizarDevolucao(devolucaoEmEdicao.numeroCarne, devolucaoEmEdicao.id, dados)
+    setDevolucaoEmEdicao(null)
+    toast.success('Devolução atualizada com sucesso.')
+    carregar()
+  }
+
+  return (
+    <div>
+      <PageHeader
+        title="Lista de devoluções"
+        description="Todas as devoluções lançadas no mês, de qualquer dizimista — inclusive avulsas."
+      />
+
+      <div className="mb-6 flex items-center justify-center gap-3 sm:justify-start">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => setCompetencia((c) => subtrairMeses(c, 1))}
+          aria-label="Mês anterior"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <p className="min-w-[9rem] text-center text-base font-semibold capitalize text-foreground sm:text-lg">
+          {formatCompetencia(competencia)}
+        </p>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => setCompetencia((c) => subtrairMeses(c, -1))}
+          aria-label="Próximo mês"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+        {competencia !== competenciaAtual() && (
+          <Button variant="ghost" size="sm" onClick={() => setCompetencia(competenciaAtual())}>
+            Mês atual
+          </Button>
+        )}
+      </div>
+
+      {carregando ? (
+        <div className="space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-20 w-full" />
+          ))}
+        </div>
+      ) : devolucoesDoMes.length === 0 ? (
+        <EmptyState icon={ArrowLeftRight} title="Nenhuma devolução lançada neste mês" />
+      ) : (
+        <>
+          <p className="mb-3 text-sm text-muted-foreground">
+            {devolucoesDoMes.length} devolução(ões) · Total {formatCurrency(total)}
+          </p>
+          <div className="space-y-3">
+            {devolucoesDoMes.map((d) => {
+              const avulso = d.numeroCarne === CARNE_AVULSO
+              const nome = avulso ? 'Avulso' : (nomesPorCarne.get(d.numeroCarne) ?? '—')
+              return (
+                <Card key={`${d.numeroCarne}-${d.id}`}>
+                  <CardContent className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium text-foreground">{nome}</p>
+                        {avulso ? (
+                          <StatusBadge label="Avulso" variant="outline" />
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Carnê nº {d.numeroCarne}</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Lançado em {formatDate(d.criadoEm.slice(0, 10))}
+                        {d.lancadoPor ? ` por ${d.lancadoPor}` : ''}
+                      </p>
+                      {d.observacao && <p className="mt-0.5 text-xs text-muted-foreground">{d.observacao}</p>}
+                    </div>
+                    <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 sm:justify-end">
+                      <div className="flex items-center gap-2">
+                        <StatusBadge label={formaPagamentoLabel(d.formaPagamento)} variant="outline" />
+                        <p className="font-medium text-foreground">{formatCurrency(d.valor)}</p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setDevolucaoEmEdicao(d)}
+                        aria-label="Editar devolução"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+        </>
+      )}
+
+      <Dialog open={!!devolucaoEmEdicao} onOpenChange={(open) => !open && setDevolucaoEmEdicao(null)}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar devolução</DialogTitle>
+          </DialogHeader>
+          {devolucaoEmEdicao && (
+            <DevolucaoForm
+              key={devolucaoEmEdicao.id}
+              devolucao={devolucaoEmEdicao}
+              onSalvar={handleAtualizarDevolucao}
+              onCancelar={() => setDevolucaoEmEdicao(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}

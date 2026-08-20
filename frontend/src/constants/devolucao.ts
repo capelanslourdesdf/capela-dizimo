@@ -7,6 +7,14 @@ export const FORMAS_PAGAMENTO_DEVOLUCAO: { value: FormaPagamentoDevolucao; label
 ]
 
 /**
+ * Nº de carnê especial pra devolução avulsa (sem dizimista cadastrado — alguém que doou/dizimou
+ * sem carnê). É só um caminho no Firestore (`dizimistas/-x-/devolucoes/...`); como nunca gravamos
+ * um documento em `dizimistas/-x-`, nenhum "dizimista avulso" chega a existir — não aparece na
+ * lista nem na busca, que só listam documentos reais da coleção.
+ */
+export const CARNE_AVULSO = '-x-'
+
+/**
  * Rótulo da forma de pagamento. Aceita `string` porque lançamentos antigos podem ter valores
  * que saíram da lista (ex.: "transferencia", "cheque") — nesses casos exibimos o valor salvo.
  */

@@ -49,7 +49,7 @@ export function AdminSessaoProvider({ children }: { children: React.ReactNode })
 
   const entrar = React.useCallback(async (papelEscolhido: PapelAcesso, senha: string) => {
     if (!PAPEIS_PASTORAL.includes(papelEscolhido)) {
-      throw new Error('Perfil sem acesso à área da Pastoral.')
+      throw new Error('Perfil sem acesso ao Administrativo.')
     }
 
     const hashEsperado = hashEsperadoParaPapel(papelEscolhido)

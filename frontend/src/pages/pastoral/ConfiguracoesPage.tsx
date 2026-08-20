@@ -50,7 +50,7 @@ export function ConfiguracoesPage() {
 
   return (
     <div>
-      <PageHeader title="Configurações" description="Ajustes gerais da área da Pastoral do Dízimo." />
+      <PageHeader title="Configurações" description="Ajustes gerais do Administrativo." />
 
       <Card className="mb-6 max-w-xl">
         <CardHeader>

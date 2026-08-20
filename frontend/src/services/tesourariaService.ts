@@ -46,7 +46,7 @@ export function receitasDizimoDaCompetencia(competencia: string, todasDevolucoes
       categoria: 'dizimo',
       valor: total,
       formaPagamento: forma,
-      observacao: `Calculado a partir de ${doMesNaForma.length} devolução(ões) de dízimo lançada(s) na área da Pastoral.`,
+      observacao: `Calculado a partir de ${doMesNaForma.length} devolução(ões) de dízimo lançada(s) no Administrativo.`,
     }
     return entrada
   }).filter((entrada): entrada is EntradaTesouraria => entrada !== null)

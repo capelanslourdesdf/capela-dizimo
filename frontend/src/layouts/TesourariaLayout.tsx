@@ -34,7 +34,7 @@ export function TesourariaLayout() {
         <main className="px-4 pb-10 pt-6 sm:px-6 lg:px-8">
           <Button variant="ghost" size="sm" className="mb-4 -ml-2" onClick={() => navigate(ROUTES.pastoral.root)}>
             <ArrowLeft className="h-4 w-4" />
-            Voltar à área da Pastoral
+            Voltar ao Administrativo
           </Button>
           {!podeEditar && (
             <div className="mb-4 flex items-center gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3.5 py-2.5 text-sm text-warning-foreground">

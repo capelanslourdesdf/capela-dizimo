@@ -25,7 +25,7 @@ export function DizimoPage() {
           <Button asChild size="lg" variant="outline" className="w-full sm:w-auto">
             <Link to={ROUTES.pastoral.entrar}>
               <Users className="h-4 w-4" />
-              Área da Pastoral
+              Administrativo
             </Link>
           </Button>
         </div>

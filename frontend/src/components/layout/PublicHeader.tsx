@@ -44,7 +44,7 @@ export function PublicHeader() {
 
         <div className="hidden items-center gap-2 md:flex">
           <Button asChild variant="ghost">
-            <Link to={ROUTES.pastoral.entrar}>Área da Pastoral</Link>
+            <Link to={ROUTES.pastoral.entrar}>Administrativo</Link>
           </Button>
         </div>
 
@@ -76,7 +76,7 @@ export function PublicHeader() {
             <div className="mt-6 flex flex-col gap-2">
               <SheetClose asChild>
                 <Button asChild size="lg">
-                  <Link to={ROUTES.pastoral.entrar}>Área da Pastoral</Link>
+                  <Link to={ROUTES.pastoral.entrar}>Administrativo</Link>
                 </Button>
               </SheetClose>
             </div>

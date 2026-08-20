@@ -26,10 +26,10 @@ export function PastoralLayout() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppSidebar navItems={nav} areaLabel="Área da Pastoral" />
+      <AppSidebar navItems={nav} areaLabel="Administrativo" />
 
       <div className="lg:pl-64">
-        <AppTopbar navItems={nav} areaLabel="Área da Pastoral" userMenu={userMenu} />
+        <AppTopbar navItems={nav} areaLabel="Administrativo" userMenu={userMenu} />
         <main className="px-4 pb-10 pt-6 sm:px-6 lg:px-8">
           <Outlet />
         </main>

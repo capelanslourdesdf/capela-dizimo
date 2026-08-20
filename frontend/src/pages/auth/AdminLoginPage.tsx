@@ -5,7 +5,7 @@ export function AdminLoginPage() {
   return (
     <Card className="w-full max-w-md">
       <CardHeader>
-        <CardTitle className="text-xl">Área da Pastoral do Dízimo</CardTitle>
+        <CardTitle className="text-xl">Administrativo</CardTitle>
         <CardDescription>Selecione seu perfil e informe a senha para continuar.</CardDescription>
       </CardHeader>
       <CardContent>

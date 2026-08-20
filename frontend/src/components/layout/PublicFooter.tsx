@@ -42,7 +42,7 @@ export function PublicFooter() {
             <ul className="mt-3 space-y-2 text-muted-foreground">
               <li>
                 <Link to={ROUTES.pastoral.entrar} className="hover:text-foreground">
-                  Área da Pastoral
+                  Administrativo
                 </Link>
               </li>
             </ul>

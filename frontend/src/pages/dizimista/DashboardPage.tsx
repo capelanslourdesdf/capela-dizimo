@@ -43,6 +43,7 @@ export function DizimistaDashboardPage() {
       <PageHeader
         title={`Olá, ${dizimista?.nomeCompleto.split(' ')[0] || 'dizimista'}`}
         description="Acompanhe suas devoluções do dízimo."
+        topTitle="Início"
       />
 
       {carregando ? (

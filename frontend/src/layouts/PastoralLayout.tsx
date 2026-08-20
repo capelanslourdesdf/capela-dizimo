@@ -8,10 +8,13 @@ import { pastoralNavParaPapel } from '@/constants/nav'
 import { PAPEL_LABEL } from '@/constants/papeisAcesso'
 import { ROUTES } from '@/constants/routes'
 import { useAdminSessao } from '@/hooks/useAdminSessao'
+import { useSidebarColapsada } from '@/hooks/useSidebarColapsada'
+import { cn } from '@/lib/utils'
 
 export function PastoralLayout() {
   const { sair, papel } = useAdminSessao()
   const navigate = useNavigate()
+  const { colapsada, alternar } = useSidebarColapsada()
 
   function handleSair() {
     sair()
@@ -26,9 +29,9 @@ export function PastoralLayout() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppSidebar navItems={nav} areaLabel="Administrativo" />
+      <AppSidebar navItems={nav} areaLabel="Administrativo" colapsada={colapsada} aoAlternar={alternar} />
 
-      <div className="lg:pl-64">
+      <div className={cn('transition-[padding] duration-200', colapsada ? 'lg:pl-[76px]' : 'lg:pl-64')}>
         <AppTopbar navItems={nav} areaLabel="Administrativo" userMenu={userMenu} />
         <main className="px-4 pb-10 pt-6 sm:px-6 lg:px-8">
           <Outlet />

@@ -10,10 +10,13 @@ import { tesourariaNav } from '@/constants/nav'
 import { PAPEL_LABEL } from '@/constants/papeisAcesso'
 import { ROUTES } from '@/constants/routes'
 import { useTesourariaSessao } from '@/hooks/useTesourariaSessao'
+import { useSidebarColapsada } from '@/hooks/useSidebarColapsada'
+import { cn } from '@/lib/utils'
 
 export function TesourariaLayout() {
   const { sair, papel, podeEditar } = useTesourariaSessao()
   const navigate = useNavigate()
+  const { colapsada, alternar } = useSidebarColapsada()
 
   function handleSair() {
     sair()
@@ -27,9 +30,9 @@ export function TesourariaLayout() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppSidebar navItems={tesourariaNav} areaLabel="Tesouraria" />
+      <AppSidebar navItems={tesourariaNav} areaLabel="Tesouraria" colapsada={colapsada} aoAlternar={alternar} />
 
-      <div className="lg:pl-64">
+      <div className={cn('transition-[padding] duration-200', colapsada ? 'lg:pl-[76px]' : 'lg:pl-64')}>
         <AppTopbar navItems={tesourariaNav} areaLabel="Tesouraria" userMenu={userMenu} />
         <main className="px-4 pb-10 pt-6 sm:px-6 lg:px-8">
           <Button variant="ghost" size="sm" className="mb-4 -ml-2" onClick={() => navigate(ROUTES.pastoral.root)}>

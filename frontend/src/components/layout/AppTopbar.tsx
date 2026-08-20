@@ -47,7 +47,7 @@ export function AppTopbar({ navItems, areaLabel, userMenu }: AppTopbarProps) {
                   className={({ isActive }) =>
                     cn(
                       'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-foreground hover:bg-accent',
-                      isActive && 'bg-primary/10 text-primary',
+                      isActive && 'bg-primary text-primary-foreground hover:bg-primary',
                     )
                   }
                 >

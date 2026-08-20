@@ -8,10 +8,13 @@ import { UserMenu } from '@/components/layout/UserMenu'
 import { dizimistaMobileNav, dizimistaNav } from '@/constants/nav'
 import { ROUTES } from '@/constants/routes'
 import { useDizimistaSessao } from '@/hooks/useDizimistaSessao'
+import { useSidebarColapsada } from '@/hooks/useSidebarColapsada'
+import { cn } from '@/lib/utils'
 
 export function DizimistaLayout() {
   const { numeroCarne, dizimista, sair } = useDizimistaSessao()
   const navigate = useNavigate()
+  const { colapsada, alternar } = useSidebarColapsada()
 
   function handleSair() {
     sair()
@@ -29,9 +32,9 @@ export function DizimistaLayout() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppSidebar navItems={dizimistaNav} areaLabel="Área do Dizimista" />
+      <AppSidebar navItems={dizimistaNav} areaLabel="Área do Dizimista" colapsada={colapsada} aoAlternar={alternar} />
 
-      <div className="lg:pl-64">
+      <div className={cn('transition-[padding] duration-200', colapsada ? 'lg:pl-[76px]' : 'lg:pl-64')}>
         <AppTopbar navItems={dizimistaNav} areaLabel="Área do Dizimista" userMenu={userMenu} />
         <main className="px-4 pb-24 pt-6 sm:px-6 lg:px-8 lg:pb-10">
           <Outlet />

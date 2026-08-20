@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
 
 import { BrandMark } from '@/components/layout/BrandMark'
 import { Button } from '@/components/ui/button'
-import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import type { NavItem } from '@/constants/nav'
 import { ROUTES } from '@/constants/routes'
 import { usePageTitle } from '@/hooks/usePageTitle'
@@ -40,21 +40,21 @@ export function AppTopbar({ navItems, areaLabel, userMenu }: AppTopbarProps) {
           <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{areaLabel}</p>
           <nav className="mt-2 flex flex-col gap-1">
             {navItems.map((item) => (
-              <SheetClose asChild key={item.href}>
-                <NavLink
-                  to={item.href}
-                  end={item.end}
-                  className={({ isActive }) =>
-                    cn(
-                      'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-foreground hover:bg-accent',
-                      isActive && 'bg-primary text-primary-foreground hover:bg-primary',
-                    )
-                  }
-                >
-                  <item.icon className="h-[18px] w-[18px] shrink-0" />
-                  <span className="min-w-0 truncate">{item.label}</span>
-                </NavLink>
-              </SheetClose>
+              <NavLink
+                key={item.href}
+                to={item.href}
+                end={item.end}
+                onClick={() => setOpen(false)}
+                className={({ isActive }) =>
+                  cn(
+                    'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-foreground hover:bg-accent',
+                    isActive && 'bg-primary text-primary-foreground hover:bg-primary',
+                  )
+                }
+              >
+                <item.icon className="h-[18px] w-[18px] shrink-0" />
+                <span className="min-w-0 truncate">{item.label}</span>
+              </NavLink>
             ))}
           </nav>
         </SheetContent>

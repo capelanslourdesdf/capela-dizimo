@@ -1,4 +1,4 @@
-import { Link, NavLink } from 'react-router-dom'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 import { BrandMark } from '@/components/layout/BrandMark'
@@ -16,6 +16,8 @@ interface AppSidebarProps {
 
 /** Só aparece no computador (lg+) — no celular a navegação é pela gaveta do menu-sanduíche (AppTopbar). */
 export function AppSidebar({ navItems, areaLabel, colapsada, aoAlternar }: AppSidebarProps) {
+  const { pathname } = useLocation()
+
   return (
     <aside
       className={cn(
@@ -58,17 +60,19 @@ export function AppSidebar({ navItems, areaLabel, colapsada, aoAlternar }: AppSi
 
       <nav className={cn('flex-1 space-y-1 overflow-y-auto px-3 py-3', colapsada && 'px-2.5')}>
         {navItems.map((item) => {
+          // Não usa a forma de função do `className` do NavLink aqui: dentro de um Tooltip com
+          // `asChild`, o Radix mescla as props ANTES do NavLink resolver a função, e o resultado
+          // vira o texto literal da função em vez das classes — daí o menu ficar "invisível".
+          const isActive = item.end ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`)
           const itemNav = (
             <NavLink
               to={item.href}
               end={item.end}
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground',
-                  colapsada && 'justify-center px-0',
-                  isActive && 'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground',
-                )
-              }
+              className={cn(
+                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground',
+                colapsada && 'justify-center px-0',
+                isActive && 'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground',
+              )}
             >
               <item.icon className="h-[18px] w-[18px] shrink-0" />
               {!colapsada && <span className="min-w-0 truncate">{item.label}</span>}

@@ -3,9 +3,8 @@ import { toast } from 'sonner'
 
 import { AppSidebar } from '@/components/layout/AppSidebar'
 import { AppTopbar } from '@/components/layout/AppTopbar'
-import { MobileBottomNav } from '@/components/layout/MobileBottomNav'
 import { UserMenu } from '@/components/layout/UserMenu'
-import { dizimistaMobileNav, dizimistaNav } from '@/constants/nav'
+import { dizimistaNav } from '@/constants/nav'
 import { ROUTES } from '@/constants/routes'
 import { useDizimistaSessao } from '@/hooks/useDizimistaSessao'
 import { useSidebarColapsada } from '@/hooks/useSidebarColapsada'
@@ -36,12 +35,10 @@ export function DizimistaLayout() {
 
       <div className={cn('transition-[padding] duration-200', colapsada ? 'lg:pl-[76px]' : 'lg:pl-64')}>
         <AppTopbar navItems={dizimistaNav} areaLabel="Área do Dizimista" userMenu={userMenu} />
-        <main className="px-4 pb-24 pt-6 sm:px-6 lg:px-8 lg:pb-10">
+        <main className="px-4 pb-10 pt-6 sm:px-6 lg:px-8">
           <Outlet />
         </main>
       </div>
-
-      <MobileBottomNav navItems={dizimistaMobileNav} />
     </div>
   )
 }

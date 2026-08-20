@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Layers,
   PartyPopper,
+  QrCode,
   Settings,
   TrendingUp,
   Users,
@@ -14,6 +15,7 @@ import {
 } from 'lucide-react'
 
 import { ROUTES } from '@/constants/routes'
+import type { PapelAcesso } from '@/constants/papeisAcesso'
 
 export interface NavItem {
   label: string
@@ -26,6 +28,7 @@ export const dizimistaNav: NavItem[] = [
   { label: 'Início', href: ROUTES.dizimista.root, icon: Home, end: true },
   { label: 'Atualização cadastral', href: ROUTES.dizimista.cadastro, icon: IdCard },
   { label: 'Minhas devoluções', href: ROUTES.dizimista.devolucoes, icon: ArrowLeftRight },
+  { label: 'Fazer devolução', href: ROUTES.dizimista.fazerDevolucao, icon: QrCode },
 ]
 
 /**
@@ -36,6 +39,7 @@ export const dizimistaMobileNav: NavItem[] = [
   { label: 'Início', href: ROUTES.dizimista.root, icon: Home, end: true },
   { label: 'Cadastro', href: ROUTES.dizimista.cadastro, icon: IdCard },
   { label: 'Devoluções', href: ROUTES.dizimista.devolucoes, icon: ArrowLeftRight },
+  { label: 'Devolver', href: ROUTES.dizimista.fazerDevolucao, icon: QrCode },
 ]
 
 export const pastoralNav: NavItem[] = [
@@ -46,6 +50,14 @@ export const pastoralNav: NavItem[] = [
   { label: 'Tesouraria', href: ROUTES.pastoral.tesouraria.root, icon: Landmark },
   { label: 'Configurações', href: ROUTES.pastoral.configuracoes, icon: Settings },
 ]
+
+/** A "Pastoral do Dízimo" não enxerga Configurações nem Tesouraria — os outros dois perfis veem o menu todo. */
+export function pastoralNavParaPapel(papel: PapelAcesso | null): NavItem[] {
+  if (papel !== 'pastoral_dizimo') return pastoralNav
+  return pastoralNav.filter(
+    (item) => item.href !== ROUTES.pastoral.configuracoes && item.href !== ROUTES.pastoral.tesouraria.root,
+  )
+}
 
 export const tesourariaNav: NavItem[] = [
   { label: 'Painel', href: ROUTES.pastoral.tesouraria.root, icon: LayoutDashboard, end: true },

@@ -6,7 +6,7 @@ export function TesourariaLoginPage() {
     <Card className="w-full max-w-md">
       <CardHeader>
         <CardTitle className="text-xl">Tesouraria</CardTitle>
-        <CardDescription>Acesso restrito — informe a senha da Tesouraria para continuar.</CardDescription>
+        <CardDescription>Selecione seu perfil e informe a senha para continuar.</CardDescription>
       </CardHeader>
       <CardContent>
         <TesourariaLoginForm />

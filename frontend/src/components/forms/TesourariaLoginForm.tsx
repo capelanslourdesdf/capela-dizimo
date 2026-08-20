@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useNavigate } from 'react-router-dom'
@@ -9,11 +9,14 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useTesourariaSessao } from '@/hooks/useTesourariaSessao'
+import { PAPEIS_TESOURARIA, PAPEL_LABEL } from '@/constants/papeisAcesso'
 import { ROUTES } from '@/constants/routes'
 
 const schema = z.object({
+  papel: z.enum(['coordenadora', 'secretaria_paroquial', 'tesoureiro'], { message: 'Selecione um perfil.' }),
   senha: z.string().min(1, 'Informe a senha.'),
 })
 
@@ -26,6 +29,7 @@ export function TesourariaLoginForm() {
   const [mostrarSenha, setMostrarSenha] = React.useState(false)
 
   const {
+    control,
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
@@ -34,7 +38,7 @@ export function TesourariaLoginForm() {
   async function onSubmit(values: FormValues) {
     setErro(null)
     try {
-      await entrar(values.senha)
+      await entrar(values.papel, values.senha)
       toast.success('Bem-vindo(a) à Tesouraria.')
       navigate(ROUTES.pastoral.tesouraria.root)
     } catch (err) {
@@ -51,7 +55,30 @@ export function TesourariaLoginForm() {
       )}
 
       <div className="space-y-1.5">
-        <Label htmlFor="senha">Senha da Tesouraria</Label>
+        <Label htmlFor="papel">Perfil</Label>
+        <Controller
+          control={control}
+          name="papel"
+          render={({ field }) => (
+            <Select value={field.value} onValueChange={field.onChange}>
+              <SelectTrigger id="papel">
+                <SelectValue placeholder="Selecione seu perfil" />
+              </SelectTrigger>
+              <SelectContent>
+                {PAPEIS_TESOURARIA.map((p) => (
+                  <SelectItem key={p} value={p}>
+                    {PAPEL_LABEL[p]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        />
+        {errors.papel && <p className="text-xs text-destructive">{errors.papel.message}</p>}
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="senha">Senha</Label>
         <div className="relative">
           <Input
             id="senha"

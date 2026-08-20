@@ -54,6 +54,7 @@ import { gerarPdfControleTesouraria } from '@/utils/pdfTesouraria'
 import { gerarExcelControleTesouraria } from '@/utils/excelTesouraria'
 import { formatCompetencia, formatCurrency, formatDate, maskChaveNfe, subtrairMeses } from '@/utils/format'
 import { ROUTES } from '@/constants/routes'
+import { useTesourariaSessao } from '@/hooks/useTesourariaSessao'
 
 interface CampoDetalheProps {
   label: string
@@ -102,6 +103,7 @@ function montarDespesa(id: string, dados: DadosDespesaTesouraria): SaidaTesourar
 export function ControleMensalPage() {
   const { competencia } = useParams<{ competencia: string }>()
   const navigate = useNavigate()
+  const { podeEditar } = useTesourariaSessao()
 
   const [controle, setControle] = React.useState<ControleTesouraria | null>(null)
   const [controleAnterior, setControleAnterior] = React.useState<ControleTesouraria | null>(null)
@@ -297,10 +299,12 @@ export function ControleMensalPage() {
             <FileSpreadsheet className="h-4 w-4" />
             Exportar Excel
           </Button>
-          <Button variant="outline" onClick={() => setModalStatus(true)}>
-            {controle.status === 'em_andamento' ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
-            {controle.status === 'em_andamento' ? 'Fechar mês' : 'Reabrir mês'}
-          </Button>
+          {podeEditar && (
+            <Button variant="outline" onClick={() => setModalStatus(true)}>
+              {controle.status === 'em_andamento' ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+              {controle.status === 'em_andamento' ? 'Fechar mês' : 'Reabrir mês'}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -349,10 +353,12 @@ export function ControleMensalPage() {
       <div className="mb-6">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-sm font-semibold text-foreground">Receitas</h2>
-          <Button size="sm" onClick={handleNovaReceita}>
-            <Plus className="h-3.5 w-3.5" />
-            Lançar receita
-          </Button>
+          {podeEditar && (
+            <Button size="sm" onClick={handleNovaReceita}>
+              <Plus className="h-3.5 w-3.5" />
+              Lançar receita
+            </Button>
+          )}
         </div>
         <Card>
           <Accordion type="single" collapsible>
@@ -402,7 +408,7 @@ export function ControleMensalPage() {
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
-                            {!calculada && (
+                            {podeEditar && !calculada && (
                               <>
                                 <Button
                                   variant="ghost"
@@ -438,10 +444,12 @@ export function ControleMensalPage() {
       <div>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-sm font-semibold text-foreground">Despesas</h2>
-          <Button size="sm" onClick={handleNovaDespesa}>
-            <Plus className="h-3.5 w-3.5" />
-            Lançar despesa
-          </Button>
+          {podeEditar && (
+            <Button size="sm" onClick={handleNovaDespesa}>
+              <Plus className="h-3.5 w-3.5" />
+              Lançar despesa
+            </Button>
+          )}
         </div>
         <Card>
           <Accordion type="single" collapsible>
@@ -490,18 +498,27 @@ export function ControleMensalPage() {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleEditarDespesa(s)} aria-label="Editar despesa">
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                            onClick={() => setDespesaParaRemover(s)}
-                            aria-label="Remover despesa"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          {podeEditar && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEditarDespesa(s)}
+                                aria-label="Editar despesa"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                onClick={() => setDespesaParaRemover(s)}
+                                aria-label="Remover despesa"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>

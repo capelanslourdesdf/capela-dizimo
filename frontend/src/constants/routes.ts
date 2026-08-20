@@ -3,19 +3,19 @@ export const ROUTES = {
   comoFunciona: '/como-funciona',
   recadastramento: '/recadastramento',
   /**
-   * Área do dizimista (login + dashboard) desativada por enquanto — nenhuma dessas rotas está
-   * registrada em App.tsx, só o recadastramento fica acessível ao público. Motivo: nº do carnê +
-   * dia/mês de nascimento é um login fraco (fácil de adivinhar/compartilhar), então até
-   * incrementarmos essa segurança, evitamos que alguém use dados de um recadastramento para abrir
-   * o dízimo de outra pessoa. Reative aqui e em App.tsx quando for pedido para voltar.
+   * Área do dizimista (login + painel) habilitada, mas sem nenhum botão/link visível apontando
+   * pra cá em páginas públicas — só é alcançada por quem já tem o link direto. Ver PublicHeader,
+   * HomePage etc.
    */
   entrar: '/entrar',
   dizimista: {
     root: '/dizimista',
     cadastro: '/dizimista/cadastro',
-    /** Pagamento via Pix — desativado por enquanto, rota não registrada em App.tsx. */
+    /** Pagamento via Pix real (Mercado Pago) — desativado por enquanto, rota não registrada em App.tsx. */
     pagamento: '/dizimista/pagamento',
     devolucoes: '/dizimista/devolucoes',
+    /** Mock de demonstração (QR/código/timer fictícios) — não gera cobrança real. */
+    fazerDevolucao: '/dizimista/fazer-devolucao',
   },
 
   pastoral: {

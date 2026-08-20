@@ -1,32 +1,37 @@
 import * as React from 'react'
 
 import { STORAGE_KEYS } from '@/constants/storage'
-import { TESOURARIA_SENHA_HASH, TESOURARIA_SENHA_HASH_PADRAO } from '@/constants/tesourariaAuth'
+import { PAPEIS_TESOURARIA, podeEditarTesouraria, type PapelAcesso } from '@/constants/papeisAcesso'
+import { hashEsperadoParaPapel } from '@/constants/senhasAcesso'
 import { sha256Hex } from '@/utils/hash'
 
 const SESSAO_TTL_MS = 12 * 60 * 60 * 1000
 
 interface SessaoTesourariaArmazenada {
   token: string
+  papel: PapelAcesso
   expiresAt: number
 }
 
 interface TesourariaSessaoContextValue {
   token: string | null
+  papel: PapelAcesso | null
+  /** Só o Tesoureiro pode incluir/editar/excluir — os demais perfis só visualizam. */
+  podeEditar: boolean
   carregando: boolean
-  entrar: (senha: string) => Promise<void>
+  entrar: (papel: PapelAcesso, senha: string) => Promise<void>
   sair: () => void
 }
 
 const TesourariaSessaoContext = React.createContext<TesourariaSessaoContextValue | undefined>(undefined)
 
-function lerSessaoArmazenada(): string | null {
+function lerSessaoArmazenada(): { token: string; papel: PapelAcesso } | null {
   const bruto = localStorage.getItem(STORAGE_KEYS.tesourariaSessao)
   if (!bruto) return null
   try {
     const sessao = JSON.parse(bruto) as SessaoTesourariaArmazenada
-    if (!sessao.token || sessao.expiresAt < Date.now()) return null
-    return sessao.token
+    if (!sessao.token || !sessao.papel || sessao.expiresAt < Date.now()) return null
+    return { token: sessao.token, papel: sessao.papel }
   } catch {
     return null
   }
@@ -34,34 +39,49 @@ function lerSessaoArmazenada(): string | null {
 
 export function TesourariaSessaoProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = React.useState<string | null>(null)
+  const [papel, setPapel] = React.useState<PapelAcesso | null>(null)
   const [carregando, setCarregando] = React.useState(true)
 
   React.useEffect(() => {
-    setToken(lerSessaoArmazenada())
+    const sessao = lerSessaoArmazenada()
+    setToken(sessao?.token ?? null)
+    setPapel(sessao?.papel ?? null)
     setCarregando(false)
   }, [])
 
-  const entrar = React.useCallback(async (senha: string) => {
-    const hashEsperado = TESOURARIA_SENHA_HASH || TESOURARIA_SENHA_HASH_PADRAO
+  const entrar = React.useCallback(async (papelEscolhido: PapelAcesso, senha: string) => {
+    if (!PAPEIS_TESOURARIA.includes(papelEscolhido)) {
+      throw new Error('Perfil sem acesso à Tesouraria.')
+    }
+
+    const hashEsperado = hashEsperadoParaPapel(papelEscolhido)
     const senhaHash = await sha256Hex(senha)
 
     if (senhaHash !== hashEsperado) {
-      throw new Error('Senha da Tesouraria inválida.')
+      throw new Error('Senha inválida para o perfil selecionado.')
     }
 
     const novoToken = crypto.randomUUID()
     const expiresAt = Date.now() + SESSAO_TTL_MS
 
-    localStorage.setItem(STORAGE_KEYS.tesourariaSessao, JSON.stringify({ token: novoToken, expiresAt }))
+    localStorage.setItem(
+      STORAGE_KEYS.tesourariaSessao,
+      JSON.stringify({ token: novoToken, papel: papelEscolhido, expiresAt }),
+    )
     setToken(novoToken)
+    setPapel(papelEscolhido)
   }, [])
 
   const sair = React.useCallback(() => {
     localStorage.removeItem(STORAGE_KEYS.tesourariaSessao)
     setToken(null)
+    setPapel(null)
   }, [])
 
-  const value = React.useMemo(() => ({ token, carregando, entrar, sair }), [token, carregando, entrar, sair])
+  const value = React.useMemo(
+    () => ({ token, papel, podeEditar: podeEditarTesouraria(papel), carregando, entrar, sair }),
+    [token, papel, carregando, entrar, sair],
+  )
 
   return <TesourariaSessaoContext.Provider value={value}>{children}</TesourariaSessaoContext.Provider>
 }

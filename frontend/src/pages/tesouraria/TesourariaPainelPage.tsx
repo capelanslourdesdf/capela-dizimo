@@ -16,9 +16,11 @@ import type { ControleTesouraria, Devolucao } from '@/types'
 import { COMPETENCIA_INICIAL_TESOURARIA, STATUS_CONTROLE_TESOURARIA } from '@/constants/tesouraria'
 import { formatCompetencia, formatCurrency, subtrairMeses } from '@/utils/format'
 import { ROUTES } from '@/constants/routes'
+import { useTesourariaSessao } from '@/hooks/useTesourariaSessao'
 
 export function TesourariaPainelPage() {
   const navigate = useNavigate()
+  const { podeEditar } = useTesourariaSessao()
   const [controles, setControles] = React.useState<ControleTesouraria[]>([])
   const [todasDevolucoes, setTodasDevolucoes] = React.useState<Devolucao[]>([])
   const [carregando, setCarregando] = React.useState(true)
@@ -113,7 +115,7 @@ export function TesourariaPainelPage() {
                   variant="outline"
                   onClick={() => navigate(ROUTES.pastoral.tesouraria.controle(controleSelecionado.competencia))}
                 >
-                  Gerenciar lançamentos deste mês
+                  {podeEditar ? 'Gerenciar lançamentos deste mês' : 'Ver lançamentos deste mês'}
                 </Button>
               </>
             )}

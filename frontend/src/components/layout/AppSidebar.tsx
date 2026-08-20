@@ -35,7 +35,7 @@ export function AppSidebar({ navItems, areaLabel }: AppSidebarProps) {
             }
           >
             <item.icon className="h-[18px] w-[18px] shrink-0" />
-            {item.label}
+            <span className="min-w-0 truncate">{item.label}</span>
           </NavLink>
         ))}
       </nav>

@@ -50,7 +50,7 @@ export function AppTopbar({ navItems, areaLabel, userMenu }: AppTopbarProps) {
                   }
                 >
                   <item.icon className="h-[18px] w-[18px] shrink-0" />
-                  {item.label}
+                  <span className="min-w-0 truncate">{item.label}</span>
                 </NavLink>
               </SheetClose>
             ))}

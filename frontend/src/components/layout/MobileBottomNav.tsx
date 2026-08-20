@@ -24,7 +24,7 @@ export function MobileBottomNav({ navItems }: MobileBottomNavProps) {
             }
           >
             <item.icon className="h-4 w-4 shrink-0" />
-            <span className="truncate">{item.label}</span>
+            <span className="min-w-0 truncate">{item.label}</span>
           </NavLink>
         ))}
       </div>

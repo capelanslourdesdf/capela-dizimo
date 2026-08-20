@@ -243,6 +243,7 @@ export function ListaDevolucoesPage() {
                 <Label htmlFor="numeroCarneNovo">Nº do carnê</Label>
                 <Input
                   id="numeroCarneNovo"
+                  inputMode="numeric"
                   placeholder="Número do carnê"
                   value={carneNovaDevolucao}
                   onChange={(e) => setCarneNovaDevolucao(e.target.value)}

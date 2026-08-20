@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useNavigate } from 'react-router-dom'
@@ -9,12 +9,14 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useAdminSessao } from '@/hooks/useAdminSessao'
+import { PAPEIS_PASTORAL, PAPEL_LABEL } from '@/constants/papeisAcesso'
 import { ROUTES } from '@/constants/routes'
 
 const schema = z.object({
-  usuario: z.string().min(1, 'Informe o usuário.'),
+  papel: z.enum(['pastoral_dizimo', 'coordenadora', 'tesoureiro'], { message: 'Selecione um perfil.' }),
   senha: z.string().min(1, 'Informe a senha.'),
 })
 
@@ -27,6 +29,7 @@ export function AdminLoginForm() {
   const [mostrarSenha, setMostrarSenha] = React.useState(false)
 
   const {
+    control,
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
@@ -35,7 +38,7 @@ export function AdminLoginForm() {
   async function onSubmit(values: FormValues) {
     setErro(null)
     try {
-      await entrar(values.usuario, values.senha)
+      await entrar(values.papel, values.senha)
       toast.success('Bem-vindo(a) à Pastoral do Dízimo.')
       navigate(ROUTES.pastoral.root)
     } catch (err) {
@@ -52,9 +55,26 @@ export function AdminLoginForm() {
       )}
 
       <div className="space-y-1.5">
-        <Label htmlFor="usuario">Usuário</Label>
-        <Input id="usuario" autoComplete="username" {...register('usuario')} />
-        {errors.usuario && <p className="text-xs text-destructive">{errors.usuario.message}</p>}
+        <Label htmlFor="papel">Perfil</Label>
+        <Controller
+          control={control}
+          name="papel"
+          render={({ field }) => (
+            <Select value={field.value} onValueChange={field.onChange}>
+              <SelectTrigger id="papel">
+                <SelectValue placeholder="Selecione seu perfil" />
+              </SelectTrigger>
+              <SelectContent>
+                {PAPEIS_PASTORAL.map((p) => (
+                  <SelectItem key={p} value={p}>
+                    {PAPEL_LABEL[p]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        />
+        {errors.papel && <p className="text-xs text-destructive">{errors.papel.message}</p>}
       </div>
 
       <div className="space-y-1.5">

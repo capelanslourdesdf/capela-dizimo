@@ -23,6 +23,7 @@ import {
 import type { EventoTesouraria } from '@/types'
 import { ANO_INICIAL_EVENTOS_TESOURARIA } from '@/constants/tesouraria'
 import { formatCurrency } from '@/utils/format'
+import { useTesourariaSessao } from '@/hooks/useTesourariaSessao'
 
 const anoAtual = new Date().getFullYear()
 const ANOS_DISPONIVEIS = Array.from(
@@ -31,6 +32,7 @@ const ANOS_DISPONIVEIS = Array.from(
 )
 
 export function EventosPage() {
+  const { podeEditar } = useTesourariaSessao()
   const [ano, setAno] = React.useState(Math.max(anoAtual, ANO_INICIAL_EVENTOS_TESOURARIA))
   const [eventos, setEventos] = React.useState<EventoTesouraria[]>([])
   const [carregando, setCarregando] = React.useState(true)
@@ -106,10 +108,12 @@ export function EventosPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Button onClick={handleNovo}>
-              <Plus className="h-4 w-4" />
-              Novo evento
-            </Button>
+            {podeEditar && (
+              <Button onClick={handleNovo}>
+                <Plus className="h-4 w-4" />
+                Novo evento
+              </Button>
+            )}
           </>
         }
       />
@@ -150,21 +154,23 @@ export function EventosPage() {
                     <span className="font-medium text-foreground">Saldo: {formatCurrency(e.arrecadado - e.despesa)}</span>
                   </div>
                 </div>
-                <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">
-                  <Button variant="outline" size="sm" onClick={() => handleEditar(e)}>
-                    <Pencil className="h-4 w-4" />
-                    Editar
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    onClick={() => setEventoParaExcluir(e)}
-                    aria-label={`Excluir ${e.nome}`}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+                {podeEditar && (
+                  <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">
+                    <Button variant="outline" size="sm" onClick={() => handleEditar(e)}>
+                      <Pencil className="h-4 w-4" />
+                      Editar
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => setEventoParaExcluir(e)}
+                      aria-label={`Excluir ${e.nome}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}

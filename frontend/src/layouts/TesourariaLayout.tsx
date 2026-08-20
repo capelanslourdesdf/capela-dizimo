@@ -1,5 +1,5 @@
 import { Outlet, useNavigate } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Eye } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { AppSidebar } from '@/components/layout/AppSidebar'
@@ -7,11 +7,12 @@ import { AppTopbar } from '@/components/layout/AppTopbar'
 import { UserMenu } from '@/components/layout/UserMenu'
 import { Button } from '@/components/ui/button'
 import { tesourariaNav } from '@/constants/nav'
+import { PAPEL_LABEL } from '@/constants/papeisAcesso'
 import { ROUTES } from '@/constants/routes'
 import { useTesourariaSessao } from '@/hooks/useTesourariaSessao'
 
 export function TesourariaLayout() {
-  const { sair } = useTesourariaSessao()
+  const { sair, papel, podeEditar } = useTesourariaSessao()
   const navigate = useNavigate()
 
   function handleSair() {
@@ -20,7 +21,9 @@ export function TesourariaLayout() {
     navigate(ROUTES.pastoral.root)
   }
 
-  const userMenu = <UserMenu nome="Tesouraria" subtitulo="Pastoral do Dízimo" onSair={handleSair} />
+  const userMenu = (
+    <UserMenu nome="Tesouraria" subtitulo={papel ? PAPEL_LABEL[papel] : 'Pastoral do Dízimo'} onSair={handleSair} />
+  )
 
   return (
     <div className="min-h-screen bg-background">
@@ -33,6 +36,12 @@ export function TesourariaLayout() {
             <ArrowLeft className="h-4 w-4" />
             Voltar à área da Pastoral
           </Button>
+          {!podeEditar && (
+            <div className="mb-4 flex items-center gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3.5 py-2.5 text-sm text-warning-foreground">
+              <Eye className="h-4 w-4 shrink-0" />
+              Modo somente visualização — seu perfil não pode incluir, editar ou excluir dados aqui.
+            </div>
+          )}
           <Outlet />
         </main>
       </div>

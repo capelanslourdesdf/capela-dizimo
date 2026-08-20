@@ -4,7 +4,6 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, LogIn } from 'lucide-react'
-import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -38,7 +37,6 @@ export function AdminLoginForm() {
     setErro(null)
     try {
       await entrar(values.papel, values.senha)
-      toast.success('Bem-vindo(a) à Pastoral do Dízimo.')
       navigate(ROUTES.pastoral.root)
     } catch (err) {
       setErro(err instanceof Error ? err.message : 'Não foi possível entrar. Tente novamente.')

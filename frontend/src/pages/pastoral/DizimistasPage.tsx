@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Cake, Download, IdCard, Phone, Trash2, UserPlus, Users, Wallet } from 'lucide-react'
+import { Cake, Download, IdCard, Pencil, Phone, Trash2, UserPlus, Users, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -409,14 +409,14 @@ export function DizimistasPage() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      className="shrink-0"
                       onClick={(e) => {
                         e.stopPropagation()
-                        setDizimistaParaExcluir(d)
+                        navigate(ROUTES.pastoral.dizimistaDetalhe(d.numeroCarne))
                       }}
-                      aria-label={`Excluir ${d.nomeCompleto}`}
+                      aria-label={`Editar ${d.nomeCompleto}`}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Pencil className="h-4 w-4" />
                     </Button>
                   </CardContent>
                 </Card>

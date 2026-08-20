@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 
 import { useDefinirPageTitle } from '@/hooks/usePageTitle'
+import { cn } from '@/lib/utils'
 
 interface PageHeaderProps {
   title: string
@@ -20,7 +21,16 @@ export function PageHeader({ title, description, actions, topTitle }: PageHeader
   return (
     <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">{title}</h1>
+        {/* No celular o topo fixo já mostra esse mesmo título (ver AppTopbar) — repetir aqui só
+            quando `topTitle` for diferente, senão fica duplicado. */}
+        <h1
+          className={cn(
+            'text-xl font-semibold tracking-tight text-foreground sm:text-2xl',
+            !topTitle && 'hidden lg:block',
+          )}
+        >
+          {title}
+        </h1>
         {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
       </div>
       {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}

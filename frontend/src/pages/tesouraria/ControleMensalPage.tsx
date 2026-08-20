@@ -284,7 +284,8 @@ export function ControleMensalPage() {
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+            {/* No celular o topo fixo já mostra o mês (ver AppTopbar) — não repete aqui. */}
+            <h1 className="hidden text-xl font-semibold tracking-tight text-foreground lg:block lg:text-2xl">
               {formatCompetencia(controle.competencia)}
             </h1>
             <StatusBadge label={STATUS_CONTROLE_TESOURARIA[controle.status]} variant={controle.status === 'fechado' ? 'muted' : 'success'} />

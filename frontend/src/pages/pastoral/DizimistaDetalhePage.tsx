@@ -210,7 +210,10 @@ export function DizimistaDetalhePage() {
             </Avatar>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-lg font-semibold text-foreground sm:text-xl">{dizimista.nomeCompleto}</h1>
+                {/* No celular o topo fixo já mostra o nome (ver AppTopbar) — não repete aqui. */}
+                <h1 className="hidden text-lg font-semibold text-foreground lg:block lg:text-xl">
+                  {dizimista.nomeCompleto}
+                </h1>
                 <StatusBadge label={status === 'ativo' ? 'Ativo' : 'Inativo'} variant={status === 'ativo' ? 'success' : 'muted'} />
               </div>
             </div>

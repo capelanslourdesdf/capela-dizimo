@@ -31,8 +31,8 @@ export function PastoralLayout() {
     <div className="min-h-screen bg-background">
       <AppSidebar navItems={nav} areaLabel="Administrativo" colapsada={colapsada} aoAlternar={alternar} />
 
-      <div className={cn('transition-[padding] duration-200', colapsada ? 'lg:pl-[76px]' : 'lg:pl-64')}>
-        <AppTopbar navItems={nav} areaLabel="Administrativo" userMenu={userMenu} />
+      <div className={cn('pl-[76px] transition-[padding] duration-200', !colapsada && 'lg:pl-64')}>
+        <AppTopbar areaLabel="Administrativo" userMenu={userMenu} />
         <main className="px-4 pb-10 pt-6 sm:px-6 lg:px-8">
           <Outlet />
         </main>

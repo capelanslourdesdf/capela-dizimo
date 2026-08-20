@@ -19,42 +19,14 @@ export function PublicHeader() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur">
-      <div className="container flex h-16 items-center justify-between">
-        <Link to={ROUTES.home} className="min-w-0">
-          <BrandMark />
-        </Link>
-
-        <nav className="hidden items-center gap-1 md:flex">
-          {links.map((link) => (
-            <NavLink
-              key={link.href}
-              to={link.href}
-              end
-              className={({ isActive }) =>
-                cn(
-                  'rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground',
-                  isActive && 'text-foreground',
-                )
-              }
-            >
-              {link.label}
-            </NavLink>
-          ))}
-        </nav>
-
-        <div className="hidden items-center gap-2 md:flex">
-          <Button asChild variant="ghost">
-            <Link to={ROUTES.pastoral.entrar}>Administrativo</Link>
-          </Button>
-        </div>
-
+      <div className="container relative flex h-16 items-center justify-between">
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" className="md:hidden" aria-label="Abrir menu">
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="w-4/5">
+          <SheetContent side="left" className="w-4/5">
             <SheetHeader>
               <SheetTitle>
                 <BrandMark subtitle={false} />
@@ -82,6 +54,37 @@ export function PublicHeader() {
             </div>
           </SheetContent>
         </Sheet>
+
+        <Link
+          to={ROUTES.home}
+          className="absolute left-1/2 min-w-0 -translate-x-1/2 md:static md:left-auto md:translate-x-0"
+        >
+          <BrandMark />
+        </Link>
+
+        <nav className="hidden items-center gap-1 md:flex">
+          {links.map((link) => (
+            <NavLink
+              key={link.href}
+              to={link.href}
+              end
+              className={({ isActive }) =>
+                cn(
+                  'rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground',
+                  isActive && 'text-foreground',
+                )
+              }
+            >
+              {link.label}
+            </NavLink>
+          ))}
+        </nav>
+
+        <div className="hidden items-center gap-2 md:flex">
+          <Button asChild variant="ghost">
+            <Link to={ROUTES.pastoral.entrar}>Administrativo</Link>
+          </Button>
+        </div>
       </div>
     </header>
   )

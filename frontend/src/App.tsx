@@ -16,6 +16,7 @@ import { ProtectedAdminRoute } from '@/routes/ProtectedAdminRoute'
 import { ProtectedTesourariaRoute } from '@/routes/ProtectedTesourariaRoute'
 import { ProtectedDizimistaRoute } from '@/routes/ProtectedDizimistaRoute'
 import { ProtegerContraPastoralDizimo } from '@/routes/ProtegerContraPastoralDizimo'
+import { ScrollToTop } from '@/routes/ScrollToTop'
 
 import { HomePage } from '@/pages/public/HomePage'
 import { ComoFuncionaPage } from '@/pages/public/ComoFuncionaPage'
@@ -51,6 +52,7 @@ function App() {
           <TesourariaSessaoProvider>
             <PageTitleProvider>
             <TooltipProvider delayDuration={200}>
+              <ScrollToTop />
               <Routes>
                 <Route element={<PublicLayout />}>
                   <Route path={ROUTES.home} element={<HomePage />} />

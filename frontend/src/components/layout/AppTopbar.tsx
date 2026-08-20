@@ -26,10 +26,10 @@ export function AppTopbar({ navItems, areaLabel, userMenu }: AppTopbarProps) {
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>
           <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Abrir menu">
-            <Menu className="h-5 w-5" />
+            <Menu className="h-6 w-6" />
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-4/5 max-w-xs">
+        <SheetContent side="left" className="w-4/5 max-w-xs overflow-y-auto">
           <SheetHeader>
             <SheetTitle>
               <Link to={ROUTES.home} onClick={() => setOpen(false)}>

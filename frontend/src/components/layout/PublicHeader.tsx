@@ -23,10 +23,10 @@ export function PublicHeader() {
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" className="md:hidden" aria-label="Abrir menu">
-              <Menu className="h-5 w-5" />
+              <Menu className="h-6 w-6" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-4/5">
+          <SheetContent side="left" className="w-4/5 overflow-y-auto">
             <SheetHeader>
               <SheetTitle>
                 <BrandMark subtitle={false} />

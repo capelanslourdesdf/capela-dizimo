@@ -222,7 +222,7 @@ export function DespesaTesourariaForm({ despesa, onSalvar, onCancelar }: Despesa
               <Input
                 id="chaveNfe"
                 inputMode="numeric"
-                placeholder="0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000"
+                placeholder="Chave de 44 dígitos"
                 value={field.value ?? ''}
                 onChange={(e) => field.onChange(maskChaveNfe(e.target.value))}
               />

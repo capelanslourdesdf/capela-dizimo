@@ -476,7 +476,7 @@ export function ControleMensalPage() {
                         {s.observacao && <p className="mt-0.5 text-xs text-muted-foreground">{s.observacao}</p>}
                       </div>
                       <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 sm:justify-end">
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <StatusBadge label={s.quitado ? 'Quitada' : 'Pendente'} variant={s.quitado ? 'success' : 'warning'} />
                           {s.possuiNfe && <StatusBadge label="Possui NF-e" variant="outline" />}
                           <p className="font-medium text-destructive">{formatCurrency(s.valor)}</p>

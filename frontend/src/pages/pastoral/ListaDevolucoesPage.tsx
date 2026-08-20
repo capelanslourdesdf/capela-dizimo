@@ -121,7 +121,7 @@ export function ListaDevolucoesPage() {
         }
       />
 
-      <div className="mb-6 flex items-center justify-center gap-3 sm:justify-start">
+      <div className="mb-6 flex flex-wrap items-center justify-center gap-3 sm:justify-start">
         <Button
           variant="outline"
           size="icon"
@@ -184,7 +184,7 @@ export function ListaDevolucoesPage() {
                       {d.observacao && <p className="mt-0.5 text-xs text-muted-foreground">{d.observacao}</p>}
                     </div>
                     <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 sm:justify-end">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <StatusBadge label={formaPagamentoLabel(d.formaPagamento)} variant="outline" />
                         <p className="font-medium text-foreground">{formatCurrency(d.valor)}</p>
                       </div>

@@ -32,8 +32,8 @@ export function TesourariaLayout() {
     <div className="min-h-screen bg-background">
       <AppSidebar navItems={tesourariaNav} areaLabel="Tesouraria" colapsada={colapsada} aoAlternar={alternar} />
 
-      <div className={cn('pl-[76px] transition-[padding] duration-200', !colapsada && 'lg:pl-64')}>
-        <AppTopbar areaLabel="Tesouraria" userMenu={userMenu} />
+      <div className={cn('transition-[padding] duration-200', colapsada ? 'lg:pl-[76px]' : 'lg:pl-64')}>
+        <AppTopbar navItems={tesourariaNav} areaLabel="Tesouraria" userMenu={userMenu} />
         <main className="px-4 pb-10 pt-6 sm:px-6 lg:px-8">
           <Button variant="ghost" size="sm" className="mb-4 -ml-2" onClick={() => navigate(ROUTES.pastoral.root)}>
             <ArrowLeft className="h-4 w-4" />

@@ -33,8 +33,8 @@ export function DizimistaLayout() {
     <div className="min-h-screen bg-background">
       <AppSidebar navItems={dizimistaNav} areaLabel="Área do Dizimista" colapsada={colapsada} aoAlternar={alternar} />
 
-      <div className={cn('pl-[76px] transition-[padding] duration-200', !colapsada && 'lg:pl-64')}>
-        <AppTopbar areaLabel="Área do Dizimista" userMenu={userMenu} />
+      <div className={cn('transition-[padding] duration-200', colapsada ? 'lg:pl-[76px]' : 'lg:pl-64')}>
+        <AppTopbar navItems={dizimistaNav} areaLabel="Área do Dizimista" userMenu={userMenu} />
         <main className="px-4 pb-10 pt-6 sm:px-6 lg:px-8">
           <Outlet />
         </main>

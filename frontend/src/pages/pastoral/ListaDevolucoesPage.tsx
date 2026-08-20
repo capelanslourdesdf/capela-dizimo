@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { ArrowLeftRight, ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react'
+import { ArrowLeftRight, ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -8,15 +8,18 @@ import { StatusBadge } from '@/components/dashboard/StatusBadge'
 import { DevolucaoForm } from '@/components/forms/DevolucaoForm'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
-import { listarDizimistas } from '@/services/dizimistaService'
+import { buscarDizimistaPorCarne, listarDizimistas } from '@/services/dizimistaService'
 import {
   atualizarDevolucao,
   competenciaDaDevolucao,
   excluirDevolucao,
+  lancarDevolucao,
   listarTodasDevolucoesPorCarne,
   type DadosDevolucao,
 } from '@/services/devolucaoService'
@@ -35,6 +38,8 @@ export function ListaDevolucoesPage() {
   const [nomesPorCarne, setNomesPorCarne] = React.useState<Map<string, string>>(new Map())
   const [devolucaoEmEdicao, setDevolucaoEmEdicao] = React.useState<DevolucaoComCarne | null>(null)
   const [devolucaoParaExcluir, setDevolucaoParaExcluir] = React.useState<DevolucaoComCarne | null>(null)
+  const [modalNovaDevolucao, setModalNovaDevolucao] = React.useState(false)
+  const [carneNovaDevolucao, setCarneNovaDevolucao] = React.useState('')
 
   const carregar = React.useCallback(async () => {
     setCarregando(true)
@@ -75,11 +80,40 @@ export function ListaDevolucoesPage() {
     carregar()
   }
 
+  async function handleLancarNovaDevolucao(dados: DadosDevolucao) {
+    const numeroCarne = carneNovaDevolucao.trim()
+    if (!numeroCarne) {
+      throw new Error('Informe o número do carnê (ou -x- para avulsa).')
+    }
+    if (numeroCarne !== CARNE_AVULSO) {
+      const dizimista = await buscarDizimistaPorCarne(numeroCarne)
+      if (!dizimista) {
+        throw new Error('Carnê não encontrado.')
+      }
+    }
+
+    await lancarDevolucao(numeroCarne, dados)
+    setModalNovaDevolucao(false)
+    toast.success('Devolução lançada com sucesso.')
+    carregar()
+  }
+
   return (
     <div>
       <PageHeader
         title="Lista de devoluções"
         description="Todas as devoluções lançadas no mês, de qualquer dizimista — inclusive avulsas."
+        actions={
+          <Button
+            onClick={() => {
+              setCarneNovaDevolucao('')
+              setModalNovaDevolucao(true)
+            }}
+          >
+            <Plus className="h-4 w-4" />
+            Lançar devolução
+          </Button>
+        }
       />
 
       <div className="mb-6 flex items-center justify-center gap-3 sm:justify-start">
@@ -189,6 +223,36 @@ export function ListaDevolucoesPage() {
               onSalvar={handleAtualizarDevolucao}
               onCancelar={() => setDevolucaoEmEdicao(null)}
             />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={modalNovaDevolucao} onOpenChange={setModalNovaDevolucao}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Lançar devolução</DialogTitle>
+          </DialogHeader>
+          {modalNovaDevolucao && (
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="numeroCarneNovo">Nº do carnê</Label>
+                <Input
+                  id="numeroCarneNovo"
+                  placeholder="Número do carnê"
+                  value={carneNovaDevolucao}
+                  onChange={(e) => setCarneNovaDevolucao(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Use <span className="font-mono font-medium text-foreground">{CARNE_AVULSO}</span> pra lançar uma
+                  devolução avulsa (sem dizimista cadastrado).
+                </p>
+              </div>
+              <DevolucaoForm
+                competenciaPadrao={competencia}
+                onSalvar={handleLancarNovaDevolucao}
+                onCancelar={() => setModalNovaDevolucao(false)}
+              />
+            </div>
           )}
         </DialogContent>
       </Dialog>

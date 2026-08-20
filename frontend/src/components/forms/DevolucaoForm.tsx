@@ -45,11 +45,13 @@ type FormValues = z.infer<typeof schema>
 interface DevolucaoFormProps {
   /** Presente só na edição — quando ausente, o form lança uma devolução nova. */
   devolucao?: Devolucao
+  /** Competência ("aaaa-mm") sugerida ao lançar uma devolução nova — padrão é o mês atual. */
+  competenciaPadrao?: string
   onSalvar: (dados: DadosDevolucao) => Promise<void>
   onCancelar: () => void
 }
 
-export function DevolucaoForm({ devolucao, onSalvar, onCancelar }: DevolucaoFormProps) {
+export function DevolucaoForm({ devolucao, competenciaPadrao, onSalvar, onCancelar }: DevolucaoFormProps) {
   const [erro, setErro] = React.useState<string | null>(null)
   const [membros, setMembros] = React.useState<MembroPastoral[]>([])
   const [carregandoMembros, setCarregandoMembros] = React.useState(true)
@@ -67,7 +69,7 @@ export function DevolucaoForm({ devolucao, onSalvar, onCancelar }: DevolucaoForm
       formaPagamento: devolucao?.formaPagamento ?? 'pix',
       competencia: devolucao
         ? competenciaParaMesAno(competenciaDaDevolucao(devolucao))
-        : competenciaParaMesAno(competenciaAtual()),
+        : competenciaParaMesAno(competenciaPadrao ?? competenciaAtual()),
       lancadoPor: devolucao?.lancadoPor ?? '',
       observacao: devolucao?.observacao ?? '',
     },

@@ -40,6 +40,9 @@ export function ListaDevolucoesPage() {
   const [devolucaoParaExcluir, setDevolucaoParaExcluir] = React.useState<DevolucaoComCarne | null>(null)
   const [modalNovaDevolucao, setModalNovaDevolucao] = React.useState(false)
   const [carneNovaDevolucao, setCarneNovaDevolucao] = React.useState('')
+  // Muda a cada lançamento com sucesso, forçando o DevolucaoForm a remontar com os campos em
+  // branco — assim dá pra lançar várias devoluções seguidas sem fechar o diálogo.
+  const [formularioNovaDevolucaoKey, setFormularioNovaDevolucaoKey] = React.useState(0)
 
   const carregar = React.useCallback(async () => {
     setCarregando(true)
@@ -93,8 +96,10 @@ export function ListaDevolucoesPage() {
     }
 
     await lancarDevolucao(numeroCarne, dados)
-    setModalNovaDevolucao(false)
     toast.success('Devolução lançada com sucesso.')
+    // Mantém o diálogo aberto pra lançar outra em seguida — limpa o carnê e reseta o formulário.
+    setCarneNovaDevolucao('')
+    setFormularioNovaDevolucaoKey((k) => k + 1)
     carregar()
   }
 
@@ -248,6 +253,7 @@ export function ListaDevolucoesPage() {
                 </p>
               </div>
               <DevolucaoForm
+                key={formularioNovaDevolucaoKey}
                 competenciaPadrao={competencia}
                 onSalvar={handleLancarNovaDevolucao}
                 onCancelar={() => setModalNovaDevolucao(false)}

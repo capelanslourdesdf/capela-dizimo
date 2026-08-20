@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import type { NavItem } from '@/constants/nav'
 import { ROUTES } from '@/constants/routes'
+import { usePageTitle } from '@/hooks/usePageTitle'
 import { cn } from '@/lib/utils'
 
 interface AppTopbarProps {
@@ -18,6 +19,7 @@ interface AppTopbarProps {
 
 export function AppTopbar({ navItems, areaLabel, userMenu }: AppTopbarProps) {
   const [open, setOpen] = React.useState(false)
+  const tituloDaTela = usePageTitle()
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-background/95 px-4 backdrop-blur lg:px-8">
@@ -59,7 +61,9 @@ export function AppTopbar({ navItems, areaLabel, userMenu }: AppTopbarProps) {
       </Sheet>
 
       <div className="flex-1 min-w-0">
-        <p className="truncate text-base font-semibold text-foreground sm:text-lg lg:hidden">Meu Dízimo Digital</p>
+        <p className="truncate text-base font-semibold text-foreground sm:text-lg lg:hidden">
+          {tituloDaTela || 'Meu Dízimo Digital'}
+        </p>
         <p className="hidden truncate text-sm font-medium text-muted-foreground lg:block">{areaLabel}</p>
       </div>
 

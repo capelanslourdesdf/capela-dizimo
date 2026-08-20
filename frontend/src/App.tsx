@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { DizimistaSessaoProvider } from '@/hooks/useDizimistaSessao'
 import { AdminSessaoProvider } from '@/hooks/useAdminSessao'
 import { TesourariaSessaoProvider } from '@/hooks/useTesourariaSessao'
+import { PageTitleProvider } from '@/hooks/usePageTitle'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Toaster } from '@/components/ui/sonner'
 
@@ -48,6 +49,7 @@ function App() {
       <DizimistaSessaoProvider>
         <AdminSessaoProvider>
           <TesourariaSessaoProvider>
+            <PageTitleProvider>
             <TooltipProvider delayDuration={200}>
               <Routes>
                 <Route element={<PublicLayout />}>
@@ -114,6 +116,7 @@ function App() {
 
               <Toaster />
             </TooltipProvider>
+            </PageTitleProvider>
           </TesourariaSessaoProvider>
         </AdminSessaoProvider>
       </DizimistaSessaoProvider>

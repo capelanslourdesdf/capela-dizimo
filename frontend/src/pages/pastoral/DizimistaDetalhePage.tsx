@@ -58,6 +58,7 @@ import {
   MINIMO_MESES_ATIVOS_PADRAO,
 } from '@/utils/statusDizimista'
 import { ROUTES } from '@/constants/routes'
+import { useDefinirPageTitle } from '@/hooks/usePageTitle'
 
 interface FichaItemProps {
   icon: LucideIcon
@@ -89,6 +90,8 @@ export function DizimistaDetalhePage() {
   const [modalDevolucao, setModalDevolucao] = React.useState(false)
   const [devolucaoEmEdicao, setDevolucaoEmEdicao] = React.useState<Devolucao | null>(null)
   const [modalExclusao, setModalExclusao] = React.useState(false)
+
+  useDefinirPageTitle(dizimista?.nomeCompleto || 'Dizimista')
 
   const carregar = React.useCallback(async () => {
     if (!numeroCarne) return

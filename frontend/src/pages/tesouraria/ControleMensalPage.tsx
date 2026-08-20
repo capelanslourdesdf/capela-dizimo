@@ -55,6 +55,7 @@ import { gerarExcelControleTesouraria } from '@/utils/excelTesouraria'
 import { formatCompetencia, formatCurrency, formatDate, maskChaveNfe, subtrairMeses } from '@/utils/format'
 import { ROUTES } from '@/constants/routes'
 import { useTesourariaSessao } from '@/hooks/useTesourariaSessao'
+import { useDefinirPageTitle } from '@/hooks/usePageTitle'
 
 interface CampoDetalheProps {
   label: string
@@ -104,6 +105,7 @@ export function ControleMensalPage() {
   const { competencia } = useParams<{ competencia: string }>()
   const navigate = useNavigate()
   const { podeEditar } = useTesourariaSessao()
+  useDefinirPageTitle(competencia ? formatCompetencia(competencia) : 'Tesouraria')
 
   const [controle, setControle] = React.useState<ControleTesouraria | null>(null)
   const [controleAnterior, setControleAnterior] = React.useState<ControleTesouraria | null>(null)

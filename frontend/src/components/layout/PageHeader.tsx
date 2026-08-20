@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
 
+import { useDefinirPageTitle } from '@/hooks/usePageTitle'
+
 interface PageHeaderProps {
   title: string
   description?: string
@@ -7,6 +9,8 @@ interface PageHeaderProps {
 }
 
 export function PageHeader({ title, description, actions }: PageHeaderProps) {
+  useDefinirPageTitle(title)
+
   return (
     <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">

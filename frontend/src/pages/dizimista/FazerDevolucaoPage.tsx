@@ -120,7 +120,7 @@ export function FazerDevolucaoPage() {
 
   return (
     <div>
-      <PageHeader title="Fazer devolução" description="Gere um Pix para regularizar o mês que faltou." />
+      <PageHeader title="Fazer devolução" description="Faça o pagamento com Pix da Capela, rápido e seguro." />
 
       <div className="mb-5 flex items-start gap-2.5 rounded-lg border border-warning/30 bg-warning/10 px-3.5 py-2.5 text-sm text-warning-foreground">
         <Info className="mt-0.5 h-4 w-4 shrink-0" />

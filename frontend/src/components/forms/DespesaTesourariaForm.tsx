@@ -48,13 +48,11 @@ export interface DadosDespesaTesouraria {
 interface DespesaTesourariaFormProps {
   /** Presente só na edição — quando ausente, o form lança uma despesa nova. */
   despesa?: SaidaTesouraria
-  /** Data padrão sugerida ao lançar uma despesa nova (dd/mm/aaaa). */
-  dataPadrao: string
   onSalvar: (dados: DadosDespesaTesouraria) => Promise<void>
   onCancelar: () => void
 }
 
-export function DespesaTesourariaForm({ despesa, dataPadrao, onSalvar, onCancelar }: DespesaTesourariaFormProps) {
+export function DespesaTesourariaForm({ despesa, onSalvar, onCancelar }: DespesaTesourariaFormProps) {
   const [erro, setErro] = React.useState<string | null>(null)
   const editando = !!despesa
 
@@ -66,7 +64,7 @@ export function DespesaTesourariaForm({ despesa, dataPadrao, onSalvar, onCancela
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      dia: despesa ? dataIsoParaBr(despesa.dia) : dataPadrao,
+      dia: despesa ? dataIsoParaBr(despesa.dia) : '',
       solicitante: despesa?.solicitante ?? '',
       prestador: despesa?.prestador ?? '',
       valor: despesa ? numeroParaMoeda(despesa.valor) : '',

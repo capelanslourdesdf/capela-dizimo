@@ -43,17 +43,6 @@ import { gerarExcelControleTesouraria } from '@/utils/excelTesouraria'
 import { formatCompetencia, formatCurrency, formatDate, subtrairMeses } from '@/utils/format'
 import { ROUTES } from '@/constants/routes'
 
-/** Data sugerida (dd/mm/aaaa) ao lançar uma receita/despesa nova: hoje, se for o mês vigente; senão o dia 1º do mês do controle. */
-function dataPadraoParaCompetencia(competencia: string): string {
-  const hoje = new Date()
-  const competenciaHoje = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`
-  if (competencia === competenciaHoje) {
-    return `${String(hoje.getDate()).padStart(2, '0')}/${String(hoje.getMonth() + 1).padStart(2, '0')}/${hoje.getFullYear()}`
-  }
-  const [ano, mes] = competencia.split('-')
-  return `01/${mes}/${ano}`
-}
-
 function montarReceita(id: string, dados: DadosReceitaTesouraria): EntradaTesouraria {
   const observacao = dados.observacao?.trim()
   return {
@@ -223,8 +212,6 @@ export function ControleMensalPage() {
     label: cat.label,
     total: controle.entradas.filter((e) => e.categoria === cat.value).reduce((s, e) => s + e.valor, 0),
   })).filter((c) => c.total > 0)
-
-  const dataPadrao = dataPadraoParaCompetencia(controle.competencia)
 
   // Mais recente primeiro, como no resto do histórico financeiro do app.
   const receitasOrdenadas = [...controle.entradas].sort((a, b) => (a.data < b.data ? 1 : a.data > b.data ? -1 : 0))
@@ -449,7 +436,6 @@ export function ControleMensalPage() {
           <ReceitaTesourariaForm
             key={receitaEmEdicao?.id ?? 'nova'}
             receita={receitaEmEdicao ?? undefined}
-            dataPadrao={dataPadrao}
             onSalvar={handleSalvarReceita}
             onCancelar={() => setModalReceita(false)}
           />
@@ -464,7 +450,6 @@ export function ControleMensalPage() {
           <DespesaTesourariaForm
             key={despesaEmEdicao?.id ?? 'nova'}
             despesa={despesaEmEdicao ?? undefined}
-            dataPadrao={dataPadrao}
             onSalvar={handleSalvarDespesa}
             onCancelar={() => setModalDespesa(false)}
           />

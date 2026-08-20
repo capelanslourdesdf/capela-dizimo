@@ -3,12 +3,56 @@ import autoTable from 'jspdf-autotable'
 
 import type { ControleTesouraria } from '@/types'
 import { CATEGORIAS_ENTRADA_TESOURARIA, STATUS_CONTROLE_TESOURARIA, categoriaEntradaLabel } from '@/constants/tesouraria'
-import { formaPagamentoLabel } from '@/constants/devolucao'
+import { FORMAS_PAGAMENTO_DEVOLUCAO, formaPagamentoLabel } from '@/constants/devolucao'
 import { formatCompetencia, formatCurrency, formatDate, formatDateLong } from '@/utils/format'
 
 /** Ponto em que a última tabela desenhada terminou — usado pra empilhar as seções sem sobrepor. */
 function finalY(doc: jsPDF): number {
   return (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY
+}
+
+/** Quem assina o controle mensal — fixo, como o nome da Capela logo abaixo. */
+const ASSINATURAS = [
+  { nome: 'Carlos Eduardo Silva Barbosa', cargo: 'Tesoureiro' },
+  { nome: 'Lucylene Valério Rocha', cargo: 'Coordenadora' },
+  { nome: 'Luiz Caetano', cargo: 'Pároco' },
+]
+
+/** Desenha as linhas de assinatura no fim do documento, abrindo página nova se não couber. */
+function desenharAssinaturas(doc: jsPDF, margemEsquerda: number, larguraPagina: number): void {
+  const alturaPagina = doc.internal.pageSize.getHeight()
+  const alturaNecessaria = 30
+  let y = finalY(doc) + 24
+
+  if (y + alturaNecessaria > alturaPagina - 15) {
+    doc.addPage()
+    y = 30
+  }
+
+  const larguraUtil = larguraPagina - margemEsquerda * 2
+  const larguraColuna = larguraUtil / ASSINATURAS.length
+
+  doc.setDrawColor(120)
+  doc.setLineWidth(0.2)
+
+  ASSINATURAS.forEach((assinatura, indice) => {
+    const xInicio = margemEsquerda + indice * larguraColuna + 4
+    const xFim = margemEsquerda + (indice + 1) * larguraColuna - 4
+    const xCentro = (xInicio + xFim) / 2
+
+    doc.line(xInicio, y, xFim, y)
+
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(0)
+    doc.text(assinatura.nome, xCentro, y + 5, { align: 'center' })
+
+    doc.setFontSize(8)
+    doc.setTextColor(110)
+    doc.text(assinatura.cargo, xCentro, y + 10, { align: 'center' })
+  })
+
+  doc.setTextColor(0)
 }
 
 /**
@@ -81,6 +125,28 @@ export function gerarPdfControleTesouraria(controle: ControleTesouraria): void {
     })
   }
 
+  const totaisPorForma = FORMAS_PAGAMENTO_DEVOLUCAO.map((forma) => ({
+    forma: forma.label,
+    total: controle.entradas.filter((e) => e.formaPagamento === forma.value).reduce((soma, e) => soma + e.valor, 0),
+  })).filter((f) => f.total > 0)
+
+  if (totaisPorForma.length > 0) {
+    doc.setFontSize(11)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Receitas por forma de pagamento', margemEsquerda, finalY(doc) + 10)
+
+    autoTable(doc, {
+      startY: finalY(doc) + 14,
+      head: [['Forma', 'Total']],
+      body: totaisPorForma.map((f) => [f.forma, formatCurrency(f.total)]),
+      theme: 'striped',
+      headStyles: { fillColor: [51, 65, 85] },
+      styles: { fontSize: 9 },
+      columnStyles: { 1: { halign: 'right' } },
+      margin: { left: margemEsquerda, right: larguraPagina - margemEsquerda - 90 },
+    })
+  }
+
   doc.setFontSize(11)
   doc.setFont('helvetica', 'bold')
   doc.text('Receitas detalhadas', margemEsquerda, finalY(doc) + 10)
@@ -129,6 +195,8 @@ export function gerarPdfControleTesouraria(controle: ControleTesouraria): void {
     columnStyles: { 3: { halign: 'right', cellWidth: 24 } },
     margin: { left: margemEsquerda, right: margemEsquerda },
   })
+
+  desenharAssinaturas(doc, margemEsquerda, larguraPagina)
 
   const totalPaginas = doc.getNumberOfPages()
   for (let pagina = 1; pagina <= totalPaginas; pagina++) {

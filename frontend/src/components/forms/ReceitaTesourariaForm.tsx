@@ -48,13 +48,11 @@ export interface DadosReceitaTesouraria {
 interface ReceitaTesourariaFormProps {
   /** Presente só na edição — quando ausente, o form lança uma receita nova. */
   receita?: EntradaTesouraria
-  /** Data padrão sugerida ao lançar uma receita nova (dd/mm/aaaa). */
-  dataPadrao: string
   onSalvar: (dados: DadosReceitaTesouraria) => Promise<void>
   onCancelar: () => void
 }
 
-export function ReceitaTesourariaForm({ receita, dataPadrao, onSalvar, onCancelar }: ReceitaTesourariaFormProps) {
+export function ReceitaTesourariaForm({ receita, onSalvar, onCancelar }: ReceitaTesourariaFormProps) {
   const [erro, setErro] = React.useState<string | null>(null)
   const editando = !!receita
 
@@ -66,7 +64,7 @@ export function ReceitaTesourariaForm({ receita, dataPadrao, onSalvar, onCancela
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      data: receita ? dataIsoParaBr(receita.data) : dataPadrao,
+      data: receita ? dataIsoParaBr(receita.data) : '',
       valor: receita ? numeroParaMoeda(receita.valor) : '',
       formaPagamento: receita?.formaPagamento ?? 'pix',
       categoria: receita?.categoria ?? 'dizimo',

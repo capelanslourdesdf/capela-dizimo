@@ -8,6 +8,7 @@ import {
   Layers,
   PartyPopper,
   Settings,
+  TrendingUp,
   Users,
   type LucideIcon,
 } from 'lucide-react'
@@ -47,5 +48,6 @@ export const pastoralNav: NavItem[] = [
 
 export const tesourariaNav: NavItem[] = [
   { label: 'Painel', href: ROUTES.pastoral.tesouraria.root, icon: LayoutDashboard, end: true },
+  { label: 'Evolução', href: ROUTES.pastoral.tesouraria.evolucao, icon: TrendingUp },
   { label: 'Eventos', href: ROUTES.pastoral.tesouraria.eventos, icon: PartyPopper },
 ]

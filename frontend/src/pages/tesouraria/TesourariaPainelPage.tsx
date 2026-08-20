@@ -1,28 +1,38 @@
 import * as React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeftRight, CalendarRange, TrendingDown, TrendingUp, Wallet } from 'lucide-react'
+import { ArrowDownRight, ArrowLeftRight, ArrowUpRight, CalendarRange, Minus, TrendingDown, TrendingUp, Wallet } from 'lucide-react'
 
 import { PageHeader } from '@/components/layout/PageHeader'
 import { StatCard } from '@/components/dashboard/StatCard'
 import { StatusBadge } from '@/components/dashboard/StatusBadge'
-import { GraficoEntradasSaidas } from '@/components/dashboard/GraficoEntradasSaidas'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 
 import { listarControlesTesouraria } from '@/services/tesourariaService'
 import type { ControleTesouraria } from '@/types'
-import { CATEGORIAS_ENTRADA_TESOURARIA, STATUS_CONTROLE_TESOURARIA } from '@/constants/tesouraria'
-import { formatCompetencia, formatCurrency } from '@/utils/format'
+import { CATEGORIAS_ENTRADA_TESOURARIA, COMPETENCIA_INICIAL_TESOURARIA, STATUS_CONTROLE_TESOURARIA } from '@/constants/tesouraria'
+import { formatCompetencia, formatCurrency, subtrairMeses } from '@/utils/format'
 import { ROUTES } from '@/constants/routes'
+
+function saldoDoControle(controle: ControleTesouraria): number {
+  return controle.entradas.reduce((s, e) => s + e.valor, 0) - controle.saidas.reduce((s, sa) => s + sa.valor, 0)
+}
 
 export function TesourariaPainelPage() {
   const navigate = useNavigate()
   const [controles, setControles] = React.useState<ControleTesouraria[]>([])
   const [carregando, setCarregando] = React.useState(true)
+  const [competenciaSelecionada, setCompetenciaSelecionada] = React.useState('')
 
   React.useEffect(() => {
     listarControlesTesouraria()
-      .then(setControles)
+      .then((lista) => {
+        setControles(lista)
+        // A lista já vem do mais recente pro mais antigo — o mais recente é o padrão exibido.
+        if (lista.length > 0) setCompetenciaSelecionada(lista[0].competencia)
+      })
       .finally(() => setCarregando(false))
   }, [])
 
@@ -46,21 +56,81 @@ export function TesourariaPainelPage() {
     }))
   }, [controles])
 
-  const dadosGrafico = React.useMemo(
-    () =>
-      [...controles]
-        .sort((a, b) => (a.competencia > b.competencia ? 1 : -1))
-        .map((c) => ({
-          competencia: c.competencia,
-          entradas: c.entradas.reduce((s, e) => s + e.valor, 0),
-          saidas: c.saidas.reduce((s, sa) => s + sa.valor, 0),
-        })),
-    [controles],
-  )
+  const controleSelecionado = controles.find((c) => c.competencia === competenciaSelecionada) ?? null
+  const competenciaAnterior = competenciaSelecionada ? subtrairMeses(competenciaSelecionada, 1) : ''
+  // O mês antes de agosto/2026 nunca existe (é o início do período controlado) — só aí a
+  // variação fica indisponível. Qualquer outro mês anterior conta como saldo zero se ainda não
+  // tiver sido aberto por ninguém.
+  const mesAnteriorComparavel = competenciaAnterior >= COMPETENCIA_INICIAL_TESOURARIA
+  const controleAnteriorSelecionado = controles.find((c) => c.competencia === competenciaAnterior) ?? null
+  const saldoAnteriorSelecionado = mesAnteriorComparavel ? (controleAnteriorSelecionado ? saldoDoControle(controleAnteriorSelecionado) : 0) : null
+
+  const receitaSelecionada = controleSelecionado ? controleSelecionado.entradas.reduce((s, e) => s + e.valor, 0) : 0
+  const despesaSelecionada = controleSelecionado ? controleSelecionado.saidas.reduce((s, sa) => s + sa.valor, 0) : 0
+  const saldoSelecionado = receitaSelecionada - despesaSelecionada
+  const variacaoSelecionada = saldoAnteriorSelecionado !== null ? saldoSelecionado - saldoAnteriorSelecionado : null
+  const IconeVariacao = variacaoSelecionada === null ? Minus : variacaoSelecionada >= 0 ? ArrowUpRight : ArrowDownRight
 
   return (
     <div>
-      <PageHeader title="Tesouraria" description="Visão geral da tesouraria da Capela, mês a mês desde agosto de 2026." />
+      <PageHeader title="Tesouraria" description="Balancete mensal da Capela, mês a mês desde agosto de 2026." />
+
+      {carregando ? (
+        <Skeleton className="mb-6 h-72 w-full rounded-xl" />
+      ) : controles.length === 0 ? null : (
+        <Card className="mb-6">
+          <CardHeader>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <CardTitle className="text-base">Balancete do mês</CardTitle>
+              <Select value={competenciaSelecionada} onValueChange={setCompetenciaSelecionada}>
+                <SelectTrigger className="w-full sm:w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {controles.map((c) => (
+                    <SelectItem key={c.competencia} value={c.competencia}>
+                      {formatCompetencia(c.competencia)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {controleSelecionado && (
+              <>
+                <div className="mb-4 flex flex-wrap items-center gap-2">
+                  <StatusBadge
+                    label={STATUS_CONTROLE_TESOURARIA[controleSelecionado.status]}
+                    variant={controleSelecionado.status === 'fechado' ? 'muted' : 'success'}
+                  />
+                </div>
+                <div className="mb-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
+                  <StatCard label="Total em receita" value={formatCurrency(receitaSelecionada)} icon={TrendingUp} />
+                  <StatCard label="Total em despesas" value={formatCurrency(despesaSelecionada)} icon={TrendingDown} />
+                  <StatCard label="Saldo total" value={formatCurrency(saldoSelecionado)} icon={Wallet} />
+                  <StatCard
+                    label="Variação vs. mês anterior"
+                    value={
+                      variacaoSelecionada === null
+                        ? '—'
+                        : `${variacaoSelecionada >= 0 ? '+' : '-'}${formatCurrency(Math.abs(variacaoSelecionada))}`
+                    }
+                    icon={IconeVariacao}
+                    helper={variacaoSelecionada === null ? 'Sem controle no mês anterior' : undefined}
+                  />
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate(ROUTES.pastoral.tesouraria.controle(controleSelecionado.competencia))}
+                >
+                  Gerenciar lançamentos deste mês
+                </Button>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {carregando ? (
         <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -77,21 +147,10 @@ export function TesourariaPainelPage() {
         </div>
       )}
 
-      {!carregando && dadosGrafico.length > 0 && (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="text-base">Evolução de entradas e saídas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <GraficoEntradasSaidas dados={dadosGrafico} />
-          </CardContent>
-        </Card>
-      )}
-
       {!carregando && (
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle className="text-base">Totais por categoria de entrada</CardTitle>
+            <CardTitle className="text-base">Totais por categoria de receita</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="divide-y divide-border">
@@ -108,7 +167,7 @@ export function TesourariaPainelPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Controles mensais</CardTitle>
+          <CardTitle className="text-base">Todos os meses</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2.5">
           {carregando ? (
@@ -133,8 +192,8 @@ export function TesourariaPainelPage() {
                     />
                   </div>
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground sm:text-sm">
-                    <span>Entradas: {formatCurrency(entradasMes)}</span>
-                    <span>Saídas: {formatCurrency(saidasMes)}</span>
+                    <span>Receita: {formatCurrency(entradasMes)}</span>
+                    <span>Despesas: {formatCurrency(saidasMes)}</span>
                     <span className="font-medium text-foreground">Saldo: {formatCurrency(entradasMes - saidasMes)}</span>
                   </div>
                 </button>

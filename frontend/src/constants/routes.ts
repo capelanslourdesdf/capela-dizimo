@@ -29,6 +29,7 @@ export const ROUTES = {
       entrar: '/pastoral/tesouraria/entrar',
       root: '/pastoral/tesouraria',
       eventos: '/pastoral/tesouraria/eventos',
+      evolucao: '/pastoral/tesouraria/evolucao',
       controle: (competencia: string) => `/pastoral/tesouraria/${competencia}`,
     },
   },

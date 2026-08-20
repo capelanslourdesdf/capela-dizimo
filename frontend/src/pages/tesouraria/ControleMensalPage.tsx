@@ -1,101 +1,87 @@
 import * as React from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, FileDown, Pencil, Plus, TrendingDown, TrendingUp, Trash2, Wallet } from 'lucide-react'
+import {
+  ArrowDownRight,
+  ArrowLeft,
+  ArrowUpRight,
+  FileDown,
+  FileSpreadsheet,
+  Lock,
+  Minus,
+  Pencil,
+  Plus,
+  TrendingDown,
+  TrendingUp,
+  Trash2,
+  Unlock,
+  Wallet,
+} from 'lucide-react'
 import { toast } from 'sonner'
 
 import { EmptyState } from '@/components/dashboard/EmptyState'
 import { StatCard } from '@/components/dashboard/StatCard'
 import { StatusBadge } from '@/components/dashboard/StatusBadge'
+import { ReceitaTesourariaForm, type DadosReceitaTesouraria } from '@/components/forms/ReceitaTesourariaForm'
+import { DespesaTesourariaForm, type DadosDespesaTesouraria } from '@/components/forms/DespesaTesourariaForm'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
-import { obterOuCriarControleTesouraria, salvarControleTesouraria } from '@/services/tesourariaService'
-import type { CategoriaEntradaTesouraria, ControleTesouraria, EntradaTesouraria, SaidaTesouraria, StatusControleTesouraria } from '@/types'
-import { CATEGORIAS_ENTRADA_TESOURARIA, STATUS_CONTROLE_TESOURARIA, categoriaEntradaLabel } from '@/constants/tesouraria'
-import { gerarPdfControleTesouraria } from '@/utils/pdfTesouraria'
 import {
-  dataBrEhValida,
-  dataBrParaIso,
-  dataIsoParaBr,
-  finalizarMoeda,
-  formatCompetencia,
-  formatCurrency,
-  maskDataBr,
-  maskMoeda,
-  moedaParaNumero,
-  numeroParaMoeda,
-} from '@/utils/format'
+  buscarControleTesouraria,
+  obterOuCriarControleTesouraria,
+  salvarControleTesouraria,
+} from '@/services/tesourariaService'
+import type { ControleTesouraria, EntradaTesouraria, SaidaTesouraria, StatusControleTesouraria } from '@/types'
+import { CATEGORIAS_ENTRADA_TESOURARIA, COMPETENCIA_INICIAL_TESOURARIA, STATUS_CONTROLE_TESOURARIA, categoriaEntradaLabel } from '@/constants/tesouraria'
+import { formaPagamentoLabel } from '@/constants/devolucao'
+import { gerarPdfControleTesouraria } from '@/utils/pdfTesouraria'
+import { gerarExcelControleTesouraria } from '@/utils/excelTesouraria'
+import { formatCompetencia, formatCurrency, formatDate, subtrairMeses } from '@/utils/format'
 import { ROUTES } from '@/constants/routes'
 
-interface EntradaEdicao {
-  id: string
-  categoria: CategoriaEntradaTesouraria
-  valorTexto: string
-  observacao: string
+/** Data sugerida (dd/mm/aaaa) ao lançar uma receita/despesa nova: hoje, se for o mês vigente; senão o dia 1º do mês do controle. */
+function dataPadraoParaCompetencia(competencia: string): string {
+  const hoje = new Date()
+  const competenciaHoje = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`
+  if (competencia === competenciaHoje) {
+    return `${String(hoje.getDate()).padStart(2, '0')}/${String(hoje.getMonth() + 1).padStart(2, '0')}/${hoje.getFullYear()}`
+  }
+  const [ano, mes] = competencia.split('-')
+  return `01/${mes}/${ano}`
 }
 
-interface SaidaEdicao {
-  id: string
-  diaBr: string
-  solicitante: string
-  prestador: string
-  valorTexto: string
-  observacao: string
-}
-
-function paraEdicaoEntrada(e: EntradaTesouraria): EntradaEdicao {
-  return { id: e.id, categoria: e.categoria, valorTexto: numeroParaMoeda(e.valor), observacao: e.observacao ?? '' }
-}
-
-function paraEdicaoSaida(s: SaidaTesouraria): SaidaEdicao {
+function montarReceita(id: string, dados: DadosReceitaTesouraria): EntradaTesouraria {
+  const observacao = dados.observacao?.trim()
   return {
-    id: s.id,
-    diaBr: s.dia ? dataIsoParaBr(s.dia) : '',
-    solicitante: s.solicitante,
-    prestador: s.prestador,
-    valorTexto: numeroParaMoeda(s.valor),
-    observacao: s.observacao ?? '',
+    id,
+    data: dados.data,
+    categoria: dados.categoria,
+    valor: dados.valor,
+    formaPagamento: dados.formaPagamento,
+    ...(observacao ? { observacao } : {}),
   }
 }
 
-function entradaVazia(e: EntradaEdicao): boolean {
-  return !moedaParaNumero(e.valorTexto) && !e.observacao.trim()
+function montarDespesa(id: string, dados: DadosDespesaTesouraria): SaidaTesouraria {
+  const observacao = dados.observacao?.trim()
+  return {
+    id,
+    dia: dados.dia,
+    solicitante: dados.solicitante,
+    prestador: dados.prestador,
+    valor: dados.valor,
+    quitado: dados.quitado,
+    ...(observacao ? { observacao } : {}),
+  }
 }
 
-function saidaVazia(s: SaidaEdicao): boolean {
-  return !moedaParaNumero(s.valorTexto) && !s.diaBr.trim() && !s.solicitante.trim() && !s.prestador.trim() && !s.observacao.trim()
-}
-
-/** Remove entradas/saídas em branco (deixadas ao adicionar linhas a mais) e converte pro formato salvo. */
-function limparEntradas(entradas: EntradaEdicao[]): EntradaTesouraria[] {
-  return entradas
-    .filter((e) => !entradaVazia(e))
-    .map((e) => {
-      const observacao = e.observacao.trim()
-      return { id: e.id, categoria: e.categoria, valor: moedaParaNumero(e.valorTexto), ...(observacao ? { observacao } : {}) }
-    })
-}
-
-function limparSaidas(saidas: SaidaEdicao[]): SaidaTesouraria[] {
-  return saidas
-    .filter((s) => !saidaVazia(s))
-    .map((s) => {
-      const observacao = s.observacao.trim()
-      return {
-        id: s.id,
-        dia: dataBrParaIso(s.diaBr.trim()),
-        solicitante: s.solicitante.trim(),
-        prestador: s.prestador.trim(),
-        valor: moedaParaNumero(s.valorTexto),
-        ...(observacao ? { observacao } : {}),
-      }
-    })
+function saldoDoControle(controle: ControleTesouraria): number {
+  const receitas = controle.entradas.reduce((s, e) => s + e.valor, 0)
+  const despesas = controle.saidas.reduce((s, sa) => s + sa.valor, 0)
+  return receitas - despesas
 }
 
 export function ControleMensalPage() {
@@ -103,105 +89,115 @@ export function ControleMensalPage() {
   const navigate = useNavigate()
 
   const [controle, setControle] = React.useState<ControleTesouraria | null>(null)
+  const [controleAnterior, setControleAnterior] = React.useState<ControleTesouraria | null>(null)
+  const [mesAnteriorComparavel, setMesAnteriorComparavel] = React.useState(false)
   const [carregando, setCarregando] = React.useState(true)
-  const [editando, setEditando] = React.useState(false)
-  const [salvando, setSalvando] = React.useState(false)
-  const [modalConfirmarSalvar, setModalConfirmarSalvar] = React.useState(false)
 
-  const [entradasEdicao, setEntradasEdicao] = React.useState<EntradaEdicao[]>([])
-  const [saidasEdicao, setSaidasEdicao] = React.useState<SaidaEdicao[]>([])
-  const [statusEdicao, setStatusEdicao] = React.useState<StatusControleTesouraria>('em_andamento')
+  const [modalReceita, setModalReceita] = React.useState(false)
+  const [receitaEmEdicao, setReceitaEmEdicao] = React.useState<EntradaTesouraria | null>(null)
+  const [receitaParaRemover, setReceitaParaRemover] = React.useState<EntradaTesouraria | null>(null)
 
-  React.useEffect(() => {
+  const [modalDespesa, setModalDespesa] = React.useState(false)
+  const [despesaEmEdicao, setDespesaEmEdicao] = React.useState<SaidaTesouraria | null>(null)
+  const [despesaParaRemover, setDespesaParaRemover] = React.useState<SaidaTesouraria | null>(null)
+
+  const [modalStatus, setModalStatus] = React.useState(false)
+
+  const carregar = React.useCallback(async () => {
     if (!competencia) return
     setCarregando(true)
-    obterOuCriarControleTesouraria(competencia)
-      .then(setControle)
-      .finally(() => setCarregando(false))
+    const competenciaAnterior = subtrairMeses(competencia, 1)
+    // O mês anterior só entra na variação se estiver dentro do período controlado pela
+    // Tesouraria (a partir de COMPETENCIA_INICIAL_TESOURARIA) — antes disso não existe "mês
+    // anterior" nenhum (é o caso de agosto/2026, o primeiro mês). Dentro do período, mesmo que
+    // ninguém tenha aberto aquele mês ainda, ele vale como comparação de saldo zero (nada foi
+    // lançado ali, não é "sem dado").
+    const comparavel = competenciaAnterior >= COMPETENCIA_INICIAL_TESOURARIA
+    const [atual, anterior] = await Promise.all([
+      obterOuCriarControleTesouraria(competencia),
+      comparavel ? buscarControleTesouraria(competenciaAnterior) : Promise.resolve(null),
+    ])
+    setControle(atual)
+    setControleAnterior(anterior)
+    setMesAnteriorComparavel(comparavel)
+    setCarregando(false)
   }, [competencia])
 
-  function iniciarEdicao() {
-    if (!controle) return
-    setEntradasEdicao(controle.entradas.map(paraEdicaoEntrada))
-    setSaidasEdicao(controle.saidas.map(paraEdicaoSaida))
-    setStatusEdicao(controle.status)
-    setEditando(true)
+  React.useEffect(() => {
+    carregar()
+  }, [carregar])
+
+  function handleNovaReceita() {
+    setReceitaEmEdicao(null)
+    setModalReceita(true)
   }
 
-  function cancelarEdicao() {
-    setEditando(false)
+  function handleEditarReceita(receita: EntradaTesouraria) {
+    setReceitaEmEdicao(receita)
+    setModalReceita(true)
   }
 
-  function adicionarEntrada() {
-    setEntradasEdicao((atual) => [...atual, { id: crypto.randomUUID(), categoria: 'dizimo', valorTexto: '', observacao: '' }])
-  }
-
-  function removerEntrada(id: string) {
-    setEntradasEdicao((atual) => atual.filter((e) => e.id !== id))
-  }
-
-  function atualizarEntrada(id: string, patch: Partial<EntradaEdicao>) {
-    setEntradasEdicao((atual) => atual.map((e) => (e.id === id ? { ...e, ...patch } : e)))
-  }
-
-  function adicionarSaida() {
-    setSaidasEdicao((atual) => [
-      ...atual,
-      { id: crypto.randomUUID(), diaBr: '', solicitante: '', prestador: '', valorTexto: '', observacao: '' },
-    ])
-  }
-
-  function removerSaida(id: string) {
-    setSaidasEdicao((atual) => atual.filter((s) => s.id !== id))
-  }
-
-  function atualizarSaida(id: string, patch: Partial<SaidaEdicao>) {
-    setSaidasEdicao((atual) => atual.map((s) => (s.id === id ? { ...s, ...patch } : s)))
-  }
-
-  function handlePedirConfirmacaoSalvar() {
-    const entradasPreenchidas = entradasEdicao.filter((e) => !entradaVazia(e))
-    if (entradasPreenchidas.some((e) => moedaParaNumero(e.valorTexto) <= 0)) {
-      toast.error('Há entrada(s) sem valor informado.')
-      return
-    }
-
-    const saidasPreenchidas = saidasEdicao.filter((s) => !saidaVazia(s))
-    const saidaIncompleta = saidasPreenchidas.some(
-      (s) => !s.diaBr.trim() || !s.solicitante.trim() || !s.prestador.trim() || moedaParaNumero(s.valorTexto) <= 0,
-    )
-    if (saidaIncompleta) {
-      toast.error('Há saída(s) com dia, solicitante, prestador ou valor faltando.')
-      return
-    }
-
-    const saidaComDataInvalida = saidasPreenchidas.some((s) => !dataBrEhValida(s.diaBr.trim()))
-    if (saidaComDataInvalida) {
-      toast.error('Há saída(s) com data inválida. Use o formato dd/mm/aaaa.')
-      return
-    }
-
-    setModalConfirmarSalvar(true)
-  }
-
-  async function handleConfirmarSalvar() {
+  async function handleSalvarReceita(dados: DadosReceitaTesouraria) {
     if (!competencia || !controle) return
-    setSalvando(true)
-    try {
-      const entradas = limparEntradas(entradasEdicao)
-      const saidas = limparSaidas(saidasEdicao)
+    const novasEntradas = receitaEmEdicao
+      ? controle.entradas.map((e) => (e.id === receitaEmEdicao.id ? montarReceita(e.id, dados) : e))
+      : [...controle.entradas, montarReceita(crypto.randomUUID(), dados)]
 
-      await salvarControleTesouraria(competencia, { status: statusEdicao, entradas, saidas })
+    await salvarControleTesouraria(competencia, { status: controle.status, entradas: novasEntradas, saidas: controle.saidas })
+    setControle({ ...controle, entradas: novasEntradas, atualizadoEm: new Date().toISOString() })
+    setModalReceita(false)
+    setReceitaEmEdicao(null)
+    toast.success(receitaEmEdicao ? 'Receita atualizada com sucesso.' : 'Receita lançada com sucesso.')
+  }
 
-      setControle({ ...controle, status: statusEdicao, entradas, saidas, atualizadoEm: new Date().toISOString() })
-      setEditando(false)
-      setModalConfirmarSalvar(false)
-      toast.success('Controle salvo com sucesso.')
-    } catch {
-      toast.error('Não foi possível salvar o controle. Tente novamente.')
-    } finally {
-      setSalvando(false)
-    }
+  async function handleRemoverReceita() {
+    if (!competencia || !controle || !receitaParaRemover) return
+    const novasEntradas = controle.entradas.filter((e) => e.id !== receitaParaRemover.id)
+    await salvarControleTesouraria(competencia, { status: controle.status, entradas: novasEntradas, saidas: controle.saidas })
+    setControle({ ...controle, entradas: novasEntradas, atualizadoEm: new Date().toISOString() })
+    setReceitaParaRemover(null)
+    toast.success('Receita removida.')
+  }
+
+  function handleNovaDespesa() {
+    setDespesaEmEdicao(null)
+    setModalDespesa(true)
+  }
+
+  function handleEditarDespesa(despesa: SaidaTesouraria) {
+    setDespesaEmEdicao(despesa)
+    setModalDespesa(true)
+  }
+
+  async function handleSalvarDespesa(dados: DadosDespesaTesouraria) {
+    if (!competencia || !controle) return
+    const novasSaidas = despesaEmEdicao
+      ? controle.saidas.map((s) => (s.id === despesaEmEdicao.id ? montarDespesa(s.id, dados) : s))
+      : [...controle.saidas, montarDespesa(crypto.randomUUID(), dados)]
+
+    await salvarControleTesouraria(competencia, { status: controle.status, entradas: controle.entradas, saidas: novasSaidas })
+    setControle({ ...controle, saidas: novasSaidas, atualizadoEm: new Date().toISOString() })
+    setModalDespesa(false)
+    setDespesaEmEdicao(null)
+    toast.success(despesaEmEdicao ? 'Despesa atualizada com sucesso.' : 'Despesa lançada com sucesso.')
+  }
+
+  async function handleRemoverDespesa() {
+    if (!competencia || !controle || !despesaParaRemover) return
+    const novasSaidas = controle.saidas.filter((s) => s.id !== despesaParaRemover.id)
+    await salvarControleTesouraria(competencia, { status: controle.status, entradas: controle.entradas, saidas: novasSaidas })
+    setControle({ ...controle, saidas: novasSaidas, atualizadoEm: new Date().toISOString() })
+    setDespesaParaRemover(null)
+    toast.success('Despesa removida.')
+  }
+
+  async function handleConfirmarStatus() {
+    if (!competencia || !controle) return
+    const novoStatus: StatusControleTesouraria = controle.status === 'em_andamento' ? 'fechado' : 'em_andamento'
+    await salvarControleTesouraria(competencia, { status: novoStatus, entradas: controle.entradas, saidas: controle.saidas })
+    setControle({ ...controle, status: novoStatus, atualizadoEm: new Date().toISOString() })
+    setModalStatus(false)
+    toast.success(novoStatus === 'fechado' ? 'Mês marcado como fechado.' : 'Mês reaberto para edição.')
   }
 
   if (carregando || !controle) {
@@ -214,24 +210,24 @@ export function ControleMensalPage() {
     )
   }
 
-  const totalEntradas = editando
-    ? entradasEdicao.reduce((s, e) => s + moedaParaNumero(e.valorTexto), 0)
-    : controle.entradas.reduce((s, e) => s + e.valor, 0)
-  const totalSaidas = editando
-    ? saidasEdicao.reduce((s, sa) => s + moedaParaNumero(sa.valorTexto), 0)
-    : controle.saidas.reduce((s, sa) => s + sa.valor, 0)
-  const saldo = totalEntradas - totalSaidas
+  const totalReceitas = controle.entradas.reduce((s, e) => s + e.valor, 0)
+  const totalDespesas = controle.saidas.reduce((s, sa) => s + sa.valor, 0)
+  const saldo = totalReceitas - totalDespesas
+
+  const saldoAnterior = mesAnteriorComparavel ? (controleAnterior ? saldoDoControle(controleAnterior) : 0) : null
+  const variacao = saldoAnterior !== null ? saldo - saldoAnterior : null
+  const IconeVariacao = variacao === null ? Minus : variacao >= 0 ? ArrowUpRight : ArrowDownRight
 
   const totaisPorCategoria = CATEGORIAS_ENTRADA_TESOURARIA.map((cat) => ({
     label: cat.label,
-    total: editando
-      ? entradasEdicao
-          .filter((e) => e.categoria === cat.value)
-          .reduce((s, e) => s + moedaParaNumero(e.valorTexto), 0)
-      : controle.entradas.filter((e) => e.categoria === cat.value).reduce((s, e) => s + e.valor, 0),
+    total: controle.entradas.filter((e) => e.categoria === cat.value).reduce((s, e) => s + e.valor, 0),
   })).filter((c) => c.total > 0)
 
-  const statusExibido = editando ? statusEdicao : controle.status
+  const dataPadrao = dataPadraoParaCompetencia(controle.competencia)
+
+  // Mais recente primeiro, como no resto do histórico financeiro do app.
+  const receitasOrdenadas = [...controle.entradas].sort((a, b) => (a.data < b.data ? 1 : a.data > b.data ? -1 : 0))
+  const despesasOrdenadas = [...controle.saidas].sort((a, b) => (a.dia < b.dia ? 1 : a.dia > b.dia ? -1 : 0))
 
   return (
     <div>
@@ -246,63 +242,43 @@ export function ControleMensalPage() {
             <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
               {formatCompetencia(controle.competencia)}
             </h1>
-            <StatusBadge label={STATUS_CONTROLE_TESOURARIA[statusExibido]} variant={statusExibido === 'fechado' ? 'muted' : 'success'} />
+            <StatusBadge label={STATUS_CONTROLE_TESOURARIA[controle.status]} variant={controle.status === 'fechado' ? 'muted' : 'success'} />
           </div>
           <p className="mt-1 text-sm text-muted-foreground">Controle financeiro mensal da Tesouraria.</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {!editando && (
-            <Button variant="outline" onClick={() => gerarPdfControleTesouraria(controle)}>
-              <FileDown className="h-4 w-4" />
-              Gerar PDF
-            </Button>
-          )}
-          {editando ? (
-            <>
-              <Button variant="outline" onClick={cancelarEdicao} disabled={salvando}>
-                Cancelar
-              </Button>
-              <Button onClick={handlePedirConfirmacaoSalvar} disabled={salvando}>
-                {salvando ? 'Salvando...' : 'Salvar'}
-              </Button>
-            </>
-          ) : (
-            <Button onClick={iniciarEdicao}>
-              <Pencil className="h-4 w-4" />
-              Editar
-            </Button>
-          )}
+          <Button variant="outline" onClick={() => gerarPdfControleTesouraria(controle)}>
+            <FileDown className="h-4 w-4" />
+            Gerar PDF
+          </Button>
+          <Button variant="outline" onClick={() => gerarExcelControleTesouraria(controle)}>
+            <FileSpreadsheet className="h-4 w-4" />
+            Exportar Excel
+          </Button>
+          <Button variant="outline" onClick={() => setModalStatus(true)}>
+            {controle.status === 'em_andamento' ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+            {controle.status === 'em_andamento' ? 'Fechar mês' : 'Reabrir mês'}
+          </Button>
         </div>
       </div>
 
-      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-3">
-        <StatCard label="Total de entradas" value={formatCurrency(totalEntradas)} icon={TrendingUp} />
-        <StatCard label="Total de saídas" value={formatCurrency(totalSaidas)} icon={TrendingDown} />
-        <StatCard label="Saldo do mês" value={formatCurrency(saldo)} icon={Wallet} />
+      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatCard label="Total de receita" value={formatCurrency(totalReceitas)} icon={TrendingUp} />
+        <StatCard label="Total de despesas" value={formatCurrency(totalDespesas)} icon={TrendingDown} />
+        <StatCard label="Saldo total" value={formatCurrency(saldo)} icon={Wallet} />
+        <StatCard
+          label="Variação vs. mês anterior"
+          value={variacao === null ? '—' : `${variacao >= 0 ? '+' : '-'}${formatCurrency(Math.abs(variacao))}`}
+          icon={IconeVariacao}
+          helper={variacao === null ? 'Sem controle no mês anterior' : undefined}
+        />
       </div>
-
-      {editando && (
-        <Card className="mb-6 max-w-xs">
-          <CardContent className="space-y-1.5 pt-6">
-            <Label htmlFor="status">Status do controle</Label>
-            <Select value={statusEdicao} onValueChange={(v) => setStatusEdicao(v as StatusControleTesouraria)}>
-              <SelectTrigger id="status">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="em_andamento">Em andamento</SelectItem>
-                <SelectItem value="fechado">Fechado</SelectItem>
-              </SelectContent>
-            </Select>
-          </CardContent>
-        </Card>
-      )}
 
       {totaisPorCategoria.length > 0 && (
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle className="text-base">Entradas por categoria</CardTitle>
+            <CardTitle className="text-base">Receitas por categoria</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="divide-y divide-border">
@@ -318,73 +294,46 @@ export function ControleMensalPage() {
       )}
 
       <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="text-base">Entradas</CardTitle>
+        <CardHeader className="flex-row flex-wrap items-center justify-between gap-2 space-y-0">
+          <CardTitle className="text-base">Receitas</CardTitle>
+          <Button size="sm" onClick={handleNovaReceita}>
+            <Plus className="h-3.5 w-3.5" />
+            Lançar receita
+          </Button>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {editando ? (
-            <>
-              {entradasEdicao.map((e) => (
-                <div key={e.id} className="grid grid-cols-1 gap-3 rounded-lg border border-border p-3 sm:grid-cols-[1fr_9rem_1fr_auto] sm:items-end">
-                  <div className="space-y-1.5">
-                    <Label>Categoria</Label>
-                    <Select value={e.categoria} onValueChange={(v) => atualizarEntrada(e.id, { categoria: v as CategoriaEntradaTesouraria })}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {CATEGORIAS_ENTRADA_TESOURARIA.map((cat) => (
-                          <SelectItem key={cat.value} value={cat.value}>
-                            {cat.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Valor</Label>
-                    <div className="relative">
-                      <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                        R$
-                      </span>
-                      <Input
-                        inputMode="decimal"
-                        placeholder="0,00"
-                        className="pl-9"
-                        value={e.valorTexto}
-                        onChange={(ev) => atualizarEntrada(e.id, { valorTexto: maskMoeda(ev.target.value) })}
-                        onBlur={() => atualizarEntrada(e.id, { valorTexto: finalizarMoeda(e.valorTexto) })}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Observação</Label>
-                    <Input
-                      value={e.observacao}
-                      onChange={(ev) => atualizarEntrada(e.id, { observacao: ev.target.value })}
-                      placeholder="Opcional"
-                    />
-                  </div>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => removerEntrada(e.id)} aria-label="Remover entrada">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-              <Button type="button" variant="outline" size="sm" onClick={adicionarEntrada}>
-                <Plus className="h-3.5 w-3.5" />
-                Adicionar entrada
-              </Button>
-            </>
-          ) : controle.entradas.length === 0 ? (
-            <EmptyState icon={TrendingUp} title="Nenhuma entrada lançada neste mês" />
+        <CardContent className="space-y-2.5">
+          {receitasOrdenadas.length === 0 ? (
+            <EmptyState icon={TrendingUp} title="Nenhuma receita lançada neste mês" />
           ) : (
-            controle.entradas.map((e) => (
-              <div key={e.id} className="flex items-center justify-between gap-3 rounded-lg border border-border px-4 py-3">
+            receitasOrdenadas.map((e) => (
+              <div
+                key={e.id}
+                className="flex flex-col gap-2 rounded-lg border border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+              >
                 <div className="min-w-0">
                   <p className="font-medium text-foreground">{categoriaEntradaLabel(e.categoria)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {e.data ? formatDate(e.data) : '—'} · {formaPagamentoLabel(e.formaPagamento)}
+                  </p>
                   {e.observacao && <p className="mt-0.5 text-xs text-muted-foreground">{e.observacao}</p>}
                 </div>
-                <p className="shrink-0 font-medium text-success">{formatCurrency(e.valor)}</p>
+                <div className="flex shrink-0 items-center justify-between gap-1 sm:justify-end">
+                  <p className="font-medium text-success">{formatCurrency(e.valor)}</p>
+                  <div className="flex items-center">
+                    <Button variant="ghost" size="icon" onClick={() => handleEditarReceita(e)} aria-label="Editar receita">
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => setReceitaParaRemover(e)}
+                      aria-label="Remover receita"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
               </div>
             ))
           )}
@@ -392,94 +341,116 @@ export function ControleMensalPage() {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Saídas</CardTitle>
+        <CardHeader className="flex-row flex-wrap items-center justify-between gap-2 space-y-0">
+          <CardTitle className="text-base">Despesas</CardTitle>
+          <Button size="sm" onClick={handleNovaDespesa}>
+            <Plus className="h-3.5 w-3.5" />
+            Lançar despesa
+          </Button>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {editando ? (
-            <>
-              {saidasEdicao.map((s) => (
-                <div key={s.id} className="grid grid-cols-1 gap-3 rounded-lg border border-border p-3 sm:grid-cols-2 lg:grid-cols-[7rem_1fr_1fr_8rem_auto]">
-                  <div className="space-y-1.5">
-                    <Label>Dia</Label>
-                    <Input
-                      inputMode="numeric"
-                      placeholder="dd/mm/aaaa"
-                      value={s.diaBr}
-                      onChange={(ev) => atualizarSaida(s.id, { diaBr: maskDataBr(ev.target.value) })}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Quem solicitou</Label>
-                    <Input value={s.solicitante} onChange={(ev) => atualizarSaida(s.id, { solicitante: ev.target.value })} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Empresa/Prestador</Label>
-                    <Input value={s.prestador} onChange={(ev) => atualizarSaida(s.id, { prestador: ev.target.value })} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Valor</Label>
-                    <div className="relative">
-                      <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                        R$
-                      </span>
-                      <Input
-                        inputMode="decimal"
-                        placeholder="0,00"
-                        className="pl-9"
-                        value={s.valorTexto}
-                        onChange={(ev) => atualizarSaida(s.id, { valorTexto: maskMoeda(ev.target.value) })}
-                        onBlur={() => atualizarSaida(s.id, { valorTexto: finalizarMoeda(s.valorTexto) })}
-                      />
-                    </div>
-                  </div>
-                  <div className="flex items-end justify-end lg:justify-center">
-                    <Button type="button" variant="ghost" size="icon" onClick={() => removerSaida(s.id)} aria-label="Remover saída">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="space-y-1.5 sm:col-span-2 lg:col-span-5">
-                    <Label>Observação</Label>
-                    <Textarea
-                      rows={2}
-                      value={s.observacao}
-                      onChange={(ev) => atualizarSaida(s.id, { observacao: ev.target.value })}
-                      placeholder="Opcional"
-                    />
-                  </div>
-                </div>
-              ))}
-              <Button type="button" variant="outline" size="sm" onClick={adicionarSaida}>
-                <Plus className="h-3.5 w-3.5" />
-                Adicionar saída
-              </Button>
-            </>
-          ) : controle.saidas.length === 0 ? (
-            <EmptyState icon={TrendingDown} title="Nenhuma saída lançada neste mês" />
+        <CardContent className="space-y-2.5">
+          {despesasOrdenadas.length === 0 ? (
+            <EmptyState icon={TrendingDown} title="Nenhuma despesa lançada neste mês" />
           ) : (
-            controle.saidas.map((s) => (
-              <div key={s.id} className="flex items-center justify-between gap-3 rounded-lg border border-border px-4 py-3">
+            despesasOrdenadas.map((s) => (
+              <div
+                key={s.id}
+                className="flex flex-col gap-2 rounded-lg border border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+              >
                 <div className="min-w-0">
                   <p className="font-medium text-foreground">{s.prestador}</p>
                   <p className="text-xs text-muted-foreground">
-                    {s.dia ? dataIsoParaBr(s.dia) : '—'} · Solicitado por {s.solicitante}
+                    {s.dia ? formatDate(s.dia) : '—'} · Solicitado por {s.solicitante}
                   </p>
                   {s.observacao && <p className="mt-0.5 text-xs text-muted-foreground">{s.observacao}</p>}
                 </div>
-                <p className="shrink-0 font-medium text-destructive">{formatCurrency(s.valor)}</p>
+                <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 sm:justify-end">
+                  <div className="flex items-center gap-2">
+                    <StatusBadge label={s.quitado ? 'Quitada' : 'Pendente'} variant={s.quitado ? 'success' : 'warning'} />
+                    <p className="font-medium text-destructive">{formatCurrency(s.valor)}</p>
+                  </div>
+                  <div className="flex items-center">
+                    <Button variant="ghost" size="icon" onClick={() => handleEditarDespesa(s)} aria-label="Editar despesa">
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => setDespesaParaRemover(s)}
+                      aria-label="Remover despesa"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
               </div>
             ))
           )}
         </CardContent>
       </Card>
 
+      <Dialog open={modalReceita} onOpenChange={setModalReceita}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{receitaEmEdicao ? 'Editar receita' : 'Lançar receita'}</DialogTitle>
+          </DialogHeader>
+          <ReceitaTesourariaForm
+            key={receitaEmEdicao?.id ?? 'nova'}
+            receita={receitaEmEdicao ?? undefined}
+            dataPadrao={dataPadrao}
+            onSalvar={handleSalvarReceita}
+            onCancelar={() => setModalReceita(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={modalDespesa} onOpenChange={setModalDespesa}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{despesaEmEdicao ? 'Editar despesa' : 'Lançar despesa'}</DialogTitle>
+          </DialogHeader>
+          <DespesaTesourariaForm
+            key={despesaEmEdicao?.id ?? 'nova'}
+            despesa={despesaEmEdicao ?? undefined}
+            dataPadrao={dataPadrao}
+            onSalvar={handleSalvarDespesa}
+            onCancelar={() => setModalDespesa(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
       <ConfirmDialog
-        open={modalConfirmarSalvar}
-        onOpenChange={setModalConfirmarSalvar}
-        title="Salvar controle mensal"
-        description="Tem certeza que deseja salvar as alterações deste controle?"
-        confirmLabel="Salvar"
-        onConfirm={handleConfirmarSalvar}
+        open={!!receitaParaRemover}
+        onOpenChange={(open) => !open && setReceitaParaRemover(null)}
+        title="Remover receita"
+        description="Tem certeza que deseja remover esta receita? Essa ação não pode ser desfeita."
+        confirmLabel="Remover"
+        destructive
+        onConfirm={handleRemoverReceita}
+      />
+
+      <ConfirmDialog
+        open={!!despesaParaRemover}
+        onOpenChange={(open) => !open && setDespesaParaRemover(null)}
+        title="Remover despesa"
+        description="Tem certeza que deseja remover esta despesa? Essa ação não pode ser desfeita."
+        confirmLabel="Remover"
+        destructive
+        onConfirm={handleRemoverDespesa}
+      />
+
+      <ConfirmDialog
+        open={modalStatus}
+        onOpenChange={setModalStatus}
+        title={controle.status === 'em_andamento' ? 'Fechar mês' : 'Reabrir mês'}
+        description={
+          controle.status === 'em_andamento'
+            ? `Marcar ${formatCompetencia(controle.competencia)} como fechado?`
+            : `Reabrir ${formatCompetencia(controle.competencia)} para edição?`
+        }
+        confirmLabel={controle.status === 'em_andamento' ? 'Fechar mês' : 'Reabrir mês'}
+        onConfirm={handleConfirmarStatus}
       />
     </div>
   )

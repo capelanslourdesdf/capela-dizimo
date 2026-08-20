@@ -28,6 +28,7 @@ import { LancamentoLotePage } from '@/pages/pastoral/LancamentoLotePage'
 import { TesourariaPainelPage } from '@/pages/tesouraria/TesourariaPainelPage'
 import { ControleMensalPage } from '@/pages/tesouraria/ControleMensalPage'
 import { EventosPage } from '@/pages/tesouraria/EventosPage'
+import { EvolucaoTesourariaPage } from '@/pages/tesouraria/EvolucaoTesourariaPage'
 
 import { ROUTES } from '@/constants/routes'
 
@@ -72,6 +73,7 @@ function App() {
                   <Route element={<ProtectedTesourariaRoute />}>
                     <Route element={<TesourariaLayout />}>
                       <Route path={ROUTES.pastoral.tesouraria.root} element={<TesourariaPainelPage />} />
+                      <Route path={ROUTES.pastoral.tesouraria.evolucao} element={<EvolucaoTesourariaPage />} />
                       <Route path={ROUTES.pastoral.tesouraria.eventos} element={<EventosPage />} />
                       <Route path="/pastoral/tesouraria/:competencia" element={<ControleMensalPage />} />
                     </Route>

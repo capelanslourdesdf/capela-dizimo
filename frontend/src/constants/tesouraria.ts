@@ -2,7 +2,7 @@ import type { CategoriaEntradaTesouraria, StatusControleTesouraria } from '@/typ
 
 export const CATEGORIAS_ENTRADA_TESOURARIA: { value: CategoriaEntradaTesouraria; label: string }[] = [
   { value: 'dizimo', label: 'Dízimo' },
-  { value: 'coleta', label: 'Coleta' },
+  { value: 'oferta', label: 'Oferta' },
   { value: 'bazar', label: 'Bazar' },
   { value: 'lojinha', label: 'Lojinha' },
   { value: 'eventos', label: 'Eventos' },

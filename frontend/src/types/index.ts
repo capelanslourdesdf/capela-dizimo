@@ -93,7 +93,7 @@ export interface MembroPastoral {
 
 export type CategoriaEntradaTesouraria =
   | 'dizimo'
-  | 'coleta'
+  | 'oferta'
   | 'bazar'
   | 'lojinha'
   | 'eventos'
@@ -102,8 +102,11 @@ export type CategoriaEntradaTesouraria =
 
 export interface EntradaTesouraria {
   id: string
+  /** Data "aaaa-mm-dd" em que a receita entrou. */
+  data: string
   categoria: CategoriaEntradaTesouraria
   valor: number
+  formaPagamento: FormaPagamentoDevolucao
   observacao?: string
 }
 
@@ -115,6 +118,8 @@ export interface SaidaTesouraria {
   /** Empresa ou prestador de serviço que recebeu o pagamento. */
   prestador: string
   valor: number
+  /** Controle de "em dia": true quando a despesa já foi paga ao solicitante/prestador. */
+  quitado: boolean
   observacao?: string
 }
 

@@ -36,6 +36,17 @@ export async function listarControlesTesouraria(): Promise<ControleTesouraria[]>
     .sort((a, b) => (a.competencia < b.competencia ? 1 : -1))
 }
 
+/**
+ * Busca o controle do mês sem criar nada — usado pra conferir o mês anterior (variação do
+ * balancete), onde um documento inexistente é uma resposta válida (mês fora do período
+ * controlado, ou simplesmente ainda não aberto por ninguém), não um erro.
+ */
+export async function buscarControleTesouraria(competencia: string): Promise<ControleTesouraria | null> {
+  const snap = await getDoc(doc(db, COLECAO_CONTROLES, competencia))
+  if (!snap.exists()) return null
+  return { competencia: snap.id, ...(snap.data() as Omit<ControleTesouraria, 'competencia'>) }
+}
+
 /** Busca o controle do mês; se ainda não existir, cria um vazio ("em andamento") na hora. */
 export async function obterOuCriarControleTesouraria(competencia: string): Promise<ControleTesouraria> {
   const ref = doc(db, COLECAO_CONTROLES, competencia)

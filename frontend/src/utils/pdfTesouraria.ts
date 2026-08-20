@@ -3,6 +3,7 @@ import autoTable from 'jspdf-autotable'
 
 import type { ControleTesouraria } from '@/types'
 import { CATEGORIAS_ENTRADA_TESOURARIA, STATUS_CONTROLE_TESOURARIA, categoriaEntradaLabel } from '@/constants/tesouraria'
+import { formaPagamentoLabel } from '@/constants/devolucao'
 import { formatCompetencia, formatCurrency, formatDate, formatDateLong } from '@/utils/format'
 
 /** Ponto em que a última tabela desenhada terminou — usado pra empilhar as seções sem sobrepor. */
@@ -11,8 +12,8 @@ function finalY(doc: jsPDF): number {
 }
 
 /**
- * Gera e baixa o PDF do controle mensal da Tesouraria: cabeçalho, resumo, entradas (com totais
- * por categoria) e saídas — tudo o que existe no controle, numa página fluida (a tabela quebra
+ * Gera e baixa o PDF do controle mensal da Tesouraria: cabeçalho, resumo, receitas (com totais
+ * por categoria) e despesas — tudo o que existe no controle, numa página fluida (a tabela quebra
  * de página sozinha se a lista for longa).
  */
 export function gerarPdfControleTesouraria(controle: ControleTesouraria): void {
@@ -20,9 +21,12 @@ export function gerarPdfControleTesouraria(controle: ControleTesouraria): void {
   const margemEsquerda = 14
   const larguraPagina = doc.internal.pageSize.getWidth()
 
-  const totalEntradas = controle.entradas.reduce((soma, e) => soma + e.valor, 0)
-  const totalSaidas = controle.saidas.reduce((soma, s) => soma + s.valor, 0)
-  const saldo = totalEntradas - totalSaidas
+  const totalReceitas = controle.entradas.reduce((soma, e) => soma + e.valor, 0)
+  const totalDespesas = controle.saidas.reduce((soma, s) => soma + s.valor, 0)
+  const saldo = totalReceitas - totalDespesas
+
+  const receitasOrdenadas = [...controle.entradas].sort((a, b) => (a.data < b.data ? 1 : a.data > b.data ? -1 : 0))
+  const despesasOrdenadas = [...controle.saidas].sort((a, b) => (a.dia < b.dia ? 1 : a.dia > b.dia ? -1 : 0))
 
   doc.setFontSize(16)
   doc.setFont('helvetica', 'bold')
@@ -46,8 +50,8 @@ export function gerarPdfControleTesouraria(controle: ControleTesouraria): void {
     theme: 'plain',
     styles: { fontSize: 10, cellPadding: { top: 1.5, bottom: 1.5, left: 0, right: 6 } },
     body: [
-      ['Total de entradas', formatCurrency(totalEntradas)],
-      ['Total de saídas', formatCurrency(totalSaidas)],
+      ['Total de receitas', formatCurrency(totalReceitas)],
+      ['Total de despesas', formatCurrency(totalDespesas)],
       ['Saldo do mês', formatCurrency(saldo)],
     ],
     columnStyles: { 0: { fontStyle: 'bold' }, 1: { halign: 'right' } },
@@ -63,7 +67,7 @@ export function gerarPdfControleTesouraria(controle: ControleTesouraria): void {
   if (totaisPorCategoria.length > 0) {
     doc.setFontSize(11)
     doc.setFont('helvetica', 'bold')
-    doc.text('Entradas por categoria', margemEsquerda, finalY(doc) + 10)
+    doc.text('Receitas por categoria', margemEsquerda, finalY(doc) + 10)
 
     autoTable(doc, {
       startY: finalY(doc) + 14,
@@ -79,43 +83,50 @@ export function gerarPdfControleTesouraria(controle: ControleTesouraria): void {
 
   doc.setFontSize(11)
   doc.setFont('helvetica', 'bold')
-  doc.text('Entradas detalhadas', margemEsquerda, finalY(doc) + 10)
+  doc.text('Receitas detalhadas', margemEsquerda, finalY(doc) + 10)
 
   autoTable(doc, {
     startY: finalY(doc) + 14,
-    head: [['Categoria', 'Valor', 'Observação']],
+    head: [['Data', 'Categoria', 'Forma', 'Valor', 'Observação']],
     body:
-      controle.entradas.length > 0
-        ? controle.entradas.map((e) => [categoriaEntradaLabel(e.categoria), formatCurrency(e.valor), e.observacao || '—'])
-        : [['Nenhuma entrada lançada neste mês.', '', '']],
+      receitasOrdenadas.length > 0
+        ? receitasOrdenadas.map((e) => [
+            e.data ? formatDate(e.data) : '—',
+            categoriaEntradaLabel(e.categoria),
+            formaPagamentoLabel(e.formaPagamento),
+            formatCurrency(e.valor),
+            e.observacao || '—',
+          ])
+        : [['Nenhuma receita lançada neste mês.', '', '', '', '']],
     theme: 'striped',
     headStyles: { fillColor: [51, 65, 85] },
     styles: { fontSize: 9 },
-    columnStyles: { 1: { halign: 'right', cellWidth: 28 } },
+    columnStyles: { 3: { halign: 'right', cellWidth: 24 } },
     margin: { left: margemEsquerda, right: margemEsquerda },
   })
 
   doc.setFontSize(11)
   doc.setFont('helvetica', 'bold')
-  doc.text('Saídas', margemEsquerda, finalY(doc) + 10)
+  doc.text('Despesas', margemEsquerda, finalY(doc) + 10)
 
   autoTable(doc, {
     startY: finalY(doc) + 14,
-    head: [['Dia', 'Solicitante', 'Empresa/Prestador', 'Valor', 'Observação']],
+    head: [['Dia', 'Solicitante', 'Empresa/Prestador', 'Valor', 'Quitado', 'Observação']],
     body:
-      controle.saidas.length > 0
-        ? controle.saidas.map((s) => [
+      despesasOrdenadas.length > 0
+        ? despesasOrdenadas.map((s) => [
             s.dia ? formatDate(s.dia) : '—',
             s.solicitante,
             s.prestador,
             formatCurrency(s.valor),
+            s.quitado ? 'Sim' : 'Não',
             s.observacao || '—',
           ])
-        : [['Nenhuma saída lançada neste mês.', '', '', '', '']],
+        : [['Nenhuma despesa lançada neste mês.', '', '', '', '', '']],
     theme: 'striped',
     headStyles: { fillColor: [51, 65, 85] },
     styles: { fontSize: 9 },
-    columnStyles: { 3: { halign: 'right', cellWidth: 26 } },
+    columnStyles: { 3: { halign: 'right', cellWidth: 24 } },
     margin: { left: margemEsquerda, right: margemEsquerda },
   })
 

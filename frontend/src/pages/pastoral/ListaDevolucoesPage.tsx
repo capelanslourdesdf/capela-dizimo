@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { ArrowLeftRight, ChevronLeft, ChevronRight, Pencil } from 'lucide-react'
+import { ArrowLeftRight, ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -10,11 +10,13 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 import { listarDizimistas } from '@/services/dizimistaService'
 import {
   atualizarDevolucao,
   competenciaDaDevolucao,
+  excluirDevolucao,
   listarTodasDevolucoesPorCarne,
   type DadosDevolucao,
 } from '@/services/devolucaoService'
@@ -32,6 +34,7 @@ export function ListaDevolucoesPage() {
   const [todasDevolucoes, setTodasDevolucoes] = React.useState<DevolucaoComCarne[]>([])
   const [nomesPorCarne, setNomesPorCarne] = React.useState<Map<string, string>>(new Map())
   const [devolucaoEmEdicao, setDevolucaoEmEdicao] = React.useState<DevolucaoComCarne | null>(null)
+  const [devolucaoParaExcluir, setDevolucaoParaExcluir] = React.useState<DevolucaoComCarne | null>(null)
 
   const carregar = React.useCallback(async () => {
     setCarregando(true)
@@ -64,6 +67,14 @@ export function ListaDevolucoesPage() {
     carregar()
   }
 
+  async function handleExcluirDevolucao() {
+    if (!devolucaoParaExcluir) return
+    await excluirDevolucao(devolucaoParaExcluir.numeroCarne, devolucaoParaExcluir.id)
+    setDevolucaoParaExcluir(null)
+    toast.success('Devolução excluída.')
+    carregar()
+  }
+
   return (
     <div>
       <PageHeader
@@ -93,7 +104,7 @@ export function ListaDevolucoesPage() {
         </Button>
         {competencia !== competenciaAtual() && (
           <Button variant="ghost" size="sm" onClick={() => setCompetencia(competenciaAtual())}>
-            Mês atual
+            Ir para mês atual
           </Button>
         )}
       </div>
@@ -138,14 +149,25 @@ export function ListaDevolucoesPage() {
                         <StatusBadge label={formaPagamentoLabel(d.formaPagamento)} variant="outline" />
                         <p className="font-medium text-foreground">{formatCurrency(d.valor)}</p>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setDevolucaoEmEdicao(d)}
-                        aria-label="Editar devolução"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setDevolucaoEmEdicao(d)}
+                          aria-label="Editar devolução"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => setDevolucaoParaExcluir(d)}
+                          aria-label="Excluir devolução"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -170,6 +192,16 @@ export function ListaDevolucoesPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!devolucaoParaExcluir}
+        onOpenChange={(open) => !open && setDevolucaoParaExcluir(null)}
+        title="Excluir devolução"
+        description="Tem certeza que deseja excluir esta devolução? Essa ação não pode ser desfeita."
+        confirmLabel="Excluir"
+        destructive
+        onConfirm={handleExcluirDevolucao}
+      />
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import { addDoc, collection, collectionGroup, doc, getDocs, orderBy, query, updateDoc } from 'firebase/firestore'
+import { addDoc, collection, collectionGroup, deleteDoc, doc, getDocs, orderBy, query, updateDoc } from 'firebase/firestore'
 
 import { db } from '@/lib/firebase'
 import type { Devolucao, FormaPagamentoDevolucao } from '@/types'
@@ -102,4 +102,9 @@ export async function atualizarDevolucao(
     ...dados,
     observacao: dados.observacao?.trim() || null,
   })
+}
+
+/** Remove uma devolução lançada. Só a área da Pastoral tem acesso a essa ação. */
+export async function excluirDevolucao(numeroCarne: string, devolucaoId: string): Promise<void> {
+  await deleteDoc(doc(db, 'dizimistas', numeroCarne, 'devolucoes', devolucaoId))
 }

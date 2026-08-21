@@ -59,7 +59,6 @@ import {
   MINIMO_MESES_ATIVOS_PADRAO,
 } from '@/utils/statusDizimista'
 import { ROUTES } from '@/constants/routes'
-import { COMPETENCIA_INICIAL_TESOURARIA } from '@/constants/tesouraria'
 import { useDefinirPageTitle } from '@/hooks/usePageTitle'
 
 interface FichaItemProps {
@@ -189,12 +188,13 @@ export function DizimistaDetalhePage() {
 
   // "Devolvidos" conta qualquer devolução do ano, mesmo lançada pra um mês anterior ao
   // recadastramento (ex.: lançamento retroativo em lote) — mesmo critério do MesesGrid, senão a
-  // devolução aparece lá mas não entra nessa contagem. "Pendentes" conta a partir do início do
-  // acompanhamento no site (agosto de 2026) — meses antes do recadastramento pessoal de quem já
-  // era dizimista antes contam normalmente, só não tem como cobrar antes do site existir.
+  // devolução aparece lá mas não entra nessa contagem. "Pendentes" não recua antes de janeiro do
+  // ano nem antes do registro do próprio dizimista (quando ele existe — ver `competenciaDeRegistro`),
+  // mas conta normalmente meses anteriores a agosto de 2026: a devolução em si pode ter sido
+  // registrada antes de a Tesouraria passar a existir no site.
   const mesesDevolvidosNoAno = competenciasEntre(inicioAno, fimAno).filter((c) => competenciasPagas.has(c)).length
 
-  const inicioContagemPendente = inicioAno > COMPETENCIA_INICIAL_TESOURARIA ? inicioAno : COMPETENCIA_INICIAL_TESOURARIA
+  const inicioContagemPendente = registro && registro > inicioAno ? registro : inicioAno
   const mesesAplicaveisPendente = competenciasEntre(inicioContagemPendente, competenciaAtual())
   const mesesPendentesNoAno = mesesAplicaveisPendente.filter((c) => !competenciasPagas.has(c)).length
 

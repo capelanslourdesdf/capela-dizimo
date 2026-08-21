@@ -46,13 +46,13 @@ export function DizimistaDashboardPage() {
 
   // Conta a partir de agosto de 2026 (início do acompanhamento no site) ou do registro do
   // dizimista, o que vier depois — quem já era dizimista antes não fica de fora dos meses que o
-  // site passou a controlar antes dele se recadastrar pessoalmente.
+  // site passou a controlar antes dele se recadastrar pessoalmente. Sem registro confiável (ver
+  // `competenciaDeRegistro`), conta a partir de agosto de 2026 normalmente.
   const inicioContagemPendentes =
     registro && registro > COMPETENCIA_INICIAL_TESOURARIA ? registro : COMPETENCIA_INICIAL_TESOURARIA
   const pendentes = React.useMemo(() => {
-    if (!registro) return [] as string[]
     return competenciasEntre(inicioContagemPendentes, competenciaAtual()).filter((c) => !competenciasPagas.has(c))
-  }, [registro, inicioContagemPendentes, competenciasPagas])
+  }, [inicioContagemPendentes, competenciasPagas])
 
   const anoAtual = new Date().getFullYear()
 
@@ -99,7 +99,9 @@ export function DizimistaDashboardPage() {
           <CardDescription>
             {registro
               ? `Contados a partir do seu registro no Meu Dízimo Digital, em ${formatCompetencia(registro)}.`
-              : 'Faça seu recadastramento para começarmos a acompanhar suas devoluções.'}
+              : devolucoes.length > 0
+                ? 'Todo o seu histórico de devoluções.'
+                : 'Faça seu recadastramento para começarmos a acompanhar suas devoluções.'}
           </CardDescription>
         </CardHeader>
         <CardContent>

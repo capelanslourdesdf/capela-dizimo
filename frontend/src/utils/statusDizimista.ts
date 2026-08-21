@@ -10,9 +10,23 @@ export const JANELA_MESES_STATUS = 6
 
 export const MINIMO_MESES_ATIVOS_PADRAO = 3
 
-/** Competência ("aaaa-mm") a partir da qual passamos a cobrar/acompanhar as devoluções. */
-export function competenciaDeRegistro(dizimista: Pick<Dizimista, 'recadastradoEm' | 'criadoEm'>): string {
-  return (dizimista.recadastradoEm || dizimista.criadoEm || '').slice(0, 7)
+/**
+ * Competência ("aaaa-mm") a partir da qual passamos a cobrar/acompanhar as devoluções — ou vazia,
+ * quando não há um marco confiável e a janela deve valer por inteiro (ver abaixo).
+ *
+ * `recadastradoEm` é sempre o marco certo: é o momento real em que a pessoa passou a ser
+ * acompanhada digitalmente. Na ausência dele, `criadoEm` só serve de marco pra quem foi cadastrado
+ * direto pelo admin (`cadastro_admin`) — ali a criação É o início real. Pra quem veio da
+ * importação da planilha antiga (`importacao_planilha`) sem nunca ter se recadastrado, `criadoEm`
+ * é só a data em que o script de importação rodou (a mesma pra centenas de registros de uma vez) —
+ * não diz nada sobre desde quando a pessoa é dizimista. Usá-la como marco cortaria fora devoluções
+ * antigas e legítimas dessas pessoas; por isso devolve vazio, o que remove o limite inferior da
+ * janela — deixa contar todo o histórico de devolução que já existir.
+ */
+export function competenciaDeRegistro(dizimista: Pick<Dizimista, 'recadastradoEm' | 'criadoEm' | 'origem'>): string {
+  if (dizimista.recadastradoEm) return dizimista.recadastradoEm.slice(0, 7)
+  if (dizimista.origem === 'importacao_planilha') return ''
+  return (dizimista.criadoEm || '').slice(0, 7)
 }
 
 /**
@@ -20,13 +34,12 @@ export function competenciaDeRegistro(dizimista: Pick<Dizimista, 'recadastradoEm
  * dizimista devolveu em pelo menos `minimoMeses` deles, fica **ativo** — caso contrário,
  * **inativo**.
  *
- * A janela nunca recua antes do registro do próprio dizimista (`recadastradoEm`/`criadoEm`) — não
- * dá pra cobrar mês de antes dele existir na base. Por isso, pra quem se cadastrou há menos de 6
- * meses, a janela é mais curta e o mínimo exigido é reduzido na mesma proporção (não dá pra exigir
- * 3 meses pagos numa janela que só teve 1). Pra todo mundo que já está na base há mais tempo, a
- * janela é sempre os 6 meses completos — inclusive meses anteriores a agosto de 2026 (quando a
- * Tesouraria passou a existir no site), já que a devolução em si pode ter sido registrada antes
- * disso.
+ * A janela nunca recua antes do registro do próprio dizimista (`competenciaDeRegistro`), quando
+ * ele existe — não dá pra cobrar mês de antes dele existir na base. Por isso, pra quem se
+ * cadastrou há menos de 6 meses, a janela é mais curta e o mínimo exigido é reduzido na mesma
+ * proporção (não dá pra exigir 3 meses pagos numa janela que só teve 1). Quando não há registro
+ * confiável (`registro` vazio — ver `competenciaDeRegistro`), a janela é sempre os 6 meses
+ * completos, sem limite inferior algum.
  */
 export function calcularStatusDizimista(
   registro: string,
@@ -34,10 +47,10 @@ export function calcularStatusDizimista(
   minimoMeses: number = MINIMO_MESES_ATIVOS_PADRAO,
   competenciaReferencia: string = competenciaAtual(),
 ): StatusDizimista {
-  if (!registro || registro > competenciaReferencia) return 'ativo'
+  if (registro && registro > competenciaReferencia) return 'ativo'
 
   const inicioJanela = subtrairMeses(competenciaReferencia, JANELA_MESES_STATUS - 1)
-  const inicioAplicavel = inicioJanela < registro ? registro : inicioJanela
+  const inicioAplicavel = registro && inicioJanela < registro ? registro : inicioJanela
   const janela = competenciasEntre(inicioAplicavel, competenciaReferencia)
 
   const minimoEfetivo = Math.min(minimoMeses, janela.length)

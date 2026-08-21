@@ -1,4 +1,16 @@
-import { addDoc, collection, collectionGroup, deleteDoc, doc, getDocs, orderBy, query, updateDoc } from 'firebase/firestore'
+import {
+  addDoc,
+  collection,
+  collectionGroup,
+  deleteDoc,
+  doc,
+  getDocs,
+  orderBy,
+  query,
+  updateDoc,
+  where,
+  type QueryConstraint,
+} from 'firebase/firestore'
 
 import { db } from '@/lib/firebase'
 import type { Devolucao, FormaPagamentoDevolucao } from '@/types'
@@ -16,13 +28,26 @@ export async function listarDevolucoes(numeroCarne: string): Promise<Devolucao[]
  * necessário para calcular o status ativo/inativo da lista inteira sem explodir o número de
  * leituras no Firestore.
  *
- * Cacheada por 60s: essa é a leitura mais pesada do site (uma pra cada devolução já lançada,
- * de todo mundo, desde sempre) e várias telas chamam ela na mesma navegação (Dizimistas, Lista de
- * devoluções, Tesouraria) — sem cache, cada troca de tela repetia a leitura inteira.
+ * `desde`/`ate` (competência "aaaa-mm", inclusive) filtram a consulta no próprio Firestore —
+ * quem só precisa de um mês (ou de um intervalo curto) não paga o custo de ler o histórico
+ * inteiro. Sem eles, o comportamento é o de sempre: lê tudo. Requer um índice de campo único
+ * ("competencia", escopo "Collection group" habilitado) — confirmado que 100% das devoluções já
+ * têm esse campo preenchido (ver `scripts/verificar-competencia-devolucoes.mjs`).
+ *
+ * Cacheada por 60s (a chave inclui o intervalo, pra uma leitura de um mês não ser reaproveitada
+ * por engano numa tela que precisa do histórico completo, e vice-versa) — essa é a leitura mais
+ * pesada do site e várias telas chamam ela na mesma navegação (Dizimistas, Lista de devoluções,
+ * Tesouraria).
  */
-export async function listarTodasDevolucoesPorCarne(): Promise<Record<string, Devolucao[]>> {
-  return comCache('devolucoes:todas', async () => {
-    const snap = await getDocs(collectionGroup(db, 'devolucoes'))
+export async function listarTodasDevolucoesPorCarne(desde?: string, ate?: string): Promise<Record<string, Devolucao[]>> {
+  const chaveCache = `devolucoes:${desde ?? ''}:${ate ?? ''}`
+
+  return comCache(chaveCache, async () => {
+    const restricoes: QueryConstraint[] = []
+    if (desde) restricoes.push(where('competencia', '>=', desde))
+    if (ate) restricoes.push(where('competencia', '<=', ate))
+
+    const snap = await getDocs(query(collectionGroup(db, 'devolucoes'), ...restricoes))
     const porCarne: Record<string, Devolucao[]> = {}
 
     snap.docs.forEach((d) => {

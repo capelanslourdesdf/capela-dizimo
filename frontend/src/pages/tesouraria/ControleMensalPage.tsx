@@ -135,10 +135,11 @@ export function ControleMensalPage() {
     // ninguém tenha aberto aquele mês ainda, ele vale como comparação de saldo zero (nada foi
     // lançado ali, não é "sem dado").
     const comparavel = competenciaAnterior >= COMPETENCIA_INICIAL_TESOURARIA
+    // Só precisa do mês atual (e do anterior, quando dá pra comparar) — não do histórico inteiro.
     const [atual, anterior, porCarne] = await Promise.all([
       obterOuCriarControleTesouraria(competencia),
       comparavel ? buscarControleTesouraria(competenciaAnterior) : Promise.resolve(null),
-      listarTodasDevolucoesPorCarne(),
+      listarTodasDevolucoesPorCarne(comparavel ? competenciaAnterior : competencia, competencia),
     ])
     setControle(atual)
     setControleAnterior(anterior)

@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { listarControlesTesouraria, receitasDizimoDaCompetencia } from '@/services/tesourariaService'
 import { listarTodasDevolucoesPorCarne } from '@/services/devolucaoService'
 import type { ControleTesouraria, Devolucao } from '@/types'
+import { COMPETENCIA_INICIAL_TESOURARIA } from '@/constants/tesouraria'
 
 export function EvolucaoTesourariaPage() {
   const [controles, setControles] = React.useState<ControleTesouraria[]>([])
@@ -17,7 +18,9 @@ export function EvolucaoTesourariaPage() {
   const [carregando, setCarregando] = React.useState(true)
 
   React.useEffect(() => {
-    Promise.all([listarControlesTesouraria(), listarTodasDevolucoesPorCarne()])
+    // O gráfico só cobre desde o início do controle da Tesouraria — não precisa do histórico
+    // inteiro de devoluções.
+    Promise.all([listarControlesTesouraria(), listarTodasDevolucoesPorCarne(COMPETENCIA_INICIAL_TESOURARIA)])
       .then(([lista, porCarne]) => {
         setControles(lista)
         setTodasDevolucoes(Object.values(porCarne).flat())

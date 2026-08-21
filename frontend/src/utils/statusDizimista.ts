@@ -16,14 +16,14 @@ export function competenciaDeRegistro(dizimista: Pick<Dizimista, 'recadastradoEm
 }
 
 /**
- * Um dizimista fica **ativo** quando devolveu em pelo menos `minimoMeses` dos últimos
- * `JANELA_MESES_STATUS` (6) meses — caso contrário, **inativo**.
+ * A regra é simples: dos últimos `JANELA_MESES_STATUS` (6) meses, se o dizimista devolveu em
+ * pelo menos `minimoMeses` deles, fica **ativo** — caso contrário, **inativo**.
  *
- * A janela conta a partir do início do acompanhamento no site (`COMPETENCIA_INICIAL_TESOURARIA`,
- * agosto de 2026) — meses anteriores ao recadastramento pessoal de quem já era dizimista antes
- * também contam contra ele; só não tem como cobrar meses de antes do site existir. Nos primeiros
- * meses depois do lançamento, quando a janela ainda não completou 6 meses, o mínimo exigido é
- * reduzido proporcionalmente (não dá pra exigir 3 meses pagos numa janela que só teve 1).
+ * Dois ajustes cuidam só do começo do acompanhamento (`COMPETENCIA_INICIAL_TESOURARIA`, 2026, é
+ * quando o site passou a controlar as devoluções — não tem como cobrar mês de antes disso):
+ * a janela nunca recua antes de 2026, e nos primeiros meses depois do lançamento — quando a
+ * janela ainda não completou 6 meses — o mínimo exigido é reduzido na mesma proporção (não dá
+ * pra exigir 3 meses pagos numa janela que só teve 1).
  */
 export function calcularStatusDizimista(
   registro: string,

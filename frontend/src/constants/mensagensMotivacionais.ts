@@ -9,23 +9,23 @@ export type SegmentoMotivacional = 'nunca' | 'irregular' | 'regular'
 export const MENSAGENS_MOTIVACIONAIS: Record<SegmentoMotivacional, string[]> = {
   nunca: [
     'Seu primeiro dízimo pode começar hoje mesmo — toque em "Devolver meu dízimo" e faça parte dessa família! 🙏',
-    'A Capela cresce com a generosidade de cada um. Que tal dar o primeiro passo hoje? 💙',
+    'A Capela cresce com a generosidade de cada um. Que tal dar o primeiro passo hoje, com a bênção de Nossa Senhora de Lourdes? 💙',
     'Nunca é tarde para começar! Sua contribuição, do tamanho que for, já faz diferença. ✨',
     'Toda grande jornada começa com um passo. Que tal começar a sua com o dízimo deste mês? 🌱',
-    'Sua fé e sua generosidade juntas fortalecem toda a nossa comunidade. Vamos começar? 🤝',
+    'Deus abençoe sua generosidade! Sua fé e sua contribuição fortalecem toda a nossa comunidade. Vamos começar? 🤝',
   ],
   irregular: [
     'Toda contribuição conta, mesmo quando a rotina atrapalha. Que tal regularizar este mês? 💪',
     'Você já demonstrou generosidade antes — vamos manter esse hábito vivo? 🙌',
-    'Um passo de cada vez: colocar o dízimo em dia fortalece você e a nossa Capela. 🕊️',
+    'Um passo de cada vez: colocar o dízimo em dia fortalece você, sob o olhar de Nossa Senhora de Lourdes. 🕊️',
     'Sua contribuição já fez diferença antes. Continue escrevendo essa história com a gente! 📖',
-    'Não deixe a rotina levar o hábito embora — retome seu dízimo hoje mesmo. ⏳💙',
+    'Deus abençoe! Não deixe a rotina levar o hábito embora — retome seu dízimo hoje mesmo. ⏳💙',
   ],
   regular: [
     'Parabéns 🎉! Você contribuiu com a Capela por {meses} meses consecutivos!',
-    'Que exemplo de fidelidade! Já são {meses} meses seguidos contribuindo. Gratidão! 🙏✨',
+    'Que exemplo de fidelidade! Já são {meses} meses seguidos contribuindo. Deus abençoe você! 🙏✨',
     '{meses} meses consecutivos de generosidade — você é parte fundamental dessa comunidade! 💙',
-    'Sua constância inspira! {meses} meses seguidos cuidando da nossa Capela. Muito obrigado! 🌟',
+    'Sua constância inspira! {meses} meses seguidos cuidando da nossa Capela, sob a proteção de Nossa Senhora de Lourdes. 🌟',
     'Fidelidade que transforma: {meses} meses consecutivos de dízimo. Continue brilhando! ✨🙌',
   ],
 }

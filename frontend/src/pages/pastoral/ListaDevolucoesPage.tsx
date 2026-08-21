@@ -18,7 +18,6 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { buscarDizimistaPorCarne, listarDizimistas } from '@/services/dizimistaService'
 import {
   atualizarDevolucao,
-  competenciaDaDevolucao,
   excluirDevolucao,
   lancarDevolucao,
   listarTodasDevolucoesPorCarne,
@@ -46,25 +45,27 @@ export function ListaDevolucoesPage() {
   // branco — assim dá pra lançar várias devoluções seguidas sem fechar o diálogo.
   const [formularioNovaDevolucaoKey, setFormularioNovaDevolucaoKey] = React.useState(0)
 
+  // Busca só a competência selecionada — não tem por que ler o histórico inteiro pra mostrar um
+  // mês. Muda de mês, busca de novo (a troca é rápida e fica em cache por 60s, ver cacheLeitura.ts).
   const carregar = React.useCallback(async () => {
     setCarregando(true)
-    const [porCarne, dizimistas] = await Promise.all([listarTodasDevolucoesPorCarne(), listarDizimistas()])
+    const [porCarne, dizimistas] = await Promise.all([
+      listarTodasDevolucoesPorCarne(competencia, competencia),
+      listarDizimistas(),
+    ])
     const flat = Object.entries(porCarne).flatMap(([numeroCarne, devs]) => devs.map((d) => ({ ...d, numeroCarne })))
     setTodasDevolucoes(flat)
     setNomesPorCarne(new Map(dizimistas.map((d) => [d.numeroCarne, d.nomeCompleto])))
     setCarregando(false)
-  }, [])
+  }, [competencia])
 
   React.useEffect(() => {
     carregar()
   }, [carregar])
 
   const devolucoesDoMes = React.useMemo(
-    () =>
-      todasDevolucoes
-        .filter((d) => competenciaDaDevolucao(d) === competencia)
-        .sort((a, b) => (a.criadoEm < b.criadoEm ? 1 : -1)),
-    [todasDevolucoes, competencia],
+    () => [...todasDevolucoes].sort((a, b) => (a.criadoEm < b.criadoEm ? 1 : -1)),
+    [todasDevolucoes],
   )
 
   const devolucoesFiltradas = React.useMemo(() => {
@@ -80,14 +81,18 @@ export function ListaDevolucoesPage() {
   const total = devolucoesFiltradas.reduce((soma, d) => soma + d.valor, 0)
 
   // Os três handlers abaixo atualizam a lista local em vez de chamar `carregar()` de novo — a
-  // leitura completa (todas as devoluções de todo mundo) é cara, e cada edição já sabe
-  // exatamente o que mudou, sem precisar buscar tudo de novo no Firestore.
+  // leitura (agora já filtrada pra só o mês visível) é cara o bastante pra evitar repetir a cada
+  // edição, e cada mudança já sabe exatamente o que mudou. Como a lista só tem o mês selecionado,
+  // uma devolução que muda pra outra competência (edição retroativa) precisa sair da lista, não
+  // só ser atualizada — do contrário ficaria visível num mês que não é mais o dela.
 
   async function handleAtualizarDevolucao(dados: DadosDevolucao) {
     if (!devolucaoEmEdicao) return
     await atualizarDevolucao(devolucaoEmEdicao.numeroCarne, devolucaoEmEdicao.id, dados)
     setTodasDevolucoes((atual) =>
-      atual.map((d) => (d.id === devolucaoEmEdicao.id ? { ...d, ...dados } : d)),
+      dados.competencia === competencia
+        ? atual.map((d) => (d.id === devolucaoEmEdicao.id ? { ...d, ...dados } : d))
+        : atual.filter((d) => d.id !== devolucaoEmEdicao.id),
     )
     setDevolucaoEmEdicao(null)
     toast.success('Devolução atualizada com sucesso.')
@@ -114,7 +119,11 @@ export function ListaDevolucoesPage() {
     }
 
     const nova = await lancarDevolucao(numeroCarne, dados)
-    setTodasDevolucoes((atual) => [...atual, { ...nova, numeroCarne }])
+    // Só entra na lista visível se for do mês selecionado — lançamentos retroativos pra outro
+    // mês continuam invisíveis aqui, do jeito que já era esperado antes dessa mudança.
+    if (dados.competencia === competencia) {
+      setTodasDevolucoes((atual) => [...atual, { ...nova, numeroCarne }])
+    }
     toast.success('Devolução lançada com sucesso.')
     // Mantém o diálogo aberto pra lançar outra em seguida — limpa o carnê e reseta o formulário.
     setCarneNovaDevolucao('')

@@ -37,7 +37,9 @@ export function TesourariaPainelPage() {
   const [competenciaSelecionada, setCompetenciaSelecionada] = React.useState('')
 
   React.useEffect(() => {
-    Promise.all([listarControlesTesouraria(), listarTodasDevolucoesPorCarne()])
+    // A Tesouraria nunca olha pra devolução anterior ao início do controle dela — não precisa
+    // ler o histórico de antes disso.
+    Promise.all([listarControlesTesouraria(), listarTodasDevolucoesPorCarne(COMPETENCIA_INICIAL_TESOURARIA)])
       .then(([lista, porCarne]) => {
         setControles(lista)
         setTodasDevolucoes(Object.values(porCarne).flat())

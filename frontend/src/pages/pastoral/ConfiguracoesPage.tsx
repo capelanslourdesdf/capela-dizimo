@@ -83,10 +83,10 @@ export function ConfiguracoesPage() {
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">
-                A regra é simples: dos últimos {JANELA_MESES_STATUS} meses, se o dizimista devolveu em pelo menos
-                esse número de meses, fica <strong className="text-foreground">Ativo</strong> — caso contrário, fica{' '}
-                <strong className="text-foreground">Inativo</strong>. A contagem vale para todos os meses desde 2026,
-                quando o site passou a controlar as devoluções.
+                A regra é simples: dos últimos {JANELA_MESES_STATUS} meses a partir do mês atual, se o dizimista
+                devolveu em pelo menos esse número de meses, fica <strong className="text-foreground">Ativo</strong> —
+                caso contrário, fica <strong className="text-foreground">Inativo</strong>. Só não conta mês anterior
+                ao próprio cadastro do dizimista no site.
               </p>
             </div>
           )}

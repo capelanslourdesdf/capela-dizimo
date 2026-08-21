@@ -16,14 +16,17 @@ export function competenciaDeRegistro(dizimista: Pick<Dizimista, 'recadastradoEm
 }
 
 /**
- * A regra é simples: dos últimos `JANELA_MESES_STATUS` (6) meses, se o dizimista devolveu em
- * pelo menos `minimoMeses` deles, fica **ativo** — caso contrário, **inativo**.
+ * A regra é simples: dos últimos `JANELA_MESES_STATUS` (6) meses a partir do mês atual, se o
+ * dizimista devolveu em pelo menos `minimoMeses` deles, fica **ativo** — caso contrário,
+ * **inativo**.
  *
- * Dois ajustes cuidam só do começo do acompanhamento (`COMPETENCIA_INICIAL_TESOURARIA`, 2026, é
- * quando o site passou a controlar as devoluções — não tem como cobrar mês de antes disso):
- * a janela nunca recua antes de 2026, e nos primeiros meses depois do lançamento — quando a
- * janela ainda não completou 6 meses — o mínimo exigido é reduzido na mesma proporção (não dá
- * pra exigir 3 meses pagos numa janela que só teve 1).
+ * A janela nunca recua antes do registro do próprio dizimista (`recadastradoEm`/`criadoEm`) — não
+ * dá pra cobrar mês de antes dele existir na base. Por isso, pra quem se cadastrou há menos de 6
+ * meses, a janela é mais curta e o mínimo exigido é reduzido na mesma proporção (não dá pra exigir
+ * 3 meses pagos numa janela que só teve 1). Pra todo mundo que já está na base há mais tempo, a
+ * janela é sempre os 6 meses completos — inclusive meses anteriores a agosto de 2026 (quando a
+ * Tesouraria passou a existir no site), já que a devolução em si pode ter sido registrada antes
+ * disso.
  */
 export function calcularStatusDizimista(
   registro: string,
@@ -34,7 +37,7 @@ export function calcularStatusDizimista(
   if (!registro || registro > competenciaReferencia) return 'ativo'
 
   const inicioJanela = subtrairMeses(competenciaReferencia, JANELA_MESES_STATUS - 1)
-  const inicioAplicavel = inicioJanela < COMPETENCIA_INICIAL_TESOURARIA ? COMPETENCIA_INICIAL_TESOURARIA : inicioJanela
+  const inicioAplicavel = inicioJanela < registro ? registro : inicioJanela
   const janela = competenciasEntre(inicioAplicavel, competenciaReferencia)
 
   const minimoEfetivo = Math.min(minimoMeses, janela.length)

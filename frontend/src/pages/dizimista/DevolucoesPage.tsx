@@ -9,10 +9,9 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useDizimistaSessao } from '@/hooks/useDizimistaSessao'
 import { competenciaDaDevolucao, listarDevolucoes } from '@/services/devolucaoService'
 import type { Devolucao } from '@/types'
-import { competenciaDeRegistro } from '@/utils/statusDizimista'
 
 export function DizimistaDevolucoesPage() {
-  const { numeroCarne, dizimista } = useDizimistaSessao()
+  const { numeroCarne } = useDizimistaSessao()
   const [devolucoes, setDevolucoes] = React.useState<Devolucao[]>([])
   const [carregando, setCarregando] = React.useState(true)
 
@@ -25,7 +24,6 @@ export function DizimistaDevolucoesPage() {
   }, [numeroCarne])
 
   const anoAtual = new Date().getFullYear()
-  const registro = dizimista ? competenciaDeRegistro(dizimista) : ''
   const competenciasPagas = React.useMemo(() => new Set(devolucoes.map(competenciaDaDevolucao)), [devolucoes])
 
   return (
@@ -41,7 +39,7 @@ export function DizimistaDevolucoesPage() {
           {carregando ? (
             <Skeleton className="h-32 w-full" />
           ) : (
-            <MesesGrid ano={anoAtual} registro={registro} competenciasPagas={competenciasPagas} />
+            <MesesGrid ano={anoAtual} competenciasPagas={competenciasPagas} />
           )}
         </CardContent>
       </Card>

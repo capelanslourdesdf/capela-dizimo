@@ -1,6 +1,16 @@
 import * as React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowDownRight, ArrowLeftRight, ArrowUpRight, Minus, TrendingDown, TrendingUp, Wallet } from 'lucide-react'
+import {
+  ArrowDownRight,
+  ArrowLeft,
+  ArrowLeftRight,
+  ArrowRight,
+  ArrowUpRight,
+  Minus,
+  TrendingDown,
+  TrendingUp,
+  Wallet,
+} from 'lucide-react'
 
 import { PageHeader } from '@/components/layout/PageHeader'
 import { StatCard } from '@/components/dashboard/StatCard'
@@ -64,6 +74,11 @@ export function TesourariaPainelPage() {
 
   return (
     <div>
+      <Button variant="ghost" size="sm" className="mb-3 -ml-2" onClick={() => navigate(ROUTES.pastoral.root)}>
+        <ArrowLeft className="h-4 w-4" />
+        Voltar ao Administrativo
+      </Button>
+
       <PageHeader title="Tesouraria" description="Balancete mensal da Capela, mês a mês desde agosto de 2026." />
 
       {carregando ? (
@@ -97,8 +112,8 @@ export function TesourariaPainelPage() {
                   />
                 </div>
                 <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
-                  <StatCard compact label="Total em receita" value={formatCurrency(receitaSelecionada)} icon={TrendingUp} />
-                  <StatCard compact label="Total em despesas" value={formatCurrency(despesaSelecionada)} icon={TrendingDown} />
+                  <StatCard compact tom="success" label="Total em receita" value={formatCurrency(receitaSelecionada)} icon={TrendingUp} />
+                  <StatCard compact tom="destructive" label="Total em despesas" value={formatCurrency(despesaSelecionada)} icon={TrendingDown} />
                   <StatCard compact label="Saldo total" value={formatCurrency(saldoSelecionado)} icon={Wallet} />
                   <StatCard
                     compact
@@ -117,6 +132,7 @@ export function TesourariaPainelPage() {
                   onClick={() => navigate(ROUTES.pastoral.tesouraria.controle(controleSelecionado.competencia))}
                 >
                   {podeEditar ? 'Gerenciar lançamentos deste mês' : 'Ver lançamentos deste mês'}
+                  <ArrowRight className="h-4 w-4" />
                 </Button>
               </>
             )}

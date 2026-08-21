@@ -19,7 +19,9 @@ export function BrandMark({ className, subtitle = true, iconOnly = false }: Bran
         <span className="flex flex-col leading-tight">
           <span className="text-sm font-semibold text-foreground sm:text-base">Meu Dízimo Digital</span>
           {subtitle && (
-            <span className="text-[11px] text-muted-foreground sm:text-xs">Capela Nossa Senhora de Lourdes</span>
+            <span className="whitespace-nowrap text-[11px] text-muted-foreground sm:text-xs">
+            Capela Nossa Senhora de Lourdes
+          </span>
           )}
         </span>
       )}

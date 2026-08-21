@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { AlertCircle, CalendarCheck, CheckCircle2, IdCard, Wallet } from 'lucide-react'
+import { AlertCircle, CalendarCheck, CheckCircle2, IdCard, Sparkles, Wallet } from 'lucide-react'
 
 import { PageHeader } from '@/components/layout/PageHeader'
 import { StatCard } from '@/components/dashboard/StatCard'
@@ -12,7 +12,9 @@ import { useDizimistaSessao } from '@/hooks/useDizimistaSessao'
 import { competenciaDaDevolucao, listarDevolucoes } from '@/services/devolucaoService'
 import type { Devolucao } from '@/types'
 import { competenciaAtual, competenciasEntre, formatCompetencia, formatCurrency } from '@/utils/format'
-import { competenciaDeRegistro } from '@/utils/statusDizimista'
+import { calcularMesesConsecutivos, calcularStatusDizimista, competenciaDeRegistro } from '@/utils/statusDizimista'
+import { sortearMensagemMotivacional, type SegmentoMotivacional } from '@/constants/mensagensMotivacionais'
+import { COMPETENCIA_INICIAL_TESOURARIA } from '@/constants/tesouraria'
 
 export function DizimistaDashboardPage() {
   const { numeroCarne, dizimista } = useDizimistaSessao()
@@ -31,10 +33,26 @@ export function DizimistaDashboardPage() {
   const totalDevolvido = devolucoes.reduce((soma, d) => soma + d.valor, 0)
   const competenciasPagas = React.useMemo(() => new Set(devolucoes.map(competenciaDaDevolucao)), [devolucoes])
 
+  // Sorteia uma mensagem por visita (não a cada re-render) — assim que os dados terminam de
+  // carregar, escolhe uma vez e não muda mais enquanto a pessoa estiver na tela.
+  const [mensagemMotivacional, setMensagemMotivacional] = React.useState<string | null>(null)
+  React.useEffect(() => {
+    if (carregando) return
+    const status = calcularStatusDizimista(registro, competenciasPagas)
+    const segmento: SegmentoMotivacional = devolucoes.length === 0 ? 'nunca' : status === 'ativo' ? 'regular' : 'irregular'
+    setMensagemMotivacional(sortearMensagemMotivacional(segmento, calcularMesesConsecutivos(competenciasPagas)))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [carregando])
+
+  // Conta a partir de agosto de 2026 (início do acompanhamento no site) ou do registro do
+  // dizimista, o que vier depois — quem já era dizimista antes não fica de fora dos meses que o
+  // site passou a controlar antes dele se recadastrar pessoalmente.
+  const inicioContagemPendentes =
+    registro && registro > COMPETENCIA_INICIAL_TESOURARIA ? registro : COMPETENCIA_INICIAL_TESOURARIA
   const pendentes = React.useMemo(() => {
     if (!registro) return [] as string[]
-    return competenciasEntre(registro, competenciaAtual()).filter((c) => !competenciasPagas.has(c))
-  }, [registro, competenciasPagas])
+    return competenciasEntre(inicioContagemPendentes, competenciaAtual()).filter((c) => !competenciasPagas.has(c))
+  }, [registro, inicioContagemPendentes, competenciasPagas])
 
   const anoAtual = new Date().getFullYear()
 
@@ -45,6 +63,13 @@ export function DizimistaDashboardPage() {
         description="Acompanhe suas devoluções do dízimo."
         topTitle="Início"
       />
+
+      {mensagemMotivacional && (
+        <div className="mb-6 flex items-start gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3.5 text-sm font-medium text-foreground">
+          <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+          <p>{mensagemMotivacional}</p>
+        </div>
+      )}
 
       {carregando ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -60,7 +85,7 @@ export function DizimistaDashboardPage() {
             label="Meses pendentes"
             value={String(pendentes.length)}
             icon={pendentes.length > 0 ? AlertCircle : CheckCircle2}
-            helper={pendentes.length === 0 ? 'Tudo em dia' : undefined}
+            helper={pendentes.length === 0 ? 'Tudo em dia' : `A partir de ${formatCompetencia(COMPETENCIA_INICIAL_TESOURARIA)}`}
           />
         </div>
       )}
@@ -81,7 +106,7 @@ export function DizimistaDashboardPage() {
           {carregando ? (
             <Skeleton className="h-32 w-full" />
           ) : (
-            <MesesGrid ano={anoAtual} registro={registro} competenciasPagas={competenciasPagas} />
+            <MesesGrid ano={anoAtual} competenciasPagas={competenciasPagas} />
           )}
         </CardContent>
       </Card>

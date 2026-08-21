@@ -23,7 +23,7 @@ export function PublicHeader() {
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" className="md:hidden" aria-label="Abrir menu">
-              <Menu className="h-6 w-6" />
+              <Menu className="h-7 w-7" />
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-4/5 overflow-y-auto">

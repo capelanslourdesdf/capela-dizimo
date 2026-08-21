@@ -148,6 +148,8 @@ export interface EventoTesouraria {
   id: string
   nome: string
   ano: number
+  /** Data "aaaa-mm-dd" em que o evento aconteceu — eventos de mesmo nome se agrupam na tela, cada ocorrência com sua própria data. */
+  data: string
   arrecadado: number
   despesa: number
   observacao?: string

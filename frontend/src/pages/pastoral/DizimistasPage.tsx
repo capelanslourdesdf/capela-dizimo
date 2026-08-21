@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Cake, Download, IdCard, Pencil, Phone, Trash2, UserPlus, Users, Wallet } from 'lucide-react'
+import { ArrowLeftRight, Cake, Download, IdCard, Pencil, Phone, Trash2, UserPlus, Users, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -11,20 +11,35 @@ import { StatCard } from '@/components/dashboard/StatCard'
 import { StatusBadge } from '@/components/dashboard/StatusBadge'
 import { GraficoEvolucaoMensal } from '@/components/dashboard/GraficoEvolucaoMensal'
 import { RecadastramentoForm } from '@/components/forms/RecadastramentoForm'
+import { DevolucaoForm } from '@/components/forms/DevolucaoForm'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
-import { criarDizimistaAdmin, diaMesDoRegistro, excluirDizimista, listarDizimistas } from '@/services/dizimistaService'
-import { competenciaDaDevolucao, listarTodasDevolucoesPorCarne } from '@/services/devolucaoService'
+import {
+  buscarDizimistaPorCarne,
+  criarDizimistaAdmin,
+  diaMesDoRegistro,
+  excluirDizimista,
+  listarDizimistas,
+} from '@/services/dizimistaService'
+import {
+  competenciaDaDevolucao,
+  lancarDevolucao,
+  listarTodasDevolucoesPorCarne,
+  type DadosDevolucao,
+} from '@/services/devolucaoService'
 import { obterMinimoMesesAtivos } from '@/services/configuracaoService'
 import type { DadosCadastraisDizimista, Devolucao, Dizimista } from '@/types'
-import { formatCurrency, getIniciais } from '@/utils/format'
+import { CARNE_AVULSO } from '@/constants/devolucao'
+import { competenciaAtual, formatCurrency, getIniciais } from '@/utils/format'
 import { baixarArquivoTexto } from '@/utils/download'
 import {
   calcularStatusDizimista,
@@ -49,6 +64,11 @@ export function DizimistasPage() {
   const [filtroStatus, setFiltroStatus] = React.useState<StatusDizimista | 'todos'>('todos')
   const [modalAberto, setModalAberto] = React.useState(false)
   const [dizimistaParaExcluir, setDizimistaParaExcluir] = React.useState<Dizimista | null>(null)
+  const [modalNovaDevolucao, setModalNovaDevolucao] = React.useState(false)
+  const [carneNovaDevolucao, setCarneNovaDevolucao] = React.useState('')
+  // Muda a cada lançamento com sucesso, forçando o DevolucaoForm a remontar com os campos em
+  // branco — assim dá pra lançar várias devoluções seguidas sem fechar o diálogo.
+  const [formularioNovaDevolucaoKey, setFormularioNovaDevolucaoKey] = React.useState(0)
 
   const carregar = React.useCallback(async () => {
     setCarregando(true)
@@ -168,6 +188,31 @@ export function DizimistasPage() {
     }
   }
 
+  async function handleLancarNovaDevolucao(dados: DadosDevolucao) {
+    const numeroCarne = carneNovaDevolucao.trim()
+    if (!numeroCarne) {
+      throw new Error('Informe o número do carnê (ou -x- para avulsa).')
+    }
+    if (numeroCarne !== CARNE_AVULSO) {
+      const dizimista = await buscarDizimistaPorCarne(numeroCarne)
+      if (!dizimista) {
+        throw new Error('Carnê não encontrado.')
+      }
+    }
+
+    const nova = await lancarDevolucao(numeroCarne, dados)
+    // Atualiza a lista local (status/totais recalculam sozinhos) em vez de buscar tudo nas
+    // devoluções de novo — evita repetir a leitura mais cara do site a cada lançamento.
+    setDevolucoesPorCarne((atual) => ({
+      ...atual,
+      [numeroCarne]: [...(atual[numeroCarne] ?? []), nova],
+    }))
+    toast.success('Devolução lançada com sucesso.')
+    // Mantém o diálogo aberto pra lançar outra em seguida — limpa o carnê e reseta o formulário.
+    setCarneNovaDevolucao('')
+    setFormularioNovaDevolucaoKey((k) => k + 1)
+  }
+
   function handleExportarAtivos() {
     const ativos = dizimistas.filter((d) => statusPorCarne.get(d.numeroCarne) === 'ativo')
     if (ativos.length === 0) {
@@ -191,6 +236,16 @@ export function DizimistasPage() {
             <Button variant="outline" onClick={handleExportarAtivos}>
               <Download className="h-4 w-4" />
               Exportar ativos
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCarneNovaDevolucao('')
+                setModalNovaDevolucao(true)
+              }}
+            >
+              <ArrowLeftRight className="h-4 w-4" />
+              Lançar devolução
             </Button>
             <Button onClick={() => setModalAberto(true)}>
               <UserPlus className="h-4 w-4" />
@@ -218,7 +273,7 @@ export function DizimistasPage() {
           <StatCard compact label="Inativos" value={String(totalInativos)} icon={Users} />
           <StatCard compact label="Total" value={String(dizimistas.length)} icon={Users} />
           <div className="col-span-3 lg:col-span-1">
-            <StatCard label={`Arrecadado em ${anoAtual}`} value={formatCurrency(totalAnoAtual)} icon={Wallet} />
+            <StatCard label={`Arrecadado em ${anoAtual}`} value={formatCurrency(totalAnoAtual)} icon={Wallet} tom="success" />
           </div>
         </div>
       )}
@@ -432,6 +487,38 @@ export function DizimistasPage() {
             <DialogTitle>Cadastrar novo dizimista</DialogTitle>
           </DialogHeader>
           <RecadastramentoForm exibirCarne={false} onSalvar={handleCadastrar} />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={modalNovaDevolucao} onOpenChange={setModalNovaDevolucao}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Lançar devolução</DialogTitle>
+          </DialogHeader>
+          {modalNovaDevolucao && (
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="numeroCarneNovaDevolucao">Nº do carnê</Label>
+                <Input
+                  id="numeroCarneNovaDevolucao"
+                  inputMode="numeric"
+                  placeholder="Número do carnê"
+                  value={carneNovaDevolucao}
+                  onChange={(e) => setCarneNovaDevolucao(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Use <span className="font-mono font-medium text-foreground">{CARNE_AVULSO}</span> pra lançar uma
+                  devolução avulsa (sem dizimista cadastrado).
+                </p>
+              </div>
+              <DevolucaoForm
+                key={formularioNovaDevolucaoKey}
+                competenciaPadrao={competenciaAtual()}
+                onSalvar={handleLancarNovaDevolucao}
+                onCancelar={() => setModalNovaDevolucao(false)}
+              />
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

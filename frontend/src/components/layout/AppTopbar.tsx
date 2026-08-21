@@ -26,7 +26,7 @@ export function AppTopbar({ navItems, areaLabel, userMenu }: AppTopbarProps) {
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>
           <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Abrir menu">
-            <Menu className="h-6 w-6" />
+            <Menu className="h-7 w-7" />
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="w-4/5 max-w-xs overflow-y-auto">

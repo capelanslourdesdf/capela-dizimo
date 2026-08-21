@@ -85,8 +85,9 @@ export function ConfiguracoesPage() {
               <p className="text-xs text-muted-foreground">
                 Um dizimista fica <strong className="text-foreground">Ativo</strong> quando devolveu em pelo menos
                 esse número de meses dentro dos últimos {JANELA_MESES_STATUS} meses — caso contrário, fica{' '}
-                <strong className="text-foreground">Inativo</strong>. Meses antes do recadastramento no site nunca
-                contam contra o dizimista.
+                <strong className="text-foreground">Inativo</strong>. A contagem começa em agosto de 2026 (início do
+                acompanhamento no site) — meses antes do recadastramento pessoal de quem já era dizimista antes
+                contam normalmente, só não conta o que é anterior ao site existir.
               </p>
             </div>
           )}

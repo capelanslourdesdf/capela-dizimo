@@ -5,7 +5,9 @@ import { toast } from 'sonner'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { EmptyState } from '@/components/dashboard/EmptyState'
 import { StatCard } from '@/components/dashboard/StatCard'
+import { GraficoEventos } from '@/components/dashboard/GraficoEventos'
 import { EventoTesourariaForm } from '@/components/forms/EventoTesourariaForm'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -22,7 +24,7 @@ import {
 } from '@/services/tesourariaService'
 import type { EventoTesouraria } from '@/types'
 import { ANO_INICIAL_EVENTOS_TESOURARIA } from '@/constants/tesouraria'
-import { formatCurrency } from '@/utils/format'
+import { formatCurrency, formatDate } from '@/utils/format'
 import { useTesourariaSessao } from '@/hooks/useTesourariaSessao'
 
 const anoAtual = new Date().getFullYear()
@@ -30,6 +32,32 @@ const ANOS_DISPONIVEIS = Array.from(
   { length: Math.max(anoAtual + 1 - ANO_INICIAL_EVENTOS_TESOURARIA + 1, 1) },
   (_, i) => ANO_INICIAL_EVENTOS_TESOURARIA + i,
 )
+
+interface GrupoEvento {
+  nome: string
+  arrecadado: number
+  despesa: number
+  ocorrencias: EventoTesouraria[]
+}
+
+/** Agrupa lançamentos de mesmo nome (ex.: "Bazar" lançado em vários meses do ano) num só bloco. */
+function agruparEventosPorNome(eventos: EventoTesouraria[]): GrupoEvento[] {
+  const porNome = new Map<string, EventoTesouraria[]>()
+  for (const evento of eventos) {
+    const lista = porNome.get(evento.nome) ?? []
+    lista.push(evento)
+    porNome.set(evento.nome, lista)
+  }
+
+  return [...porNome.entries()]
+    .map(([nome, ocorrencias]) => ({
+      nome,
+      arrecadado: ocorrencias.reduce((s, e) => s + e.arrecadado, 0),
+      despesa: ocorrencias.reduce((s, e) => s + e.despesa, 0),
+      ocorrencias: [...ocorrencias].sort((a, b) => (a.data < b.data ? 1 : -1)),
+    }))
+    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+}
 
 export function EventosPage() {
   const { podeEditar } = useTesourariaSessao()
@@ -53,6 +81,7 @@ export function EventosPage() {
 
   const totalArrecadado = React.useMemo(() => eventos.reduce((s, e) => s + e.arrecadado, 0), [eventos])
   const totalDespesa = React.useMemo(() => eventos.reduce((s, e) => s + e.despesa, 0), [eventos])
+  const grupos = React.useMemo(() => agruparEventosPorNome(eventos), [eventos])
 
   function handleNovo() {
     setEventoEmEdicao(null)
@@ -93,7 +122,7 @@ export function EventosPage() {
     <div>
       <PageHeader
         title="Eventos"
-        description="Total arrecadado e despesas por evento, ano a ano."
+        description="Total arrecadado e despesas por evento, ano a ano — eventos de mesmo nome ficam agrupados."
         actions={
           <>
             <Select value={String(ano)} onValueChange={(v) => setAno(Number(v))}>
@@ -119,15 +148,15 @@ export function EventosPage() {
       />
 
       {carregando ? (
-        <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-3">
+        <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-3 lg:gap-4">
           {Array.from({ length: 3 }).map((_, i) => (
             <Skeleton key={i} className="h-24 w-full rounded-xl" />
           ))}
         </div>
       ) : (
         <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-3 lg:gap-4">
-          <StatCard compact label="Total arrecadado" value={formatCurrency(totalArrecadado)} icon={TrendingUp} />
-          <StatCard compact label="Total de despesas" value={formatCurrency(totalDespesa)} icon={TrendingDown} />
+          <StatCard compact tom="success" label="Total arrecadado" value={formatCurrency(totalArrecadado)} icon={TrendingUp} />
+          <StatCard compact tom="destructive" label="Total de despesas" value={formatCurrency(totalDespesa)} icon={TrendingDown} />
           <StatCard compact label="Saldo do ano" value={formatCurrency(totalArrecadado - totalDespesa)} icon={Wallet} />
         </div>
       )}
@@ -141,40 +170,77 @@ export function EventosPage() {
       ) : eventos.length === 0 ? (
         <EmptyState icon={PartyPopper} title={`Nenhum evento lançado em ${ano}`} />
       ) : (
-        <div className="space-y-3">
-          {eventos.map((e) => (
-            <Card key={e.id}>
-              <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0">
-                  <p className="font-medium text-foreground">{e.nome}</p>
-                  {e.observacao && <p className="mt-0.5 text-xs text-muted-foreground">{e.observacao}</p>}
-                  <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                    <span>Arrecadado: {formatCurrency(e.arrecadado)}</span>
-                    <span>Despesa: {formatCurrency(e.despesa)}</span>
-                    <span className="font-medium text-foreground">Saldo: {formatCurrency(e.arrecadado - e.despesa)}</span>
-                  </div>
-                </div>
-                {podeEditar && (
-                  <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">
-                    <Button variant="outline" size="sm" onClick={() => handleEditar(e)}>
-                      <Pencil className="h-4 w-4" />
-                      Editar
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      onClick={() => setEventoParaExcluir(e)}
-                      aria-label={`Excluir ${e.nome}`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <>
+          <Card className="mb-6">
+            <CardContent className="pt-6">
+              <GraficoEventos dados={grupos} />
+            </CardContent>
+          </Card>
+
+          <div className="space-y-3">
+            {grupos.map((grupo) => (
+              <Card key={grupo.nome}>
+                <Accordion type="single" collapsible>
+                  <AccordionItem value={grupo.nome} className="border-b-0">
+                    <AccordionTrigger className="px-5 py-5 hover:no-underline sm:px-6 sm:py-6">
+                      <div className="flex items-center gap-2 text-left">
+                        <PartyPopper className="h-4 w-4 shrink-0 text-primary" />
+                        <div>
+                          <p className="font-semibold leading-none tracking-tight text-foreground">{grupo.nome}</p>
+                          <p className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-sm font-normal text-muted-foreground">
+                            <span>
+                              {grupo.ocorrencias.length > 1
+                                ? `${grupo.ocorrencias.length} lançamentos`
+                                : '1 lançamento'}
+                            </span>
+                            <span className="text-success">Arrecadado: {formatCurrency(grupo.arrecadado)}</span>
+                            <span className="text-destructive">Despesa: {formatCurrency(grupo.despesa)}</span>
+                          </p>
+                        </div>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="space-y-2.5 px-5 pb-5 sm:px-6 sm:pb-6">
+                      {grupo.ocorrencias.map((e) => (
+                        <div
+                          key={e.id}
+                          className="flex flex-col gap-2 rounded-lg border border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-foreground">
+                              {e.data ? formatDate(e.data) : 'Sem data informada'}
+                            </p>
+                            {e.observacao && <p className="mt-0.5 text-xs text-muted-foreground">{e.observacao}</p>}
+                            <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                              <span>Arrecadado: {formatCurrency(e.arrecadado)}</span>
+                              <span>Despesa: {formatCurrency(e.despesa)}</span>
+                            </div>
+                          </div>
+                          {podeEditar && (
+                            <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">
+                              <Button variant="outline" size="sm" onClick={() => handleEditar(e)}>
+                                <Pencil className="h-4 w-4" />
+                                Editar
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                onClick={() => setEventoParaExcluir(e)}
+                                aria-label={`Excluir lançamento de ${e.nome} em ${e.data ? formatDate(e.data) : ''}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              </Card>
+            ))}
+          </div>
+        </>
       )}
 
       <Dialog open={modalAberto} onOpenChange={setModalAberto}>
@@ -196,7 +262,7 @@ export function EventosPage() {
         open={!!eventoParaExcluir}
         onOpenChange={(open) => !open && setEventoParaExcluir(null)}
         title="Excluir evento"
-        description={`Tem certeza que deseja excluir o evento "${eventoParaExcluir?.nome ?? ''}"? Essa ação não pode ser desfeita.`}
+        description={`Tem certeza que deseja excluir esse lançamento de "${eventoParaExcluir?.nome ?? ''}"? Essa ação não pode ser desfeita.`}
         confirmLabel="Excluir"
         destructive
         onConfirm={handleExcluir}

@@ -1,6 +1,7 @@
 import type { Devolucao, Dizimista } from '@/types'
 import { competenciaAtual, competenciasEntre, subtrairMeses } from '@/utils/format'
 import { competenciaDaDevolucao } from '@/services/devolucaoService'
+import { COMPETENCIA_INICIAL_TESOURARIA } from '@/constants/tesouraria'
 
 export type StatusDizimista = 'ativo' | 'inativo'
 
@@ -18,9 +19,11 @@ export function competenciaDeRegistro(dizimista: Pick<Dizimista, 'recadastradoEm
  * Um dizimista fica **ativo** quando devolveu em pelo menos `minimoMeses` dos últimos
  * `JANELA_MESES_STATUS` (6) meses — caso contrário, **inativo**.
  *
- * Meses anteriores ao registro no site nunca contam contra o dizimista: se ele tem menos meses
- * de registro do que `minimoMeses`, ainda não há como avaliar (não daria nem tempo de atingir o
- * mínimo), então o benefício da dúvida é dado e ele fica ativo.
+ * A janela conta a partir do início do acompanhamento no site (`COMPETENCIA_INICIAL_TESOURARIA`,
+ * agosto de 2026) — meses anteriores ao recadastramento pessoal de quem já era dizimista antes
+ * também contam contra ele; só não tem como cobrar meses de antes do site existir. Nos primeiros
+ * meses depois do lançamento, quando a janela ainda não completou 6 meses, o mínimo exigido é
+ * reduzido proporcionalmente (não dá pra exigir 3 meses pagos numa janela que só teve 1).
  */
 export function calcularStatusDizimista(
   registro: string,
@@ -31,15 +34,36 @@ export function calcularStatusDizimista(
   if (!registro || registro > competenciaReferencia) return 'ativo'
 
   const inicioJanela = subtrairMeses(competenciaReferencia, JANELA_MESES_STATUS - 1)
-  const janela = competenciasEntre(inicioJanela, competenciaReferencia)
-  const aplicaveis = janela.filter((c) => c >= registro)
+  const inicioAplicavel = inicioJanela < COMPETENCIA_INICIAL_TESOURARIA ? COMPETENCIA_INICIAL_TESOURARIA : inicioJanela
+  const janela = competenciasEntre(inicioAplicavel, competenciaReferencia)
 
-  if (aplicaveis.length < minimoMeses) return 'ativo'
-
-  const mesesPagos = aplicaveis.filter((c) => competenciasPagas.has(c)).length
-  return mesesPagos >= minimoMeses ? 'ativo' : 'inativo'
+  const minimoEfetivo = Math.min(minimoMeses, janela.length)
+  const mesesPagos = janela.filter((c) => competenciasPagas.has(c)).length
+  return mesesPagos >= minimoEfetivo ? 'ativo' : 'inativo'
 }
 
 export function competenciasPagasDoDizimista(devolucoes: Devolucao[]): Set<string> {
   return new Set(devolucoes.map(competenciaDaDevolucao))
+}
+
+/**
+ * Quantos meses seguidos (sem buraco) o dizimista devolveu, contando pra trás a partir do mês
+ * mais recente já pago — o mês atual, se ainda não tiver sido pago, não quebra a sequência (ele
+ * pode simplesmente ainda não ter chegado a hora de devolver este mês).
+ */
+export function calcularMesesConsecutivos(
+  competenciasPagas: Set<string>,
+  competenciaReferencia: string = competenciaAtual(),
+): number {
+  let mes = competenciaReferencia
+  while (!competenciasPagas.has(mes) && mes >= COMPETENCIA_INICIAL_TESOURARIA) {
+    mes = subtrairMeses(mes, 1)
+  }
+
+  let contador = 0
+  while (competenciasPagas.has(mes)) {
+    contador++
+    mes = subtrairMeses(mes, 1)
+  }
+  return contador
 }

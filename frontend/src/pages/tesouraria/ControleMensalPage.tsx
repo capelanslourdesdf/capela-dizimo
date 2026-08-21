@@ -294,16 +294,16 @@ export function ControleMensalPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" onClick={() => gerarPdfControleTesouraria({ ...controle, entradas: todasReceitas })}>
+          <Button onClick={() => gerarPdfControleTesouraria({ ...controle, entradas: todasReceitas })}>
             <FileDown className="h-4 w-4" />
             Gerar PDF
           </Button>
-          <Button variant="outline" onClick={() => gerarExcelControleTesouraria({ ...controle, entradas: todasReceitas })}>
+          <Button onClick={() => gerarExcelControleTesouraria({ ...controle, entradas: todasReceitas })}>
             <FileSpreadsheet className="h-4 w-4" />
             Exportar Excel
           </Button>
           {podeEditar && (
-            <Button variant="outline" onClick={() => setModalStatus(true)}>
+            <Button onClick={() => setModalStatus(true)}>
               {controle.status === 'em_andamento' ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
               {controle.status === 'em_andamento' ? 'Fechar mês' : 'Reabrir mês'}
             </Button>
@@ -312,11 +312,12 @@ export function ControleMensalPage() {
       </div>
 
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
-        <StatCard compact label="Total de receita" value={formatCurrency(totalReceitas)} icon={TrendingUp} />
-        <StatCard compact label="Total de despesas" value={formatCurrency(totalDespesas)} icon={TrendingDown} />
-        <StatCard compact label="Saldo total" value={formatCurrency(saldo)} icon={Wallet} />
+        <StatCard compact tom="success" label="Total de receita" value={formatCurrency(totalReceitas)} icon={TrendingUp} />
+        <StatCard compact tom="destructive" label="Total de despesas" value={formatCurrency(totalDespesas)} icon={TrendingDown} />
+        <StatCard compact tom={saldo >= 0 ? 'success' : 'destructive'} label="Saldo total" value={formatCurrency(saldo)} icon={Wallet} />
         <StatCard
           compact
+          tom={variacao === null ? undefined : variacao >= 0 ? 'success' : 'destructive'}
           label="Variação vs. mês anterior"
           value={variacao === null ? '—' : `${variacao >= 0 ? '+' : '-'}${formatCurrency(Math.abs(variacao))}`}
           icon={IconeVariacao}

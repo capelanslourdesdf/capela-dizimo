@@ -28,7 +28,7 @@ export function PastoralLayout() {
   )
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[hsl(0deg_0%_92.54%/35%)]">
       <AppSidebar navItems={nav} areaLabel="Administrativo" colapsada={colapsada} aoAlternar={alternar} />
 
       <div className={cn('transition-[padding] duration-200', colapsada ? 'lg:pl-[76px]' : 'lg:pl-64')}>

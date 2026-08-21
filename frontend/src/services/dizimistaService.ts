@@ -4,6 +4,7 @@ import { db } from '@/lib/firebase'
 import type { DadosCadastraisDizimista, Dizimista } from '@/types'
 import { isoParaDiaMes } from '@/utils/format'
 import { similaridadeNome } from '@/utils/busca'
+import { comCache, invalidarCache } from '@/lib/cacheLeitura'
 
 const COLECAO = 'dizimistas'
 
@@ -201,11 +202,22 @@ export async function salvarRecadastramento(
     },
     { merge: true },
   )
+  invalidarCache('dizimistas')
+}
+
+/**
+ * Lê a coleção inteira de dizimistas — cacheada por 60s pelo mesmo motivo da lista de devoluções:
+ * várias telas (Dizimistas, Lista de devoluções) leem a coleção toda na mesma navegação.
+ */
+async function listarTodosDizimistas(): Promise<Dizimista[]> {
+  return comCache('dizimistas:todos', async () => {
+    const snap = await getDocs(collection(db, COLECAO))
+    return snap.docs.map((d) => ({ numeroCarne: d.id, ...(d.data() as Omit<Dizimista, 'numeroCarne'>) }))
+  })
 }
 
 export async function listarDizimistas(busca = ''): Promise<Dizimista[]> {
-  const snap = await getDocs(collection(db, COLECAO))
-  const todos = snap.docs.map((d) => ({ numeroCarne: d.id, ...(d.data() as Omit<Dizimista, 'numeroCarne'>) }))
+  const todos = await listarTodosDizimistas()
 
   const termo = busca.trim().toLowerCase()
   if (!termo) return todos
@@ -234,6 +246,8 @@ export async function excluirDizimista(numeroCarne: string): Promise<void> {
   batch.delete(doc(db, COLECAO, carne))
 
   await batch.commit()
+  invalidarCache('dizimistas')
+  invalidarCache('devolucoes')
 }
 
 export type CriarDizimistaAdminInput = DadosCadastraisDizimista
@@ -251,5 +265,6 @@ export async function criarDizimistaAdmin(dados: CriarDizimistaAdminInput): Prom
     throw new Error(payload.error || 'Não foi possível cadastrar o dizimista.')
   }
 
+  invalidarCache('dizimistas')
   return payload.numeroCarne
 }

@@ -1,17 +1,16 @@
 import { cn } from '@/lib/utils'
 import { competenciaAtual } from '@/utils/format'
+import { COMPETENCIA_INICIAL_TESOURARIA } from '@/constants/tesouraria'
 
 const NOMES_MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 
 interface MesesGridProps {
   ano: number
-  /** Competência ("aaaa-mm") em que o dizimista passou a ser acompanhado — meses antes dela ficam neutros. */
-  registro?: string
   /** Competências ("aaaa-mm") com devolução lançada. */
   competenciasPagas: Set<string>
 }
 
-export function MesesGrid({ ano, registro, competenciasPagas }: MesesGridProps) {
+export function MesesGrid({ ano, competenciasPagas }: MesesGridProps) {
   const competenciaHoje = competenciaAtual()
 
   return (
@@ -20,10 +19,10 @@ export function MesesGrid({ ano, registro, competenciasPagas }: MesesGridProps) 
         {NOMES_MESES.map((nome, indice) => {
           const competencia = `${ano}-${String(indice + 1).padStart(2, '0')}`
           const pago = competenciasPagas.has(competencia)
-          // Um mês com devolução lançada aparece como "Devolvido" mesmo fora da janela normal
-          // (ex.: devolução retroativa a um mês anterior ao recadastramento) — a lançada por lote
-          // ou avulsa não fica escondida só porque, em tese, "não contaria" no cálculo de status.
-          const aplicavel = pago || ((!registro || competencia >= registro) && competencia <= competenciaHoje)
+          // Só ficam neutros os meses de antes do site existir (não tinha como cobrar) ou ainda
+          // no futuro — todo o resto conta contra o dizimista, mesmo antes do recadastramento
+          // pessoal dele.
+          const aplicavel = pago || (competencia >= COMPETENCIA_INICIAL_TESOURARIA && competencia <= competenciaHoje)
 
           return (
             <div

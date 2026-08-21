@@ -3,6 +3,7 @@ import { ArrowLeftRight, ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from 
 import { toast } from 'sonner'
 
 import { PageHeader } from '@/components/layout/PageHeader'
+import { FiltroBar } from '@/components/pastoral/FiltroBar'
 import { EmptyState } from '@/components/dashboard/EmptyState'
 import { StatusBadge } from '@/components/dashboard/StatusBadge'
 import { DevolucaoForm } from '@/components/forms/DevolucaoForm'
@@ -40,6 +41,7 @@ export function ListaDevolucoesPage() {
   const [devolucaoParaExcluir, setDevolucaoParaExcluir] = React.useState<DevolucaoComCarne | null>(null)
   const [modalNovaDevolucao, setModalNovaDevolucao] = React.useState(false)
   const [carneNovaDevolucao, setCarneNovaDevolucao] = React.useState('')
+  const [buscaCarne, setBuscaCarne] = React.useState('')
   // Muda a cada lançamento com sucesso, forçando o DevolucaoForm a remontar com os campos em
   // branco — assim dá pra lançar várias devoluções seguidas sem fechar o diálogo.
   const [formularioNovaDevolucaoKey, setFormularioNovaDevolucaoKey] = React.useState(0)
@@ -65,22 +67,38 @@ export function ListaDevolucoesPage() {
     [todasDevolucoes, competencia],
   )
 
-  const total = devolucoesDoMes.reduce((soma, d) => soma + d.valor, 0)
+  const devolucoesFiltradas = React.useMemo(() => {
+    const termo = buscaCarne.trim().toLowerCase()
+    if (!termo) return devolucoesDoMes
+    return devolucoesDoMes.filter(
+      (d) =>
+        d.numeroCarne.toLowerCase().includes(termo) ||
+        (nomesPorCarne.get(d.numeroCarne) ?? '').toLowerCase().includes(termo),
+    )
+  }, [devolucoesDoMes, buscaCarne, nomesPorCarne])
+
+  const total = devolucoesFiltradas.reduce((soma, d) => soma + d.valor, 0)
+
+  // Os três handlers abaixo atualizam a lista local em vez de chamar `carregar()` de novo — a
+  // leitura completa (todas as devoluções de todo mundo) é cara, e cada edição já sabe
+  // exatamente o que mudou, sem precisar buscar tudo de novo no Firestore.
 
   async function handleAtualizarDevolucao(dados: DadosDevolucao) {
     if (!devolucaoEmEdicao) return
     await atualizarDevolucao(devolucaoEmEdicao.numeroCarne, devolucaoEmEdicao.id, dados)
+    setTodasDevolucoes((atual) =>
+      atual.map((d) => (d.id === devolucaoEmEdicao.id ? { ...d, ...dados } : d)),
+    )
     setDevolucaoEmEdicao(null)
     toast.success('Devolução atualizada com sucesso.')
-    carregar()
   }
 
   async function handleExcluirDevolucao() {
     if (!devolucaoParaExcluir) return
     await excluirDevolucao(devolucaoParaExcluir.numeroCarne, devolucaoParaExcluir.id)
+    setTodasDevolucoes((atual) => atual.filter((d) => d.id !== devolucaoParaExcluir.id))
     setDevolucaoParaExcluir(null)
     toast.success('Devolução excluída.')
-    carregar()
   }
 
   async function handleLancarNovaDevolucao(dados: DadosDevolucao) {
@@ -95,12 +113,12 @@ export function ListaDevolucoesPage() {
       }
     }
 
-    await lancarDevolucao(numeroCarne, dados)
+    const nova = await lancarDevolucao(numeroCarne, dados)
+    setTodasDevolucoes((atual) => [...atual, { ...nova, numeroCarne }])
     toast.success('Devolução lançada com sucesso.')
     // Mantém o diálogo aberto pra lançar outra em seguida — limpa o carnê e reseta o formulário.
     setCarneNovaDevolucao('')
     setFormularioNovaDevolucaoKey((k) => k + 1)
-    carregar()
   }
 
   return (
@@ -130,7 +148,7 @@ export function ListaDevolucoesPage() {
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <p className="min-w-[9rem] text-center text-base font-semibold capitalize text-foreground sm:text-lg">
+        <p className="min-w-[9rem] text-center text-base font-semibold text-foreground sm:text-lg">
           {formatCompetencia(competencia)}
         </p>
         <Button
@@ -148,21 +166,30 @@ export function ListaDevolucoesPage() {
         )}
       </div>
 
+      <FiltroBar busca={buscaCarne} onBuscaChange={setBuscaCarne} placeholder="Buscar por nº do carnê ou nome..." />
+
       {carregando ? (
         <div className="space-y-3">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-20 w-full" />
           ))}
         </div>
-      ) : devolucoesDoMes.length === 0 ? (
-        <EmptyState icon={ArrowLeftRight} title="Nenhuma devolução lançada neste mês" />
+      ) : devolucoesFiltradas.length === 0 ? (
+        <EmptyState
+          icon={ArrowLeftRight}
+          title={
+            devolucoesDoMes.length === 0
+              ? 'Nenhuma devolução lançada neste mês'
+              : 'Nenhuma devolução encontrada para essa busca'
+          }
+        />
       ) : (
         <>
           <p className="mb-3 text-sm text-muted-foreground">
-            {devolucoesDoMes.length} devolução(ões) · Total {formatCurrency(total)}
+            {devolucoesFiltradas.length} devolução(ões) · Total {formatCurrency(total)}
           </p>
           <div className="space-y-3">
-            {devolucoesDoMes.map((d) => {
+            {devolucoesFiltradas.map((d) => {
               const avulso = d.numeroCarne === CARNE_AVULSO
               const nome = avulso ? 'Avulso' : (nomesPorCarne.get(d.numeroCarne) ?? '—')
               return (

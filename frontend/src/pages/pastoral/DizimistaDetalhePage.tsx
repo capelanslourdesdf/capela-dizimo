@@ -58,6 +58,7 @@ import {
   MINIMO_MESES_ATIVOS_PADRAO,
 } from '@/utils/statusDizimista'
 import { ROUTES } from '@/constants/routes'
+import { COMPETENCIA_INICIAL_TESOURARIA } from '@/constants/tesouraria'
 import { useDefinirPageTitle } from '@/hooks/usePageTitle'
 
 interface FichaItemProps {
@@ -187,11 +188,12 @@ export function DizimistaDetalhePage() {
 
   // "Devolvidos" conta qualquer devolução do ano, mesmo lançada pra um mês anterior ao
   // recadastramento (ex.: lançamento retroativo em lote) — mesmo critério do MesesGrid, senão a
-  // devolução aparece lá mas não entra nessa contagem. "Pendentes" só considera os meses em que o
-  // dizimista já era acompanhado (a partir do recadastramento), já que antes disso não conta contra ele.
+  // devolução aparece lá mas não entra nessa contagem. "Pendentes" conta a partir do início do
+  // acompanhamento no site (agosto de 2026) — meses antes do recadastramento pessoal de quem já
+  // era dizimista antes contam normalmente, só não tem como cobrar antes do site existir.
   const mesesDevolvidosNoAno = competenciasEntre(inicioAno, fimAno).filter((c) => competenciasPagas.has(c)).length
 
-  const inicioContagemPendente = registro && registro > inicioAno ? registro : inicioAno
+  const inicioContagemPendente = inicioAno > COMPETENCIA_INICIAL_TESOURARIA ? inicioAno : COMPETENCIA_INICIAL_TESOURARIA
   const mesesAplicaveisPendente = competenciasEntre(inicioContagemPendente, competenciaAtual())
   const mesesPendentesNoAno = mesesAplicaveisPendente.filter((c) => !competenciasPagas.has(c)).length
 
@@ -277,7 +279,7 @@ export function DizimistaDetalhePage() {
           <CardDescription>Situação mês a mês das devoluções do dízimo.</CardDescription>
         </CardHeader>
         <CardContent>
-          <MesesGrid ano={anoAtual} registro={registro} competenciasPagas={competenciasPagas} />
+          <MesesGrid ano={anoAtual} competenciasPagas={competenciasPagas} />
         </CardContent>
       </Card>
 

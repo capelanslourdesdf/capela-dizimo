@@ -2,6 +2,7 @@ import { addDoc, collection, collectionGroup, deleteDoc, doc, getDocs, orderBy, 
 
 import { db } from '@/lib/firebase'
 import type { Devolucao, FormaPagamentoDevolucao } from '@/types'
+import { comCache, invalidarCache } from '@/lib/cacheLeitura'
 
 export async function listarDevolucoes(numeroCarne: string): Promise<Devolucao[]> {
   const ref = collection(db, 'dizimistas', numeroCarne, 'devolucoes')
@@ -14,19 +15,25 @@ export async function listarDevolucoes(numeroCarne: string): Promise<Devolucao[]
  * collection group query (uma única leitura em lote) em vez de uma consulta por dizimista —
  * necessário para calcular o status ativo/inativo da lista inteira sem explodir o número de
  * leituras no Firestore.
+ *
+ * Cacheada por 60s: essa é a leitura mais pesada do site (uma pra cada devolução já lançada,
+ * de todo mundo, desde sempre) e várias telas chamam ela na mesma navegação (Dizimistas, Lista de
+ * devoluções, Tesouraria) — sem cache, cada troca de tela repetia a leitura inteira.
  */
 export async function listarTodasDevolucoesPorCarne(): Promise<Record<string, Devolucao[]>> {
-  const snap = await getDocs(collectionGroup(db, 'devolucoes'))
-  const porCarne: Record<string, Devolucao[]> = {}
+  return comCache('devolucoes:todas', async () => {
+    const snap = await getDocs(collectionGroup(db, 'devolucoes'))
+    const porCarne: Record<string, Devolucao[]> = {}
 
-  snap.docs.forEach((d) => {
-    const numeroCarne = d.ref.parent.parent?.id
-    if (!numeroCarne) return
-    const devolucao: Devolucao = { id: d.id, ...(d.data() as Omit<Devolucao, 'id'>) }
-    ;(porCarne[numeroCarne] ??= []).push(devolucao)
+    snap.docs.forEach((d) => {
+      const numeroCarne = d.ref.parent.parent?.id
+      if (!numeroCarne) return
+      const devolucao: Devolucao = { id: d.id, ...(d.data() as Omit<Devolucao, 'id'>) }
+      ;(porCarne[numeroCarne] ??= []).push(devolucao)
+    })
+
+    return porCarne
   })
-
-  return porCarne
 }
 
 /**
@@ -78,14 +85,18 @@ export function agruparDevolucoesPorCompetencia(devolucoes: Devolucao[]): GrupoD
     .sort((a, b) => (a.competencia < b.competencia ? 1 : -1))
 }
 
-export async function lancarDevolucao(numeroCarne: string, dados: DadosDevolucao): Promise<void> {
+/**
+ * Devolve a devolução recém-criada (com o `id` gerado) — quem chama pode atualizar a lista local
+ * direto com esse retorno em vez de buscar tudo de novo no Firestore (importante em telas que
+ * lançam várias devoluções seguidas, uma atrás da outra).
+ */
+export async function lancarDevolucao(numeroCarne: string, dados: DadosDevolucao): Promise<Devolucao> {
   const ref = collection(db, 'dizimistas', numeroCarne, 'devolucoes')
-  await addDoc(ref, {
-    ...dados,
-    observacao: dados.observacao?.trim() || null,
-    // Data em que a Pastoral registrou o lançamento (diferente da competência).
-    criadoEm: new Date().toISOString(),
-  })
+  const observacao = dados.observacao?.trim() || null
+  const criadoEm = new Date().toISOString()
+  const novoDoc = await addDoc(ref, { ...dados, observacao, criadoEm })
+  invalidarCache('devolucoes')
+  return { id: novoDoc.id, ...dados, observacao: observacao ?? undefined, criadoEm }
 }
 
 /**
@@ -102,9 +113,11 @@ export async function atualizarDevolucao(
     ...dados,
     observacao: dados.observacao?.trim() || null,
   })
+  invalidarCache('devolucoes')
 }
 
 /** Remove uma devolução lançada. Só a área da Pastoral tem acesso a essa ação. */
 export async function excluirDevolucao(numeroCarne: string, devolucaoId: string): Promise<void> {
   await deleteDoc(doc(db, 'dizimistas', numeroCarne, 'devolucoes', devolucaoId))
+  invalidarCache('devolucoes')
 }

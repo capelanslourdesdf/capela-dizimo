@@ -8,16 +8,10 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { MesAnoPicker } from '@/components/ui/mes-ano-picker'
 import { cn } from '@/lib/utils'
 
-import {
-  competenciaAtual,
-  competenciaParaMesAno,
-  maskMesAno,
-  maskMoedaCentavos,
-  mesAnoEhValido,
-  moedaParaNumero,
-} from '@/utils/format'
+import { competenciaAtual, maskMoedaCentavos, moedaParaNumero } from '@/utils/format'
 
 const DURACAO_TIMER_SEGUNDOS = 5 * 60
 const DURACAO_COPIADO_MS = 3000
@@ -61,7 +55,7 @@ function formatarTempo(segundos: number): string {
 }
 
 export function FazerDevolucaoPage() {
-  const [mes, setMes] = React.useState(competenciaParaMesAno(competenciaAtual()))
+  const [mes, setMes] = React.useState(competenciaAtual())
   const [valor, setValor] = React.useState('')
   const [erro, setErro] = React.useState<string | null>(null)
   const [pix, setPix] = React.useState<{ modulos: boolean[][]; codigo: string } | null>(null)
@@ -91,8 +85,8 @@ export function FazerDevolucaoPage() {
     event.preventDefault()
     setErro(null)
 
-    if (!mesAnoEhValido(mes)) {
-      setErro('Informe um mês/ano válido, no formato mm/aaaa.')
+    if (!mes) {
+      setErro('Selecione o mês da devolução.')
       return
     }
     if (moedaParaNumero(valor) <= 0) {
@@ -120,7 +114,7 @@ export function FazerDevolucaoPage() {
 
   return (
     <div>
-      <PageHeader title="Fazer devolução" description="Faça o pagamento com Pix da Capela, rápido e seguro." />
+      <PageHeader title="Devolver meu dízimo" description="Faça o pagamento com Pix da Capela, rápido e seguro." />
 
       <div className="mb-5 flex items-start gap-2.5 rounded-lg border border-warning/30 bg-warning/10 px-3.5 py-2.5 text-sm text-warning-foreground">
         <Info className="mt-0.5 h-4 w-4 shrink-0" />
@@ -135,14 +129,7 @@ export function FazerDevolucaoPage() {
                 <Label htmlFor="mes" className="text-base">
                   Mês da devolução
                 </Label>
-                <Input
-                  id="mes"
-                  inputMode="numeric"
-                  placeholder="mm/aaaa"
-                  className="h-12 text-base"
-                  value={mes}
-                  onChange={(e) => setMes(maskMesAno(e.target.value))}
-                />
+                <MesAnoPicker value={mes} onChange={setMes} />
               </div>
 
               <div className="space-y-1.5">

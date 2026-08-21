@@ -4,6 +4,19 @@ import { ArrowDownRight, ArrowUpRight } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 
+/** Cor de destaque do card — além do azul padrão, usada onde o valor em si já carrega um sentido (receita = verde, despesa = vermelho). */
+type TomStatCard = 'success' | 'destructive'
+
+const TOM_ICONE: Record<TomStatCard, string> = {
+  success: 'bg-success/10 text-success',
+  destructive: 'bg-destructive/10 text-destructive',
+}
+
+const TOM_VALOR: Record<TomStatCard, string> = {
+  success: 'text-success',
+  destructive: 'text-destructive',
+}
+
 interface StatCardProps {
   label: string
   value: string
@@ -15,9 +28,10 @@ interface StatCardProps {
    * valores como "R$ 1.234,56" ou "Agosto de 2026" caibam em uma única linha no mobile.
    */
   compact?: boolean
+  tom?: TomStatCard
 }
 
-export function StatCard({ label, value, icon: Icon, trend, helper, compact = false }: StatCardProps) {
+export function StatCard({ label, value, icon: Icon, trend, helper, compact = false, tom }: StatCardProps) {
   return (
     <Card>
       <CardContent
@@ -27,7 +41,8 @@ export function StatCard({ label, value, icon: Icon, trend, helper, compact = fa
           <p className={cn('text-xs text-muted-foreground sm:text-sm', compact && 'text-[11px] sm:text-sm')}>{label}</p>
           <p
             className={cn(
-              'mt-1 text-lg font-semibold leading-tight text-foreground sm:text-xl',
+              'mt-1 text-lg font-semibold leading-tight sm:text-xl',
+              tom ? TOM_VALOR[tom] : 'text-foreground',
               compact && 'text-base sm:text-xl',
             )}
           >
@@ -48,7 +63,8 @@ export function StatCard({ label, value, icon: Icon, trend, helper, compact = fa
         </div>
         <div
           className={cn(
-            'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary',
+            'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
+            tom ? TOM_ICONE[tom] : 'bg-primary/10 text-primary',
             compact && 'hidden sm:flex',
           )}
         >

@@ -125,28 +125,36 @@ export function LancamentoLotePage() {
     const resultados: ResultadoLinha[] = []
 
     for (const linha of linhasPreenchidas) {
-      const numeroCarne = linha.numeroCarne.trim()
+      const digitado = linha.numeroCarne.trim()
       const valor = moedaParaNumero(linha.valor)
 
       try {
-        if (numeroCarne === CARNE_AVULSO) {
+        if (digitado === CARNE_AVULSO) {
           await lancarDevolucao(CARNE_AVULSO, {
             valor,
             formaPagamento: values.formaPagamento as FormaPagamentoDevolucao,
             competencia,
             lancadoPor: values.lancadoPor,
           })
-          resultados.push({ index: linha.index, numeroCarne, valor, ok: true, mensagem: 'Devolução avulsa — lançada.' })
+          resultados.push({
+            index: linha.index,
+            numeroCarne: digitado,
+            valor,
+            ok: true,
+            mensagem: 'Devolução avulsa — lançada.',
+          })
           continue
         }
 
-        const dizimista = await buscarDizimistaPorCarne(numeroCarne)
+        // Aceita o carnê digitado com ou sem zeros à esquerda — a devolução é lançada sob o id
+        // real devolvido pela busca, não o que foi digitado.
+        const dizimista = await buscarDizimistaPorCarne(digitado)
         if (!dizimista) {
-          resultados.push({ index: linha.index, numeroCarne, valor, ok: false, mensagem: 'Carnê não encontrado.' })
+          resultados.push({ index: linha.index, numeroCarne: digitado, valor, ok: false, mensagem: 'Carnê não encontrado.' })
           continue
         }
 
-        await lancarDevolucao(numeroCarne, {
+        await lancarDevolucao(dizimista.numeroCarne, {
           valor,
           formaPagamento: values.formaPagamento as FormaPagamentoDevolucao,
           competencia,
@@ -155,7 +163,7 @@ export function LancamentoLotePage() {
 
         resultados.push({
           index: linha.index,
-          numeroCarne,
+          numeroCarne: dizimista.numeroCarne,
           valor,
           ok: true,
           mensagem: `${dizimista.nomeCompleto} — lançado.`,
@@ -163,7 +171,7 @@ export function LancamentoLotePage() {
       } catch {
         resultados.push({
           index: linha.index,
-          numeroCarne,
+          numeroCarne: digitado,
           valor,
           ok: false,
           mensagem: 'Falha ao lançar. Tente novamente.',

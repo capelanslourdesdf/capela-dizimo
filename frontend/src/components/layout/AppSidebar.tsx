@@ -41,15 +41,6 @@ export function AppSidebar({ navItems, areaLabel, colapsada, aoAlternar }: AppSi
             <Link to={ROUTES.home}>
               <BrandMark />
             </Link>
-            <button
-              type="button"
-              onClick={aoAlternar}
-              aria-label="Recolher menu"
-              title="Recolher menu"
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
           </div>
         )}
       </div>
@@ -90,17 +81,29 @@ export function AppSidebar({ navItems, areaLabel, colapsada, aoAlternar }: AppSi
         })}
       </nav>
 
-      {colapsada && (
-        <button
-          type="button"
-          onClick={aoAlternar}
-          aria-label="Expandir menu"
-          title="Expandir menu"
-          className="mx-2.5 mb-3 flex h-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </button>
-      )}
+      <div className="mb-3 flex items-center px-2.5">
+        {colapsada ? (
+          <button
+            type="button"
+            onClick={aoAlternar}
+            aria-label="Expandir menu"
+            title="Expandir menu"
+            className="flex h-8 flex-1 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={aoAlternar}
+            aria-label="Recolher menu"
+            title="Recolher menu"
+            className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+        )}
+      </div>
     </aside>
   )
 }

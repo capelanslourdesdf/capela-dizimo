@@ -15,9 +15,10 @@ import {
 import { db } from '@/lib/firebase'
 import type { Devolucao, FormaPagamentoDevolucao } from '@/types'
 import { comCache, invalidarCache } from '@/lib/cacheLeitura'
+import { normalizarNumeroCarne } from '@/utils/format'
 
 export async function listarDevolucoes(numeroCarne: string): Promise<Devolucao[]> {
-  const ref = collection(db, 'dizimistas', numeroCarne, 'devolucoes')
+  const ref = collection(db, 'dizimistas', normalizarNumeroCarne(numeroCarne), 'devolucoes')
   const snap = await getDocs(query(ref, orderBy('criadoEm', 'desc')))
   return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Devolucao, 'id'>) }))
 }
@@ -116,7 +117,7 @@ export function agruparDevolucoesPorCompetencia(devolucoes: Devolucao[]): GrupoD
  * lançam várias devoluções seguidas, uma atrás da outra).
  */
 export async function lancarDevolucao(numeroCarne: string, dados: DadosDevolucao): Promise<Devolucao> {
-  const ref = collection(db, 'dizimistas', numeroCarne, 'devolucoes')
+  const ref = collection(db, 'dizimistas', normalizarNumeroCarne(numeroCarne), 'devolucoes')
   const observacao = dados.observacao?.trim() || null
   const criadoEm = new Date().toISOString()
   const novoDoc = await addDoc(ref, { ...dados, observacao, criadoEm })
@@ -133,7 +134,7 @@ export async function atualizarDevolucao(
   devolucaoId: string,
   dados: DadosDevolucao,
 ): Promise<void> {
-  const ref = doc(db, 'dizimistas', numeroCarne, 'devolucoes', devolucaoId)
+  const ref = doc(db, 'dizimistas', normalizarNumeroCarne(numeroCarne), 'devolucoes', devolucaoId)
   await updateDoc(ref, {
     ...dados,
     observacao: dados.observacao?.trim() || null,
@@ -143,6 +144,6 @@ export async function atualizarDevolucao(
 
 /** Remove uma devolução lançada. Só a área da Pastoral tem acesso a essa ação. */
 export async function excluirDevolucao(numeroCarne: string, devolucaoId: string): Promise<void> {
-  await deleteDoc(doc(db, 'dizimistas', numeroCarne, 'devolucoes', devolucaoId))
+  await deleteDoc(doc(db, 'dizimistas', normalizarNumeroCarne(numeroCarne), 'devolucoes', devolucaoId))
   invalidarCache('devolucoes')
 }

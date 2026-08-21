@@ -39,7 +39,7 @@ import {
 import { obterMinimoMesesAtivos } from '@/services/configuracaoService'
 import type { DadosCadastraisDizimista, Devolucao, Dizimista } from '@/types'
 import { CARNE_AVULSO } from '@/constants/devolucao'
-import { competenciaAtual, formatCurrency, getIniciais } from '@/utils/format'
+import { competenciaAtual, formatarNumeroCarne, formatCurrency, getIniciais } from '@/utils/format'
 import { baixarArquivoTexto } from '@/utils/download'
 import {
   calcularStatusDizimista,
@@ -163,7 +163,10 @@ export function DizimistasPage() {
 
     return dizimistas.filter((d) => {
       const combinaBusca =
-        !termo || d.nomeCompleto.toLowerCase().includes(termo) || d.numeroCarne.includes(termo)
+        !termo ||
+        d.nomeCompleto.toLowerCase().includes(termo) ||
+        d.numeroCarne.includes(termo) ||
+        formatarNumeroCarne(d.numeroCarne).includes(termo)
       const combinaStatus = filtroStatus === 'todos' || statusPorCarne.get(d.numeroCarne) === filtroStatus
       return combinaBusca && combinaStatus
     })
@@ -172,7 +175,7 @@ export function DizimistasPage() {
   async function handleCadastrar(dados: DadosCadastraisDizimista) {
     const numeroCarne = await criarDizimistaAdmin(dados)
     setModalAberto(false)
-    toast.success(`Dizimista cadastrado(a) com o carnê nº ${numeroCarne}.`)
+    toast.success(`Dizimista cadastrado(a) com o carnê nº ${formatarNumeroCarne(numeroCarne)}.`)
     navigate(ROUTES.pastoral.dizimistaDetalhe(numeroCarne))
   }
 
@@ -189,15 +192,21 @@ export function DizimistasPage() {
   }
 
   async function handleLancarNovaDevolucao(dados: DadosDevolucao) {
-    const numeroCarne = carneNovaDevolucao.trim()
-    if (!numeroCarne) {
+    const digitado = carneNovaDevolucao.trim()
+    if (!digitado) {
       throw new Error('Informe o número do carnê (ou -x- para avulsa).')
     }
-    if (numeroCarne !== CARNE_AVULSO) {
-      const dizimista = await buscarDizimistaPorCarne(numeroCarne)
+
+    // Aceita o carnê digitado com ou sem zeros à esquerda — usa sempre o id real devolvido pela
+    // busca daqui pra frente, senão a devolução ficaria gravada sob uma chave diferente da do
+    // dizimista de verdade.
+    let numeroCarne = digitado
+    if (digitado !== CARNE_AVULSO) {
+      const dizimista = await buscarDizimistaPorCarne(digitado)
       if (!dizimista) {
         throw new Error('Carnê não encontrado.')
       }
+      numeroCarne = dizimista.numeroCarne
     }
 
     const nova = await lancarDevolucao(numeroCarne, dados)
@@ -220,7 +229,7 @@ export function DizimistasPage() {
       return
     }
 
-    const conteudo = ativos.map((d) => d.numeroCarne).join('\n')
+    const conteudo = ativos.map((d) => formatarNumeroCarne(d.numeroCarne)).join('\n')
     const hoje = new Date().toISOString().slice(0, 10)
     baixarArquivoTexto(`carnes-ativos-${hoje}.txt`, conteudo)
     toast.success(`${ativos.length} carnê(s) exportado(s).`)
@@ -344,7 +353,7 @@ export function DizimistasPage() {
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-medium text-foreground">{d.nomeCompleto}</p>
                           <p className="truncate text-xs text-muted-foreground">
-                            Carnê nº {d.numeroCarne} · {d.telefone || '—'}
+                            Carnê nº {formatarNumeroCarne(d.numeroCarne)} · {d.telefone || '—'}
                           </p>
                         </div>
                       </li>
@@ -408,7 +417,7 @@ export function DizimistasPage() {
                           <p className="truncate font-medium text-foreground">{d.nomeCompleto}</p>
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{d.numeroCarne}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{formatarNumeroCarne(d.numeroCarne)}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{d.telefone}</TableCell>
                       <TableCell>
                         {status && <StatusBadge label={STATUS_CONFIG[status].label} variant={STATUS_CONFIG[status].variant} />}
@@ -454,7 +463,7 @@ export function DizimistasPage() {
                       </div>
                       <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
                         <IdCard className="h-3 w-3" />
-                        Carnê nº {d.numeroCarne}
+                        Carnê nº {formatarNumeroCarne(d.numeroCarne)}
                       </p>
                       <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
                         <Phone className="h-3 w-3" />

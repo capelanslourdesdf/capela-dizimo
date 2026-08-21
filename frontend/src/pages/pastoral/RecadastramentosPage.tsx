@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 
 import { listarDizimistas, salvarRecadastramento } from '@/services/dizimistaService'
 import type { DadosCadastraisDizimista, Dizimista } from '@/types'
-import { formatDate } from '@/utils/format'
+import { formatarNumeroCarne, formatDate, normalizarNumeroCarne } from '@/utils/format'
 import { ROUTES } from '@/constants/routes'
 
 /** Data usada para ordenar/exibir: quando o recadastramento foi feito. */
@@ -56,7 +56,10 @@ export function RecadastramentosPage() {
     opcoes?: { carneGeradoPeloSite?: boolean },
   ) {
     await salvarRecadastramento(numeroCarneInformado, dados, { exigirNovo: opcoes?.carneGeradoPeloSite })
-    toast.success(`Recadastramento concluído! Carnê nº ${numeroCarneInformado}.`, { duration: 8000 })
+    toast.success(
+      `Recadastramento concluído! Carnê nº ${formatarNumeroCarne(normalizarNumeroCarne(numeroCarneInformado))}.`,
+      { duration: 8000 },
+    )
     carregar()
   }
 
@@ -64,8 +67,10 @@ export function RecadastramentosPage() {
     const termo = busca.trim().toLowerCase()
     if (!termo) return todos
 
-    return todos.filter((d) =>
-      [d.nomeCompleto, d.numeroCarne].some((campo) => (campo ?? '').toLowerCase().includes(termo)),
+    return todos.filter(
+      (d) =>
+        [d.nomeCompleto, d.numeroCarne].some((campo) => (campo ?? '').toLowerCase().includes(termo)) ||
+        formatarNumeroCarne(d.numeroCarne).includes(termo),
     )
   }, [todos, busca])
 
@@ -120,7 +125,7 @@ export function RecadastramentosPage() {
                     onClick={() => navigate(ROUTES.pastoral.dizimistaDetalhe(d.numeroCarne))}
                   >
                     <TableCell className="font-medium">{d.nomeCompleto}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{d.numeroCarne}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{formatarNumeroCarne(d.numeroCarne)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{d.telefone || '—'}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {formatDate(dataRecadastro(d).slice(0, 10))}
@@ -144,7 +149,7 @@ export function RecadastramentosPage() {
                     </div>
                     <p className="flex items-center gap-1 text-xs text-muted-foreground">
                       <IdCard className="h-3 w-3" />
-                      Carnê nº {d.numeroCarne}
+                      Carnê nº {formatarNumeroCarne(d.numeroCarne)}
                     </p>
                     <p className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Phone className="h-3 w-3" />

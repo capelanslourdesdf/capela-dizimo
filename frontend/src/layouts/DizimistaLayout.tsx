@@ -9,6 +9,7 @@ import { ROUTES } from '@/constants/routes'
 import { useDizimistaSessao } from '@/hooks/useDizimistaSessao'
 import { useSidebarColapsada } from '@/hooks/useSidebarColapsada'
 import { cn } from '@/lib/utils'
+import { formatarNumeroCarne } from '@/utils/format'
 
 export function DizimistaLayout() {
   const { numeroCarne, dizimista, sair } = useDizimistaSessao()
@@ -24,7 +25,7 @@ export function DizimistaLayout() {
   const userMenu = (
     <UserMenu
       nome={dizimista?.nomeCompleto || 'Dizimista'}
-      subtitulo={`Carnê nº ${numeroCarne}`}
+      subtitulo={`Carnê nº ${numeroCarne ? formatarNumeroCarne(numeroCarne) : '—'}`}
       onSair={handleSair}
     />
   )

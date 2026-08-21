@@ -2,14 +2,14 @@ import { collection, doc, getDoc, getDocs, runTransaction, setDoc, writeBatch } 
 
 import { db } from '@/lib/firebase'
 import type { DadosCadastraisDizimista, Dizimista } from '@/types'
-import { isoParaDiaMes } from '@/utils/format'
+import { formatarNumeroCarne, isoParaDiaMes, normalizarNumeroCarne } from '@/utils/format'
 import { similaridadeNome } from '@/utils/busca'
 import { comCache, invalidarCache } from '@/lib/cacheLeitura'
 
 const COLECAO = 'dizimistas'
 
 export async function buscarDizimistaPorCarne(numeroCarne: string): Promise<Dizimista | null> {
-  const ref = doc(db, COLECAO, numeroCarne.trim())
+  const ref = doc(db, COLECAO, normalizarNumeroCarne(numeroCarne))
   const snap = await getDoc(ref)
   if (!snap.exists()) return null
   return { numeroCarne: snap.id, ...(snap.data() as Omit<Dizimista, 'numeroCarne'>) }
@@ -168,7 +168,7 @@ export async function salvarRecadastramento(
   dados: DadosCadastraisDizimista,
   opcoes: { exigirNovo?: boolean } = {},
 ): Promise<void> {
-  const carne = numeroCarne.trim()
+  const carne = normalizarNumeroCarne(numeroCarne)
   const agora = new Date().toISOString()
   const payload = montarPayload(dados, agora)
   const ref = doc(db, COLECAO, carne)
@@ -177,7 +177,7 @@ export async function salvarRecadastramento(
     await runTransaction(db, async (tx) => {
       const existente = await tx.get(ref)
       if (existente.exists()) {
-        throw new Error(`O carnê nº ${carne} acabou de ser usado por outra pessoa. Tente salvar novamente.`)
+        throw new Error(`O carnê nº ${formatarNumeroCarne(carne)} acabou de ser usado por outra pessoa. Tente salvar novamente.`)
       }
       tx.set(ref, {
         ...payload,
@@ -223,7 +223,10 @@ export async function listarDizimistas(busca = ''): Promise<Dizimista[]> {
   if (!termo) return todos
 
   return todos.filter(
-    (d) => d.nomeCompleto.toLowerCase().includes(termo) || d.numeroCarne.includes(termo),
+    (d) =>
+      d.nomeCompleto.toLowerCase().includes(termo) ||
+      d.numeroCarne.includes(termo) ||
+      formatarNumeroCarne(d.numeroCarne).includes(termo),
   )
 }
 
@@ -233,7 +236,7 @@ export async function listarDizimistas(busca = ''): Promise<Dizimista[]> {
  * documento pai.
  */
 export async function excluirDizimista(numeroCarne: string): Promise<void> {
-  const carne = numeroCarne.trim()
+  const carne = normalizarNumeroCarne(numeroCarne)
 
   const [pagamentosSnap, devolucoesSnap] = await Promise.all([
     getDocs(collection(db, COLECAO, carne, 'pagamentos')),

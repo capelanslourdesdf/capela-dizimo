@@ -82,16 +82,18 @@ export function DizimistaSessaoProvider({ children }: { children: React.ReactNod
 
   const entrar = React.useCallback(
     async (carneInformado: string, dataNascimentoBr: string) => {
-      const carne = carneInformado.trim()
       const dataIso = dataBrParaIso(dataNascimentoBr.trim())
-      const encontrado = await buscarDizimistaPorCarne(carne)
+      // Busca já aceita o carnê digitado com ou sem zeros à esquerda (ex.: "001" para o carnê
+      // "1") — usa sempre o id real devolvido (`encontrado.numeroCarne`) daqui pra frente, nunca
+      // o que foi digitado, senão a sessão e as leituras seguintes ficariam com uma chave errada.
+      const encontrado = await buscarDizimistaPorCarne(carneInformado)
 
       if (!encontrado || !dataIso || !datasNascimentoDo(encontrado).includes(dataIso)) {
         throw new Error('Nº do carnê ou data de nascimento não conferem.')
       }
 
-      persistirSessao(carne)
-      setNumeroCarne(carne)
+      persistirSessao(encontrado.numeroCarne)
+      setNumeroCarne(encontrado.numeroCarne)
       setDizimista(encontrado)
       return encontrado
     },

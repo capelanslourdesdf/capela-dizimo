@@ -25,7 +25,7 @@ import {
 } from '@/services/devolucaoService'
 import type { Devolucao } from '@/types'
 import { CARNE_AVULSO, formaPagamentoLabel } from '@/constants/devolucao'
-import { competenciaAtual, formatCompetencia, formatCurrency, formatDate, subtrairMeses } from '@/utils/format'
+import { competenciaAtual, formatarNumeroCarne, formatCompetencia, formatCurrency, formatDate, subtrairMeses } from '@/utils/format'
 
 interface DevolucaoComCarne extends Devolucao {
   numeroCarne: string
@@ -74,6 +74,7 @@ export function ListaDevolucoesPage() {
     return devolucoesDoMes.filter(
       (d) =>
         d.numeroCarne.toLowerCase().includes(termo) ||
+        formatarNumeroCarne(d.numeroCarne).toLowerCase().includes(termo) ||
         (nomesPorCarne.get(d.numeroCarne) ?? '').toLowerCase().includes(termo),
     )
   }, [devolucoesDoMes, buscaCarne, nomesPorCarne])
@@ -107,15 +108,21 @@ export function ListaDevolucoesPage() {
   }
 
   async function handleLancarNovaDevolucao(dados: DadosDevolucao) {
-    const numeroCarne = carneNovaDevolucao.trim()
-    if (!numeroCarne) {
+    const digitado = carneNovaDevolucao.trim()
+    if (!digitado) {
       throw new Error('Informe o número do carnê (ou -x- para avulsa).')
     }
-    if (numeroCarne !== CARNE_AVULSO) {
-      const dizimista = await buscarDizimistaPorCarne(numeroCarne)
+
+    // Aceita o carnê digitado com ou sem zeros à esquerda — usa sempre o id real devolvido pela
+    // busca daqui pra frente, senão a devolução ficaria gravada sob uma chave diferente da do
+    // dizimista de verdade.
+    let numeroCarne = digitado
+    if (digitado !== CARNE_AVULSO) {
+      const dizimista = await buscarDizimistaPorCarne(digitado)
       if (!dizimista) {
         throw new Error('Carnê não encontrado.')
       }
+      numeroCarne = dizimista.numeroCarne
     }
 
     const nova = await lancarDevolucao(numeroCarne, dados)
@@ -210,7 +217,7 @@ export function ListaDevolucoesPage() {
                         {avulso ? (
                           <StatusBadge label="Avulso" variant="outline" />
                         ) : (
-                          <span className="text-xs text-muted-foreground">Carnê nº {d.numeroCarne}</span>
+                          <span className="text-xs text-muted-foreground">Carnê nº {formatarNumeroCarne(d.numeroCarne)}</span>
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground">

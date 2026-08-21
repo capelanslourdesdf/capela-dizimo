@@ -11,7 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useDizimistaSessao } from '@/hooks/useDizimistaSessao'
 import { competenciaDaDevolucao, listarDevolucoes } from '@/services/devolucaoService'
 import type { Devolucao } from '@/types'
-import { competenciaAtual, competenciasEntre, formatCompetencia, formatCurrency } from '@/utils/format'
+import { competenciaAtual, competenciasEntre, formatarNumeroCarne, formatCompetencia, formatCurrency } from '@/utils/format'
 import { calcularMesesConsecutivos, calcularStatusDizimista, competenciaDeRegistro } from '@/utils/statusDizimista'
 import { sortearMensagemMotivacional, type SegmentoMotivacional } from '@/constants/mensagensMotivacionais'
 import { COMPETENCIA_INICIAL_TESOURARIA } from '@/constants/tesouraria'
@@ -79,7 +79,7 @@ export function DizimistaDashboardPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <StatCard label="Nº do carnê" value={numeroCarne || '—'} icon={IdCard} />
+          <StatCard label="Nº do carnê" value={numeroCarne ? formatarNumeroCarne(numeroCarne) : '—'} icon={IdCard} />
           <StatCard label="Total devolvido" value={formatCurrency(totalDevolvido)} icon={Wallet} />
           <StatCard
             label="Meses pendentes"

@@ -45,6 +45,7 @@ import {
 import type { DadosCadastraisDizimista, Devolucao, Dizimista } from '@/types'
 import {
   formatCurrency,
+  formatarNumeroCarne,
   formatCompetencia,
   formatDate,
   competenciaAtual,
@@ -223,7 +224,7 @@ export function DizimistaDetalhePage() {
 
           {/* Ficha completa do cadastro, para a Pastoral conferir tudo sem abrir o formulário. */}
           <dl className="grid gap-3 sm:grid-cols-3">
-            <FichaItem icon={IdCard} rotulo="Nº do carnê" valor={dizimista.numeroCarne} />
+            <FichaItem icon={IdCard} rotulo="Nº do carnê" valor={formatarNumeroCarne(dizimista.numeroCarne)} />
             <FichaItem icon={Cake} rotulo="Data de nascimento" valor={nascimentoExibido} />
             <FichaItem icon={Phone} rotulo="Telefone" valor={dizimista.telefone} />
           </dl>

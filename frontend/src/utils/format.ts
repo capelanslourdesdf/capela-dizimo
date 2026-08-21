@@ -40,6 +40,19 @@ export function getIniciais(nome: string): string {
   return `${primeira}${ultima}`.toUpperCase()
 }
 
+/** "1" -> "001", "25" -> "025", "500" -> "500". Só exibição — o número salvo no banco não muda. */
+export function formatarNumeroCarne(numeroCarne: string): string {
+  return numeroCarne.padStart(3, '0')
+}
+
+/**
+ * Remove zeros à esquerda digitados por engano ("001" -> "1", "026" -> "26"), para que o carnê
+ * seja encontrado independente de ter sido digitado com ou sem o preenchimento de 3 dígitos.
+ */
+export function normalizarNumeroCarne(valor: string): string {
+  return valor.trim().replace(/^0+(?=\d)/, '')
+}
+
 export function maskCpf(valor: string): string {
   return valor
     .replace(/\D/g, '')

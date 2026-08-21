@@ -22,6 +22,7 @@ import {
   dataBrParaIso,
   dataIsoParaBr,
   diaMesEhValido,
+  formatarNumeroCarne,
   maskDataBr,
   maskDiaMes,
   maskTelefone,
@@ -309,9 +310,11 @@ export function RecadastramentoForm({
       }
 
       setStatusCarne('encontrado')
+      // Usa o id real devolvido pela busca (não o que foi digitado): aceita "001" para o carnê
+      // "1", mas precisa salvar sob a chave verdadeira, senão viraria um cadastro duplicado.
       reset({
         ...getValues(),
-        numeroCarne: carne,
+        numeroCarne: encontrado.numeroCarne,
         nomeCompleto: encontrado.nomeCompleto,
         dataNascimento: dataIsoParaBr(encontrado.dataNascimento),
         telefone: encontrado.telefone ?? '',
@@ -453,7 +456,7 @@ export function RecadastramentoForm({
                       <span className="min-w-0">
                         <span className="block truncate font-medium text-foreground">{d.nomeCompleto}</span>
                         <span className="block text-xs text-muted-foreground">
-                          Carnê nº {d.numeroCarne}
+                          Carnê nº {formatarNumeroCarne(d.numeroCarne)}
                           {!nascimentoConfere && ' · nascimento não confere'}
                         </span>
                       </span>

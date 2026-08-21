@@ -26,11 +26,14 @@ import {
 
 const schema = z.object({
   nome: z.string().trim().min(1, 'Informe o nome do evento.'),
-  ano: z.number().int().min(ANO_INICIAL_EVENTOS_TESOURARIA, `Informe um ano a partir de ${ANO_INICIAL_EVENTOS_TESOURARIA}.`),
   data: z
     .string()
     .regex(/^\d{2}\/\d{2}\/\d{4}$/, 'Use o formato dd/mm/aaaa.')
-    .refine((valor) => dataBrEhValida(valor), 'Informe uma data válida.'),
+    .refine((valor) => dataBrEhValida(valor), 'Informe uma data válida.')
+    .refine(
+      (valor) => Number(valor.slice(6, 10)) >= ANO_INICIAL_EVENTOS_TESOURARIA,
+      `Informe uma data a partir de ${ANO_INICIAL_EVENTOS_TESOURARIA}.`,
+    ),
   arrecadado: z.string(),
   despesa: z.string(),
   observacao: z.string().optional(),
@@ -40,12 +43,11 @@ type FormValues = z.infer<typeof schema>
 
 interface EventoTesourariaFormProps {
   evento?: EventoTesouraria
-  anoPadrao: number
   onSalvar: (dados: DadosEventoTesouraria) => Promise<void>
   onCancelar: () => void
 }
 
-export function EventoTesourariaForm({ evento, anoPadrao, onSalvar, onCancelar }: EventoTesourariaFormProps) {
+export function EventoTesourariaForm({ evento, onSalvar, onCancelar }: EventoTesourariaFormProps) {
   const [erro, setErro] = React.useState<string | null>(null)
   const editando = !!evento
 
@@ -58,7 +60,6 @@ export function EventoTesourariaForm({ evento, anoPadrao, onSalvar, onCancelar }
     resolver: zodResolver(schema),
     defaultValues: {
       nome: evento?.nome ?? '',
-      ano: evento?.ano ?? anoPadrao,
       data: evento ? dataIsoParaBr(evento.data) : dataIsoParaBr(new Date().toISOString().slice(0, 10)),
       arrecadado: evento ? numeroParaMoeda(evento.arrecadado) : '',
       despesa: evento ? numeroParaMoeda(evento.despesa) : '',
@@ -71,7 +72,9 @@ export function EventoTesourariaForm({ evento, anoPadrao, onSalvar, onCancelar }
     try {
       await onSalvar({
         nome: values.nome.trim(),
-        ano: values.ano,
+        // O ano é sempre o da data do evento — não faz sentido a pessoa preencher os dois
+        // separadamente e correr o risco de ficarem incoerentes.
+        ano: Number(values.data.slice(6, 10)),
         data: dataBrParaIso(values.data),
         arrecadado: moedaParaNumero(values.arrecadado),
         despesa: moedaParaNumero(values.despesa),
@@ -98,35 +101,23 @@ export function EventoTesourariaForm({ evento, anoPadrao, onSalvar, onCancelar }
         {errors.nome && <p className="text-xs text-destructive">{errors.nome.message}</p>}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <Label htmlFor="ano">Ano</Label>
-          <Input
-            id="ano"
-            type="number"
-            inputMode="numeric"
-            min={ANO_INICIAL_EVENTOS_TESOURARIA}
-            {...register('ano', { valueAsNumber: true })}
-          />
-          {errors.ano && <p className="text-xs text-destructive">{errors.ano.message}</p>}
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="data">Data do evento</Label>
-          <Controller
-            control={control}
-            name="data"
-            render={({ field }) => (
-              <Input
-                id="data"
-                inputMode="numeric"
-                placeholder="dd/mm/aaaa"
-                value={field.value ?? ''}
-                onChange={(e) => field.onChange(maskDataBr(e.target.value))}
-              />
-            )}
-          />
-          {errors.data && <p className="text-xs text-destructive">{errors.data.message}</p>}
-        </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="data">Data do evento</Label>
+        <Controller
+          control={control}
+          name="data"
+          render={({ field }) => (
+            <Input
+              id="data"
+              inputMode="numeric"
+              placeholder="dd/mm/aaaa"
+              className="max-w-[10rem]"
+              value={field.value ?? ''}
+              onChange={(e) => field.onChange(maskDataBr(e.target.value))}
+            />
+          )}
+        />
+        {errors.data && <p className="text-xs text-destructive">{errors.data.message}</p>}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">

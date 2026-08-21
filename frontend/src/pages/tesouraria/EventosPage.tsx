@@ -188,7 +188,6 @@ export function EventosPage() {
           <EventoTesourariaForm
             key={eventoEmEdicao?.id ?? 'novo'}
             evento={eventoEmEdicao ?? undefined}
-            anoPadrao={ano}
             onSalvar={handleSalvar}
             onCancelar={() => setModalAberto(false)}
           />

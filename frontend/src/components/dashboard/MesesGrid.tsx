@@ -1,6 +1,4 @@
 import { cn } from '@/lib/utils'
-import { competenciaAtual } from '@/utils/format'
-import { COMPETENCIA_INICIAL_TESOURARIA } from '@/constants/tesouraria'
 
 const NOMES_MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 
@@ -10,28 +8,22 @@ interface MesesGridProps {
   competenciasPagas: Set<string>
 }
 
+/** Todo mês é Devolvido ou Pendente — sem estado neutro. */
 export function MesesGrid({ ano, competenciasPagas }: MesesGridProps) {
-  const competenciaHoje = competenciaAtual()
-
   return (
     <div>
       <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
         {NOMES_MESES.map((nome, indice) => {
           const competencia = `${ano}-${String(indice + 1).padStart(2, '0')}`
           const pago = competenciasPagas.has(competencia)
-          // Só ficam neutros os meses de antes do site existir (não tinha como cobrar) ou ainda
-          // no futuro — todo o resto conta contra o dizimista, mesmo antes do recadastramento
-          // pessoal dele.
-          const aplicavel = pago || (competencia >= COMPETENCIA_INICIAL_TESOURARIA && competencia <= competenciaHoje)
 
           return (
             <div
               key={competencia}
               className={cn(
                 'flex flex-col items-center justify-center gap-0.5 rounded-lg border py-3 text-xs font-medium',
-                !aplicavel && 'border-border bg-muted text-muted-foreground/60',
-                aplicavel && pago && 'border-success/30 bg-success/10 text-success',
-                aplicavel && !pago && 'border-warning/30 bg-warning/15 text-warning-foreground',
+                pago && 'border-success/30 bg-success/10 text-success',
+                !pago && 'border-warning/30 bg-warning/15 text-warning-foreground',
               )}
             >
               {nome}
@@ -48,10 +40,6 @@ export function MesesGrid({ ano, competenciasPagas }: MesesGridProps) {
         <span className="flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-full bg-warning" />
           Pendente
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/40" />
-          Não aplicável
         </span>
       </div>
     </div>

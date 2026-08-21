@@ -27,7 +27,7 @@ export const ROUTES = {
     lancamentoLote: '/pastoral/devolucoes/lote',
     listaDevolucoes: '/pastoral/devolucoes/lista',
     tesouraria: {
-      entrar: '/pastoral/tesouraria/entrar',
+      entrar: '/tesouraria/entrar',
       root: '/pastoral/tesouraria',
       eventos: '/pastoral/tesouraria/eventos',
       evolucao: '/pastoral/tesouraria/evolucao',

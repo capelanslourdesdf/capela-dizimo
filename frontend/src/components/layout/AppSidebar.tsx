@@ -22,7 +22,7 @@ export function AppSidebar({ navItems, areaLabel, colapsada, aoAlternar }: AppSi
     <aside
       className={cn(
         'fixed inset-y-0 left-0 hidden flex-col border-r border-border bg-card transition-[width] duration-200 lg:flex',
-        colapsada ? 'w-[76px]' : 'w-64',
+        colapsada ? 'w-[76px]' : 'w-72',
       )}
     >
       <div className="flex h-16 items-center border-b border-border px-4">

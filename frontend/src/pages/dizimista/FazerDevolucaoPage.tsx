@@ -113,7 +113,12 @@ function IconePix({ className }: { className?: string }) {
   )
 }
 
-/** Barra que mostra uma escolha já feita (forma de pagamento, mês, valor) com opção de alterá-la. */
+/**
+ * Barra que mostra uma escolha já feita (forma de pagamento, mês, valor). O card inteiro é
+ * clicável — tocar em qualquer parte já dispara a mesma ação de alterar, não só o link de texto.
+ * O rótulo da escolha e o link de "alterar" ficam empilhados (em vez de lado a lado) pra não
+ * cortar a lista de meses quando são vários selecionados.
+ */
 function FaixaFixada({
   icon: Icon,
   label,
@@ -126,15 +131,17 @@ function FaixaFixada({
   onAcao: () => void
 }) {
   return (
-    <div className="mb-5 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-white px-4 py-3 shadow-sm">
-      <div className="flex min-w-0 items-center gap-2 text-base font-medium text-foreground">
-        <Icon className="h-5 w-5 shrink-0 text-primary" />
-        <span className="truncate">{label}</span>
-      </div>
-      <Button type="button" variant="link" size="sm" className="h-auto shrink-0 p-0 text-sm" onClick={onAcao}>
-        {acaoLabel}
-      </Button>
-    </div>
+    <button
+      type="button"
+      onClick={onAcao}
+      className="mb-5 flex w-full flex-col gap-1 rounded-lg border border-border bg-white px-4 py-3 text-left shadow-sm transition-colors hover:border-primary/50"
+    >
+      <span className="flex items-start gap-2 text-base font-medium text-foreground">
+        <Icon className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+        <span>{label}</span>
+      </span>
+      <span className="pl-7 text-sm font-medium text-primary">{acaoLabel}</span>
+    </button>
   )
 }
 
@@ -156,7 +163,7 @@ function CardMetodo({
       onClick={onClick}
       className="flex flex-col items-center gap-2 rounded-xl border border-border bg-white p-4 text-center shadow-sm transition-colors hover:border-primary hover:shadow-md sm:gap-3 sm:p-6"
     >
-      <span className="flex h-12 items-center justify-center sm:h-14">{icon}</span>
+      <span className="flex h-14 items-center justify-center">{icon}</span>
       <div>
         <p className="text-base font-semibold text-slate-900 sm:text-lg">{titulo}</p>
         <p className="mt-1 hidden text-sm text-slate-500 sm:block">{descricao}</p>
@@ -368,13 +375,13 @@ export function FazerDevolucaoPage() {
           <p className="mb-4 text-lg font-semibold text-foreground">Como deseja devolver?</p>
           <div className="grid grid-cols-2 gap-3 sm:gap-4">
             <CardMetodo
-              icon={<IconePix className="h-9 w-9 sm:h-12 sm:w-12" />}
+              icon={<IconePix className="h-14 w-14 sm:h-14 sm:w-14" />}
               titulo="Pix"
               descricao="Pagamento instantâneo, com QR Code ou copia e cola."
               onClick={() => setMetodo('pix')}
             />
             <CardMetodo
-              icon={<img src={iconeCartao} alt="" className="h-9 w-auto sm:h-12" />}
+              icon={<img src={iconeCartao} alt="" className="h-14 w-auto sm:h-14" />}
               titulo="Cartão de crédito ou débito"
               descricao="Pague com o cartão em poucos passos."
               onClick={() => setMetodo('cartao')}
@@ -427,7 +434,7 @@ export function FazerDevolucaoPage() {
                   <CardHeader>
                     <CardTitle className="text-lg">Valor da devolução</CardTitle>
                     <CardDescription className="text-sm">
-                      Você escolheu {mesesOrdenados.length} meses — diga como dividir o valor entre eles.
+                      Você escolheu {mesesOrdenados.length} meses — escolha uma opção:
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-5">
@@ -438,7 +445,7 @@ export function FazerDevolucaoPage() {
                         className="h-auto whitespace-normal py-3 text-sm"
                         onClick={() => handleEscolherModoValor('distribuir')}
                       >
-                        Distribuir valor entre os meses selecionados
+                        Dividir o valor entre os meses
                       </Button>
                       <Button
                         type="button"
@@ -446,7 +453,7 @@ export function FazerDevolucaoPage() {
                         className="h-auto whitespace-normal py-3 text-sm"
                         onClick={() => handleEscolherModoValor('mesmo')}
                       >
-                        Mesmo valor para cada mês selecionado
+                        Devolver o mesmo valor para cada mês
                       </Button>
                     </div>
 
@@ -735,7 +742,6 @@ export function FazerDevolucaoPage() {
                             </Label>
                             <Input
                               id="nomeTitular"
-                              placeholder="Maria Santos Pereira"
                               className="text-base"
                               value={nomeTitular}
                               onChange={(e) => setNomeTitular(e.target.value.toUpperCase())}

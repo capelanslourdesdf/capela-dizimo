@@ -92,6 +92,7 @@ export function DizimistaPagamentoPage() {
                   <Input
                     id="valor"
                     inputMode="numeric"
+                    pattern="[0-9]*"
                     placeholder="0,00"
                     className="pl-9"
                     value={valor}

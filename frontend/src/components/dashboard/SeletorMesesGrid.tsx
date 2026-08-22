@@ -15,7 +15,7 @@ interface SeletorMesesGridProps {
 
 /**
  * Mesma grade visual do MesesGrid (dashboard), mas interativa: meses já devolvidos ficam travados
- * com o selo "Já pago"; pendentes e futuros podem ser escolhidos, um ou mais, para a devolução.
+ * com o selo "Devolvido"; pendentes e futuros podem ser escolhidos, um ou mais, para a devolução.
  */
 export function SeletorMesesGrid({ ano, competenciasPagas, selecionados, onAlternar }: SeletorMesesGridProps) {
   const atual = competenciaAtual()
@@ -33,11 +33,11 @@ export function SeletorMesesGrid({ ano, competenciasPagas, selecionados, onAlter
             return (
               <div
                 key={competencia}
-                className="relative flex flex-col items-center justify-center gap-0.5 rounded-lg border border-success/30 bg-success/10 py-3 text-xs font-medium text-success"
+                className="relative flex flex-col items-center justify-center gap-0.5 rounded-lg border border-success/30 bg-success/10 py-3 text-sm font-medium text-success"
               >
                 {nome}
-                <span className="absolute -top-2 right-1 rounded-full bg-success px-1.5 py-0.5 text-[9px] font-semibold leading-none text-success-foreground shadow-sm">
-                  Já pago
+                <span className="absolute -top-2 right-1 rounded-full bg-success px-1.5 py-0.5 text-[10px] font-semibold leading-none text-success-foreground shadow-sm">
+                  Devolvido
                 </span>
               </div>
             )
@@ -50,7 +50,7 @@ export function SeletorMesesGrid({ ano, competenciasPagas, selecionados, onAlter
               onClick={() => onAlternar(competencia)}
               aria-pressed={selecionado}
               className={cn(
-                'relative flex flex-col items-center justify-center gap-0.5 rounded-lg border py-3 text-xs font-medium transition-colors',
+                'relative flex flex-col items-center justify-center gap-0.5 rounded-lg border py-3 text-sm font-medium transition-colors',
                 selecionado && 'border-primary bg-primary text-primary-foreground',
                 !selecionado && futuro && 'border-border bg-background text-foreground hover:border-primary/50',
                 !selecionado &&
@@ -69,10 +69,10 @@ export function SeletorMesesGrid({ ano, competenciasPagas, selecionados, onAlter
         })}
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-sm text-muted-foreground">
         <span className="flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-full bg-success" />
-          Já pago
+          Devolvido
         </span>
         <span className="flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-full bg-warning" />
@@ -80,7 +80,7 @@ export function SeletorMesesGrid({ ano, competenciasPagas, selecionados, onAlter
         </span>
         <span className="flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-full bg-primary" />
-          Selecionado
+          Selecionado para pagar
         </span>
       </div>
     </div>

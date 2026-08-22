@@ -26,9 +26,9 @@ export interface NavItem {
 
 export const dizimistaNav: NavItem[] = [
   { label: 'Início', href: ROUTES.dizimista.root, icon: Home, end: true },
-  { label: 'Atualização cadastral', href: ROUTES.dizimista.cadastro, icon: IdCard },
-  { label: 'Minhas devoluções', href: ROUTES.dizimista.devolucoes, icon: ArrowLeftRight },
   { label: 'Devolver meu dízimo', href: ROUTES.dizimista.fazerDevolucao, icon: QrCode },
+  { label: 'Minhas devoluções', href: ROUTES.dizimista.devolucoes, icon: ArrowLeftRight },
+  { label: 'Atualização cadastral', href: ROUTES.dizimista.cadastro, icon: IdCard },
 ]
 
 export const pastoralNav: NavItem[] = [

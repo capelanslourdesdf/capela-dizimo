@@ -62,6 +62,16 @@ export function maskCpf(valor: string): string {
     .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
 }
 
+export function maskCnpj(valor: string): string {
+  return valor
+    .replace(/\D/g, '')
+    .slice(0, 14)
+    .replace(/(\d{2})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1/$2')
+    .replace(/(\d{4})(\d{1,2})$/, '$1-$2')
+}
+
 export function maskTelefone(valor: string): string {
   return valor
     .replace(/\D/g, '')
@@ -89,6 +99,10 @@ export function maskValidade(valor: string): string {
     .replace(/\D/g, '')
     .slice(0, 4)
     .replace(/(\d{2})(\d)/, '$1/$2')
+}
+
+export function maskCvv(valor: string): string {
+  return valor.replace(/\D/g, '').slice(0, 4)
 }
 
 export function maskDataBr(valor: string): string {

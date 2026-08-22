@@ -1,10 +1,12 @@
 import * as React from 'react'
-import { AlertCircle, CalendarCheck, CheckCircle2, IdCard, Sparkles, Wallet } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { AlertCircle, ArrowLeftRight, CalendarCheck, CheckCircle2, IdCard, Sparkles, Wallet } from 'lucide-react'
 
 import { PageHeader } from '@/components/layout/PageHeader'
 import { StatCard } from '@/components/dashboard/StatCard'
 import { MesesGrid } from '@/components/dashboard/MesesGrid'
 import { DevolucoesAgrupadas } from '@/components/dashboard/DevolucoesAgrupadas'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -14,6 +16,7 @@ import type { Devolucao } from '@/types'
 import { competenciaAtual, competenciasEntre, formatarNumeroCarne, formatCompetencia, formatCurrency } from '@/utils/format'
 import { calcularMesesConsecutivos, calcularStatusDizimista, competenciaDeRegistro } from '@/utils/statusDizimista'
 import { sortearMensagemMotivacional, type SegmentoMotivacional } from '@/constants/mensagensMotivacionais'
+import { ROUTES } from '@/constants/routes'
 
 export function DizimistaDashboardPage() {
   const { numeroCarne, dizimista } = useDizimistaSessao()
@@ -58,6 +61,14 @@ export function DizimistaDashboardPage() {
         title={`Olá, ${dizimista?.nomeCompleto.split(' ')[0] || 'dizimista'}`}
         description="Acompanhe suas devoluções do dízimo."
         topTitle="Início"
+        actions={
+          <Button asChild size="lg" className="w-full text-base sm:w-auto">
+            <Link to={ROUTES.dizimista.fazerDevolucao}>
+              <ArrowLeftRight className="h-5 w-5" />
+              Devolver meu dízimo
+            </Link>
+          </Button>
+        }
       />
 
       {mensagemMotivacional && (

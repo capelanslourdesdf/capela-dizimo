@@ -20,6 +20,7 @@ import { SeletorMesesGrid } from '@/components/dashboard/SeletorMesesGrid'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -320,6 +321,7 @@ export function FazerDevolucaoPage() {
   const [nomeTitular, setNomeTitular] = React.useState('')
   const [tipoDocumento, setTipoDocumento] = React.useState<TipoDocumento>('cpf')
   const [documento, setDocumento] = React.useState('')
+  const [salvarCartao, setSalvarCartao] = React.useState(false)
   const [cartaoAprovado, setCartaoAprovado] = React.useState(false)
 
   function handleTipoDocumento(valor: TipoDocumento) {
@@ -358,6 +360,7 @@ export function FazerDevolucaoPage() {
     setNomeTitular('')
     setTipoDocumento('cpf')
     setDocumento('')
+    setSalvarCartao(false)
     setCartaoAprovado(false)
   }
 
@@ -788,6 +791,24 @@ export function FazerDevolucaoPage() {
                               />
                             </div>
                           </div>
+
+                          <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-input px-3.5 py-3 has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary/5">
+                            <Checkbox
+                              checked={salvarCartao}
+                              onCheckedChange={(v) => setSalvarCartao(v === true)}
+                              className="mt-0.5"
+                            />
+                            <span>
+                              <span className="block text-base font-medium text-slate-900">
+                                Salvar cartão para as próximas devoluções
+                              </span>
+                              <span className="mt-1 flex items-start gap-1.5 text-sm text-slate-500">
+                                <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                                Seus dados ficam criptografados e protegidos — você pode remover o cartão salvo
+                                quando quiser.
+                              </span>
+                            </span>
+                          </label>
 
                           <Button type="submit" size="lg" className="w-full text-base">
                             <Lock className="h-4 w-4" />

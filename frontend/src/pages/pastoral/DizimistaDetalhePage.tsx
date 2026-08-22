@@ -188,14 +188,11 @@ export function DizimistaDetalhePage() {
 
   // "Devolvidos" conta qualquer devolução do ano, mesmo lançada pra um mês anterior ao
   // recadastramento (ex.: lançamento retroativo em lote) — mesmo critério do MesesGrid, senão a
-  // devolução aparece lá mas não entra nessa contagem. "Pendentes" não recua antes de janeiro do
-  // ano nem antes do registro do próprio dizimista (quando ele existe — ver `competenciaDeRegistro`),
-  // mas conta normalmente meses anteriores a agosto de 2026: a devolução em si pode ter sido
-  // registrada antes de a Tesouraria passar a existir no site.
+  // devolução aparece lá mas não entra nessa contagem. "Pendentes" conta todos os meses do ano,
+  // de janeiro até o mês atual — sem exceção pra quem se registrou depois de janeiro.
   const mesesDevolvidosNoAno = competenciasEntre(inicioAno, fimAno).filter((c) => competenciasPagas.has(c)).length
 
-  const inicioContagemPendente = registro && registro > inicioAno ? registro : inicioAno
-  const mesesAplicaveisPendente = competenciasEntre(inicioContagemPendente, competenciaAtual())
+  const mesesAplicaveisPendente = competenciasEntre(inicioAno, competenciaAtual())
   const mesesPendentesNoAno = mesesAplicaveisPendente.filter((c) => !competenciasPagas.has(c)).length
 
   return (

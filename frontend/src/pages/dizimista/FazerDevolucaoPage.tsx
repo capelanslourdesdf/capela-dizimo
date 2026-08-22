@@ -126,7 +126,7 @@ function FaixaFixada({
   onAcao,
 }: {
   icon: LucideIcon
-  label: string
+  label: React.ReactNode
   acaoLabel: string
   onAcao: () => void
 }) {
@@ -424,7 +424,18 @@ export function FazerDevolucaoPage() {
             <>
               <FaixaFixada
                 icon={CalendarDays}
-                label={`${multiplosMeses ? 'Meses selecionados' : 'Mês selecionado'}:<br/> ${mesesOrdenados.map(formatCompetencia).join('<br/>')}`}
+                label={
+                  <>
+                    {multiplosMeses ? 'Meses selecionados:' : 'Mês selecionado:'}
+                    <br />
+                    {mesesOrdenados.map((c, indice) => (
+                      <React.Fragment key={c}>
+                        {formatCompetencia(c)}
+                        {indice < mesesOrdenados.length - 1 && <br />}
+                      </React.Fragment>
+                    ))}
+                  </>
+                }
                 acaoLabel={multiplosMeses ? 'Alterar meses' : 'Alterar mês'}
                 onAcao={handleAlterarMeses}
               />

@@ -46,13 +46,11 @@ export function DizimistaDashboardPage() {
   const anoAtual = new Date().getFullYear()
   const inicioAno = `${anoAtual}-01`
 
-  // Conta todos os meses do ano atual, de janeiro até o mês atual (nunca meses futuros) — ou a
-  // partir do registro do dizimista, se ele se cadastrou depois de janeiro (não dá pra cobrar mês
-  // de antes dele existir na base).
-  const inicioContagemPendentes = registro && registro > inicioAno ? registro : inicioAno
+  // Todos os meses do ano atual, de janeiro até o mês atual — nunca meses futuros. Sem exceção
+  // pra quem se registrou depois de janeiro: o ano inteiro conta.
   const pendentes = React.useMemo(() => {
-    return competenciasEntre(inicioContagemPendentes, competenciaAtual()).filter((c) => !competenciasPagas.has(c))
-  }, [inicioContagemPendentes, competenciasPagas])
+    return competenciasEntre(inicioAno, competenciaAtual()).filter((c) => !competenciasPagas.has(c))
+  }, [inicioAno, competenciasPagas])
 
   return (
     <div>
@@ -83,7 +81,7 @@ export function DizimistaDashboardPage() {
             label="Meses pendentes"
             value={String(pendentes.length)}
             icon={pendentes.length > 0 ? AlertCircle : CheckCircle2}
-            helper={pendentes.length === 0 ? 'Tudo em dia' : `A partir de ${formatCompetencia(inicioContagemPendentes)}`}
+            helper={pendentes.length === 0 ? 'Tudo em dia' : `A partir de ${formatCompetencia(inicioAno)}`}
           />
         </div>
       )}

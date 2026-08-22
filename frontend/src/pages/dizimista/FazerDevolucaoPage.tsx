@@ -424,7 +424,7 @@ export function FazerDevolucaoPage() {
             <>
               <FaixaFixada
                 icon={CalendarDays}
-                label={`${multiplosMeses ? 'Meses selecionados' : 'Mês selecionado'}: ${mesesOrdenados.map(formatCompetencia).join(', ')}`}
+                label={`${multiplosMeses ? 'Meses selecionados' : 'Mês selecionado'}:<br/> ${mesesOrdenados.map(formatCompetencia).join('<br/>')}`}
                 acaoLabel={multiplosMeses ? 'Alterar meses' : 'Alterar mês'}
                 onAcao={handleAlterarMeses}
               />

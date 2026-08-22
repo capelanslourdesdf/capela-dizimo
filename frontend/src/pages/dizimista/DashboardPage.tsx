@@ -14,7 +14,6 @@ import type { Devolucao } from '@/types'
 import { competenciaAtual, competenciasEntre, formatarNumeroCarne, formatCompetencia, formatCurrency } from '@/utils/format'
 import { calcularMesesConsecutivos, calcularStatusDizimista, competenciaDeRegistro } from '@/utils/statusDizimista'
 import { sortearMensagemMotivacional, type SegmentoMotivacional } from '@/constants/mensagensMotivacionais'
-import { COMPETENCIA_INICIAL_TESOURARIA } from '@/constants/tesouraria'
 
 export function DizimistaDashboardPage() {
   const { numeroCarne, dizimista } = useDizimistaSessao()
@@ -44,17 +43,16 @@ export function DizimistaDashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [carregando])
 
-  // Conta a partir de agosto de 2026 (início do acompanhamento no site) ou do registro do
-  // dizimista, o que vier depois — quem já era dizimista antes não fica de fora dos meses que o
-  // site passou a controlar antes dele se recadastrar pessoalmente. Sem registro confiável (ver
-  // `competenciaDeRegistro`), conta a partir de agosto de 2026 normalmente.
-  const inicioContagemPendentes =
-    registro && registro > COMPETENCIA_INICIAL_TESOURARIA ? registro : COMPETENCIA_INICIAL_TESOURARIA
+  const anoAtual = new Date().getFullYear()
+  const inicioAno = `${anoAtual}-01`
+
+  // Conta todos os meses do ano atual, de janeiro até o mês atual (nunca meses futuros) — ou a
+  // partir do registro do dizimista, se ele se cadastrou depois de janeiro (não dá pra cobrar mês
+  // de antes dele existir na base).
+  const inicioContagemPendentes = registro && registro > inicioAno ? registro : inicioAno
   const pendentes = React.useMemo(() => {
     return competenciasEntre(inicioContagemPendentes, competenciaAtual()).filter((c) => !competenciasPagas.has(c))
   }, [inicioContagemPendentes, competenciasPagas])
-
-  const anoAtual = new Date().getFullYear()
 
   return (
     <div>
@@ -85,7 +83,7 @@ export function DizimistaDashboardPage() {
             label="Meses pendentes"
             value={String(pendentes.length)}
             icon={pendentes.length > 0 ? AlertCircle : CheckCircle2}
-            helper={pendentes.length === 0 ? 'Tudo em dia' : `A partir de ${formatCompetencia(COMPETENCIA_INICIAL_TESOURARIA)}`}
+            helper={pendentes.length === 0 ? 'Tudo em dia' : `A partir de ${formatCompetencia(inicioContagemPendentes)}`}
           />
         </div>
       )}

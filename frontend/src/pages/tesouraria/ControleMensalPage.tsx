@@ -507,7 +507,7 @@ export function ControleMensalPage() {
                   <FiltroBar
                     busca={buscaDespesa}
                     onBuscaChange={setBuscaDespesa}
-                    placeholder="Buscar por prestador, solicitante, valor, observação..."
+                    placeholder="Buscar por quem fez, prestador, valor, observação..."
                   />
                 )}
                 {termoBuscaDespesa && (

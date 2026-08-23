@@ -24,6 +24,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { EmptyState } from '@/components/dashboard/EmptyState'
 import { StatCard } from '@/components/dashboard/StatCard'
 import { StatusBadge } from '@/components/dashboard/StatusBadge'
+import { FiltroBar } from '@/components/pastoral/FiltroBar'
 import { ReceitaTesourariaForm, type DadosReceitaTesouraria } from '@/components/forms/ReceitaTesourariaForm'
 import { DespesaTesourariaForm, type DadosDespesaTesouraria } from '@/components/forms/DespesaTesourariaForm'
 import { Button } from '@/components/ui/button'
@@ -85,6 +86,21 @@ function montarReceita(id: string, dados: DadosReceitaTesouraria): EntradaTesour
   }
 }
 
+/** Compara o termo de busca com todos os campos da despesa (inclusive os exibidos como texto/rótulo). */
+function despesaCombinaBusca(s: SaidaTesouraria, termo: string): boolean {
+  const partes = [
+    s.prestador,
+    s.solicitante,
+    s.observacao ?? '',
+    s.dia ? formatDate(s.dia) : '',
+    formatCurrency(s.valor),
+    s.quitado ? 'quitada' : 'pendente',
+    s.possuiNfe ? 'possui nf-e nota fiscal' : '',
+    s.chaveNfe ?? '',
+  ]
+  return partes.join(' ').toLowerCase().includes(termo)
+}
+
 function montarDespesa(id: string, dados: DadosDespesaTesouraria): SaidaTesouraria {
   const observacao = dados.observacao?.trim()
   const chaveNfe = dados.possuiNfe ? dados.chaveNfe?.trim() : undefined
@@ -124,6 +140,7 @@ export function ControleMensalPage() {
   const [despesaEmVisualizacao, setDespesaEmVisualizacao] = React.useState<SaidaTesouraria | null>(null)
 
   const [modalStatus, setModalStatus] = React.useState(false)
+  const [buscaDespesa, setBuscaDespesa] = React.useState('')
 
   const carregar = React.useCallback(async () => {
     if (!competencia) return
@@ -274,6 +291,10 @@ export function ControleMensalPage() {
   // Mais recente primeiro, como no resto do histórico financeiro do app.
   const receitasOrdenadas = [...todasReceitas].sort((a, b) => (a.data < b.data ? 1 : a.data > b.data ? -1 : 0))
   const despesasOrdenadas = [...controle.saidas].sort((a, b) => (a.dia < b.dia ? 1 : a.dia > b.dia ? -1 : 0))
+  const termoBuscaDespesa = buscaDespesa.trim().toLowerCase()
+  const despesasFiltradas = termoBuscaDespesa
+    ? despesasOrdenadas.filter((s) => despesaCombinaBusca(s, termoBuscaDespesa))
+    : despesasOrdenadas
 
   return (
     <div>
@@ -474,10 +495,19 @@ export function ControleMensalPage() {
                 </div>
               </AccordionTrigger>
               <AccordionContent className="space-y-2.5 px-5 pb-5 sm:px-6 sm:pb-6">
+                {despesasOrdenadas.length > 0 && (
+                  <FiltroBar
+                    busca={buscaDespesa}
+                    onBuscaChange={setBuscaDespesa}
+                    placeholder="Buscar por prestador, solicitante, valor, observação..."
+                  />
+                )}
                 {despesasOrdenadas.length === 0 ? (
                   <EmptyState icon={TrendingDown} title="Nenhuma despesa lançada neste mês" />
+                ) : despesasFiltradas.length === 0 ? (
+                  <EmptyState icon={TrendingDown} title="Nenhuma despesa encontrada para essa busca" />
                 ) : (
-                  despesasOrdenadas.map((s) => (
+                  despesasFiltradas.map((s) => (
                     <div
                       key={s.id}
                       className="flex flex-col gap-2 rounded-lg border border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between"

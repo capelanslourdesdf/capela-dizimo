@@ -8,7 +8,7 @@ import { ROUTES } from '@/constants/routes'
 export function NotFoundPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-secondary/30 px-4 text-center">
-      <BrandMark mostrarNome={false} />
+      <BrandMark />
       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
         <Compass className="h-8 w-8" />
       </div>

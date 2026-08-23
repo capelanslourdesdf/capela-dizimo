@@ -29,7 +29,7 @@ export function PublicHeader() {
           <SheetContent side="left" className="w-4/5 overflow-y-auto">
             <SheetHeader>
               <SheetTitle>
-                <BrandMark subtitle={false} mostrarNome={false} />
+                <BrandMark />
               </SheetTitle>
             </SheetHeader>
             <nav className="mt-6 flex flex-col gap-1">
@@ -59,7 +59,7 @@ export function PublicHeader() {
           to={ROUTES.home}
           className="absolute left-1/2 min-w-0 -translate-x-1/2 md:static md:left-auto md:translate-x-0"
         >
-          <BrandMark mostrarNome={false} />
+          <BrandMark />
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex">

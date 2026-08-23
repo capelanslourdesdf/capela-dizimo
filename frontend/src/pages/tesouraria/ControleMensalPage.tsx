@@ -57,19 +57,24 @@ import { formatCompetencia, formatCurrency, formatDate, maskChaveNfe, subtrairMe
 import { ROUTES } from '@/constants/routes'
 import { useTesourariaSessao } from '@/hooks/useTesourariaSessao'
 import { useDefinirPageTitle } from '@/hooks/usePageTitle'
+import { cn } from '@/lib/utils'
 
 interface CampoDetalheProps {
   label: string
   valor: React.ReactNode
   className?: string
+  /** Preserva quebras de linha digitadas — usado em campos de texto livre (ex.: Observação). */
+  preWrap?: boolean
 }
 
 /** Par rótulo/valor usado nos diálogos de "ver detalhes" (visualização, sem edição). */
-function CampoDetalhe({ label, valor, className }: CampoDetalheProps) {
+function CampoDetalhe({ label, valor, className, preWrap }: CampoDetalheProps) {
   return (
     <div className={className}>
       <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className="mt-0.5 break-words text-sm font-medium text-foreground">{valor}</dd>
+      <dd className={cn('mt-0.5 break-words text-sm font-medium text-foreground', preWrap && 'whitespace-pre-wrap')}>
+        {valor}
+      </dd>
     </div>
   )
 }
@@ -382,7 +387,7 @@ export function ControleMensalPage() {
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-sm font-semibold text-foreground">Receitas</h2>
           {podeEditar && (
-            <Button size="sm" onClick={handleNovaReceita}>
+            <Button variant="success" size="sm" onClick={handleNovaReceita}>
               <Plus className="h-3.5 w-3.5" />
               Lançar receita
             </Button>
@@ -423,7 +428,9 @@ export function ControleMensalPage() {
                           <p className="text-xs text-muted-foreground">
                             {e.data ? formatDate(e.data) : '—'} · {formaPagamentoLabel(e.formaPagamento)}
                           </p>
-                          {e.observacao && <p className="mt-0.5 text-xs text-muted-foreground">{e.observacao}</p>}
+                          {e.observacao && (
+                            <p className="mt-0.5 whitespace-pre-wrap text-xs text-muted-foreground">{e.observacao}</p>
+                          )}
                         </div>
                         <div className="flex shrink-0 flex-wrap items-center justify-between gap-1 sm:justify-end">
                           <p className="font-medium text-success">{formatCurrency(e.valor)}</p>
@@ -473,7 +480,7 @@ export function ControleMensalPage() {
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-sm font-semibold text-foreground">Despesas</h2>
           {podeEditar && (
-            <Button size="sm" onClick={handleNovaDespesa}>
+            <Button variant="destructive" size="sm" onClick={handleNovaDespesa}>
               <Plus className="h-3.5 w-3.5" />
               Lançar despesa
             </Button>
@@ -523,7 +530,9 @@ export function ControleMensalPage() {
                         <p className="text-xs text-muted-foreground">
                           {s.dia ? formatDate(s.dia) : '—'} · Solicitado por {s.solicitante}
                         </p>
-                        {s.observacao && <p className="mt-0.5 text-xs text-muted-foreground">{s.observacao}</p>}
+                        {s.observacao && (
+                          <p className="mt-0.5 whitespace-pre-wrap text-xs text-muted-foreground">{s.observacao}</p>
+                        )}
                       </div>
                       <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 sm:justify-end">
                         <div className="flex flex-wrap items-center gap-2">
@@ -618,6 +627,7 @@ export function ControleMensalPage() {
                 className="sm:col-span-2"
                 label="Observação"
                 valor={receitaEmVisualizacao.observacao || '—'}
+                preWrap
               />
             </dl>
           )}
@@ -645,7 +655,12 @@ export function ControleMensalPage() {
                     valor={maskChaveNfe(despesaEmVisualizacao.chaveNfe)}
                   />
                 )}
-                <CampoDetalhe className="sm:col-span-2" label="Observação" valor={despesaEmVisualizacao.observacao || '—'} />
+                <CampoDetalhe
+                  className="sm:col-span-2"
+                  label="Observação"
+                  valor={despesaEmVisualizacao.observacao || '—'}
+                  preWrap
+                />
               </dl>
 
               {despesaEmVisualizacao.possuiNfe && despesaEmVisualizacao.chaveNfe && (

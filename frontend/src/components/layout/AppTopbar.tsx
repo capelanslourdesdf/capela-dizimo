@@ -35,7 +35,7 @@ export function AppTopbar({ navItems, areaLabel, userMenu, exibirNomeApp = true 
           <SheetHeader>
             <SheetTitle>
               <Link to={ROUTES.home} onClick={() => setOpen(false)}>
-                <BrandMark subtitle={false} mostrarNome={exibirNomeApp} />
+                <BrandMark />
               </Link>
             </SheetTitle>
           </SheetHeader>

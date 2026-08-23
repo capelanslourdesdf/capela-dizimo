@@ -10,7 +10,7 @@ export function AuthLayout() {
       <header className="border-b border-border bg-background">
         <div className="container flex h-16 items-center justify-between">
           <Link to={ROUTES.home}>
-            <BrandMark mostrarNome={false} />
+            <BrandMark />
           </Link>
           <Link
             to={ROUTES.home}

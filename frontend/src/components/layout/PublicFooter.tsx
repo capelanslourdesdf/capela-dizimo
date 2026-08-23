@@ -9,7 +9,7 @@ export function PublicFooter() {
     <footer className="border-t border-border bg-secondary/40">
       <div className="container flex flex-col gap-6 py-10 sm:flex-row sm:items-start sm:justify-between">
         <div className="max-w-sm">
-          <BrandMark mostrarNome={false} />
+          <BrandMark />
           <p className="mt-3 text-sm text-muted-foreground">
             Uma iniciativa da Pastoral do Dízimo para fortalecer a comunidade da Capela Nossa Senhora de Lourdes,
             com transparência e gratidão.

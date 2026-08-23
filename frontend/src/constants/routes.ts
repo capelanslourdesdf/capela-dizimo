@@ -28,10 +28,10 @@ export const ROUTES = {
     listaDevolucoes: '/pastoral/devolucoes/lista',
     tesouraria: {
       entrar: '/tesouraria/entrar',
-      root: '/pastoral/tesouraria',
-      eventos: '/pastoral/tesouraria/eventos',
-      evolucao: '/pastoral/tesouraria/evolucao',
-      controle: (competencia: string) => `/pastoral/tesouraria/${competencia}`,
+      root: '/tesouraria',
+      eventos: '/tesouraria/eventos',
+      evolucao: '/tesouraria/evolucao',
+      controle: (competencia: string) => `/tesouraria/${competencia}`,
     },
   },
 } as const

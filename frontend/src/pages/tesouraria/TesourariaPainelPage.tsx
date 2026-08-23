@@ -2,7 +2,6 @@ import * as React from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowDownRight,
-  ArrowLeft,
   ArrowLeftRight,
   ArrowRight,
   ArrowUpRight,
@@ -76,11 +75,6 @@ export function TesourariaPainelPage() {
 
   return (
     <div>
-      <Button variant="ghost" size="sm" className="mb-3 -ml-2" onClick={() => navigate(ROUTES.pastoral.root)}>
-        <ArrowLeft className="h-4 w-4" />
-        Voltar ao Administrativo
-      </Button>
-
       <PageHeader title="Tesouraria" description="Balancete mensal da Capela, mês a mês desde agosto de 2026." />
 
       {carregando ? (

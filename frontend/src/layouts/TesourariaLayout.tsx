@@ -20,7 +20,7 @@ export function TesourariaLayout() {
   function handleSair() {
     sair()
     toast.success('Sessão da Tesouraria encerrada.')
-    navigate(ROUTES.pastoral.root)
+    navigate(ROUTES.home)
   }
 
   const userMenu = (

@@ -115,25 +115,26 @@ export function DizimistaDetalhePage() {
   async function handleSalvarEdicao(dados: DadosCadastraisDizimista) {
     if (!numeroCarne) return
     await salvarRecadastramento(numeroCarne, dados)
+    const atualizado = await buscarDizimistaPorCarne(numeroCarne)
+    setDizimista(atualizado)
     setModalEdicao(false)
     toast.success('Dados do dizimista atualizados.')
-    carregar()
   }
 
   async function handleLancarDevolucao(dados: DadosDevolucao) {
     if (!numeroCarne) return
-    await lancarDevolucao(numeroCarne, dados)
+    const nova = await lancarDevolucao(numeroCarne, dados)
+    setDevolucoes((atual) => [nova, ...atual])
     setModalDevolucao(false)
     toast.success('Devolução lançada com sucesso.')
-    carregar()
   }
 
   async function handleAtualizarDevolucao(dados: DadosDevolucao) {
     if (!numeroCarne || !devolucaoEmEdicao) return
     await atualizarDevolucao(numeroCarne, devolucaoEmEdicao.id, dados)
+    setDevolucoes((atual) => atual.map((d) => (d.id === devolucaoEmEdicao.id ? { ...d, ...dados } : d)))
     setDevolucaoEmEdicao(null)
     toast.success('Devolução atualizada com sucesso.')
-    carregar()
   }
 
   async function handleExcluir() {

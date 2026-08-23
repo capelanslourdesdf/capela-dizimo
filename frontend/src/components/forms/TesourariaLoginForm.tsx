@@ -2,7 +2,7 @@ import * as React from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate, type Location } from 'react-router-dom'
 import { Eye, EyeOff, LogIn } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -25,6 +25,7 @@ type FormValues = z.infer<typeof schema>
 export function TesourariaLoginForm() {
   const { entrar } = useTesourariaSessao()
   const navigate = useNavigate()
+  const location = useLocation()
   const [erro, setErro] = React.useState<string | null>(null)
   const [mostrarSenha, setMostrarSenha] = React.useState(false)
 
@@ -39,7 +40,11 @@ export function TesourariaLoginForm() {
     try {
       await entrar(values.papel, values.senha)
       toast.success('Bem-vindo(a) à Tesouraria.')
-      navigate(ROUTES.pastoral.tesouraria.root)
+      // Quem chegou aqui redirecionado de uma página específica (ex.: /tesouraria/2026-08,
+      // digitada direto sem estar logado) volta pra ela — ver `state: { from }` em
+      // `ProtectedTesourariaRoute`. Sem isso, cai no Painel por padrão.
+      const destino = (location.state as { from?: Location } | null)?.from
+      navigate(destino ? `${destino.pathname}${destino.search}` : ROUTES.pastoral.tesouraria.root, { replace: true })
     } catch (err) {
       setErro(err instanceof Error ? err.message : 'Não foi possível entrar. Tente novamente.')
     }

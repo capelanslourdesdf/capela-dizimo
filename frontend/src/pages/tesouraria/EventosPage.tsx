@@ -67,23 +67,31 @@ export function EventosPage() {
   async function handleSalvar(dados: DadosEventoTesouraria) {
     if (eventoEmEdicao) {
       await atualizarEventoTesouraria(eventoEmEdicao.id, dados)
+      setEventos((atual) =>
+        atual
+          .map((e) => (e.id === eventoEmEdicao.id ? { ...e, ...dados } : e))
+          .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')),
+      )
       toast.success('Evento atualizado com sucesso.')
+      setModalAberto(false)
+      setEventoEmEdicao(null)
     } else {
       await criarEventoTesouraria(dados)
       toast.success('Evento lançado com sucesso.')
+      setModalAberto(false)
+      setEventoEmEdicao(null)
+      // O id gerado não volta pra cá — recarrega (agora cacheado por ano, então é barato).
+      carregar()
     }
-    setModalAberto(false)
-    setEventoEmEdicao(null)
-    carregar()
   }
 
   async function handleExcluir() {
     if (!eventoParaExcluir) return
     try {
       await excluirEventoTesouraria(eventoParaExcluir.id)
+      setEventos((atual) => atual.filter((e) => e.id !== eventoParaExcluir.id))
       toast.success(`Evento "${eventoParaExcluir.nome}" excluído.`)
       setEventoParaExcluir(null)
-      carregar()
     } catch {
       toast.error('Não foi possível excluir o evento. Tente novamente.')
     }

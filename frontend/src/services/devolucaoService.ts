@@ -17,10 +17,18 @@ import type { Devolucao, FormaPagamentoDevolucao } from '@/types'
 import { comCache, invalidarCache } from '@/lib/cacheLeitura'
 import { normalizarNumeroCarne } from '@/utils/format'
 
+/**
+ * Devoluções de um único dizimista — cacheada por 60s (chave inclui o carnê) porque é lida de
+ * forma independente em várias telas da própria área do dizimista (Início, Devolver meu dízimo,
+ * Minhas devoluções) e na ficha dele na área administrativa, muitas vezes na mesma visita.
+ */
 export async function listarDevolucoes(numeroCarne: string): Promise<Devolucao[]> {
-  const ref = collection(db, 'dizimistas', normalizarNumeroCarne(numeroCarne), 'devolucoes')
-  const snap = await getDocs(query(ref, orderBy('criadoEm', 'desc')))
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Devolucao, 'id'>) }))
+  const carne = normalizarNumeroCarne(numeroCarne)
+  return comCache(`devolucoes:carne:${carne}`, async () => {
+    const ref = collection(db, 'dizimistas', carne, 'devolucoes')
+    const snap = await getDocs(query(ref, orderBy('criadoEm', 'desc')))
+    return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Devolucao, 'id'>) }))
+  })
 }
 
 /**

@@ -1,4 +1,4 @@
-import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, setDoc, updateDoc } from 'firebase/firestore'
+import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, updateDoc, where } from 'firebase/firestore'
 
 import { db } from '@/lib/firebase'
 import type {
@@ -13,6 +13,7 @@ import type {
 import { competenciaDaDevolucao } from '@/services/devolucaoService'
 import { competenciaAtual, competenciasEntre } from '@/utils/format'
 import { COMPETENCIA_INICIAL_TESOURARIA } from '@/constants/tesouraria'
+import { comCache, invalidarCache } from '@/lib/cacheLeitura'
 
 const COLECAO_CONTROLES = 'tesouraria'
 const COLECAO_EVENTOS = 'tesourariaEventos'
@@ -70,14 +71,16 @@ function controlePadrao(competencia: string): ControleTesouraria {
  * `COMPETENCIA_INICIAL_TESOURARIA`, mesmo sem nada lançado ainda.
  */
 export async function listarControlesTesouraria(): Promise<ControleTesouraria[]> {
-  const snap = await getDocs(collection(db, COLECAO_CONTROLES))
-  const existentes = new Map(
-    snap.docs.map((d) => [d.id, { competencia: d.id, ...(d.data() as Omit<ControleTesouraria, 'competencia'>) }]),
-  )
+  return comCache('controles-tesouraria', async () => {
+    const snap = await getDocs(collection(db, COLECAO_CONTROLES))
+    const existentes = new Map(
+      snap.docs.map((d) => [d.id, { competencia: d.id, ...(d.data() as Omit<ControleTesouraria, 'competencia'>) }]),
+    )
 
-  return competenciasControleTesouraria()
-    .map((competencia) => existentes.get(competencia) ?? controlePadrao(competencia))
-    .sort((a, b) => (a.competencia < b.competencia ? 1 : -1))
+    return competenciasControleTesouraria()
+      .map((competencia) => existentes.get(competencia) ?? controlePadrao(competencia))
+      .sort((a, b) => (a.competencia < b.competencia ? 1 : -1))
+  })
 }
 
 /**
@@ -131,16 +134,19 @@ export interface DadosControleTesouraria {
 export async function salvarControleTesouraria(competencia: string, dados: DadosControleTesouraria): Promise<void> {
   const ref = doc(db, COLECAO_CONTROLES, competencia)
   await updateDoc(ref, { ...dados, atualizadoEm: new Date().toISOString() })
+  invalidarCache('controles-tesouraria')
 }
 
 export type DadosEventoTesouraria = Omit<EventoTesouraria, 'id' | 'criadoEm' | 'atualizadoEm'>
 
+/** Cacheada por ano (60s) — o filtro já roda no Firestore (`where('ano', ...)`), então cada troca do seletor de ano só lê os eventos daquele ano, não a coleção inteira. */
 export async function listarEventosTesouraria(ano: number): Promise<EventoTesouraria[]> {
-  const snap = await getDocs(collection(db, COLECAO_EVENTOS))
-  return snap.docs
-    .map((d) => ({ id: d.id, ...(d.data() as Omit<EventoTesouraria, 'id'>) }))
-    .filter((e) => e.ano === ano)
-    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+  return comCache(`eventos-tesouraria:${ano}`, async () => {
+    const snap = await getDocs(query(collection(db, COLECAO_EVENTOS), where('ano', '==', ano)))
+    return snap.docs
+      .map((d) => ({ id: d.id, ...(d.data() as Omit<EventoTesouraria, 'id'>) }))
+      .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+  })
 }
 
 export async function criarEventoTesouraria(dados: DadosEventoTesouraria): Promise<void> {
@@ -151,6 +157,7 @@ export async function criarEventoTesouraria(dados: DadosEventoTesouraria): Promi
     criadoEm: agora,
     atualizadoEm: agora,
   })
+  invalidarCache('eventos-tesouraria')
 }
 
 export async function atualizarEventoTesouraria(id: string, dados: DadosEventoTesouraria): Promise<void> {
@@ -159,8 +166,10 @@ export async function atualizarEventoTesouraria(id: string, dados: DadosEventoTe
     observacao: dados.observacao?.trim() || null,
     atualizadoEm: new Date().toISOString(),
   })
+  invalidarCache('eventos-tesouraria')
 }
 
 export async function excluirEventoTesouraria(id: string): Promise<void> {
   await deleteDoc(doc(db, COLECAO_EVENTOS, id))
+  invalidarCache('eventos-tesouraria')
 }

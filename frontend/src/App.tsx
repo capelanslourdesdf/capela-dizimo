@@ -62,6 +62,7 @@ function App() {
                 <Route element={<AuthLayout />}>
                   <Route path={ROUTES.recadastramento} element={<RecadastramentoPage />} />
                   <Route path={ROUTES.pastoral.entrar} element={<AdminLoginPage />} />
+                  <Route path={ROUTES.pastoral.tesouraria.entrar} element={<TesourariaLoginPage />} />
                   <Route path={ROUTES.entrar} element={<LoginPage />} />
                 </Route>
 
@@ -91,25 +92,21 @@ function App() {
                       <Route path={ROUTES.pastoral.configuracoes} element={<ConfiguracoesPage />} />
                     </Route>
                   </Route>
+                </Route>
 
-                  {/* Tesouraria: só chega quem já está autenticado na Pastoral (e não é o perfil
-                      "Pastoral do Dízimo"), e mesmo assim precisa de uma segunda senha
-                      (ProtectedTesourariaRoute) — ver constants/senhasAcesso.ts. É uma área/visão
-                      própria, com layout e navegação separados da Pastoral (TesourariaLayout, não
-                      PastoralLayout). */}
-                  <Route element={<ProtegerContraPastoralDizimo />}>
-                    <Route element={<AuthLayout />}>
-                      <Route path={ROUTES.pastoral.tesouraria.entrar} element={<TesourariaLoginPage />} />
-                    </Route>
-
-                    <Route element={<ProtectedTesourariaRoute />}>
-                      <Route element={<TesourariaLayout />}>
-                        <Route path={ROUTES.pastoral.tesouraria.root} element={<TesourariaPainelPage />} />
-                        <Route path={ROUTES.pastoral.tesouraria.evolucao} element={<EvolucaoTesourariaPage />} />
-                        <Route path={ROUTES.pastoral.tesouraria.eventos} element={<EventosPage />} />
-                        <Route path="/tesouraria/:competencia" element={<ControleMensalPage />} />
-                      </Route>
-                    </Route>
+                {/* Tesouraria: área própria, com login, sessão (ProtectedTesourariaRoute) e
+                    navegação (TesourariaLayout) totalmente independentes da Pastoral — dá pra
+                    entrar direto em /tesouraria/entrar sem passar pelo Administrativo antes.
+                    Quem já for da Pastoral (Coordenadora/Tesoureiro) continua alcançando aqui
+                    pelo link "Tesouraria" do menu, mas não é obrigatório. O login da Tesouraria
+                    já restringe sozinho quais perfis entram (PAPEIS_TESOURARIA, em
+                    constants/papeisAcesso.ts) — "Pastoral do Dízimo" não é um deles. */}
+                <Route element={<ProtectedTesourariaRoute />}>
+                  <Route element={<TesourariaLayout />}>
+                    <Route path={ROUTES.pastoral.tesouraria.root} element={<TesourariaPainelPage />} />
+                    <Route path={ROUTES.pastoral.tesouraria.evolucao} element={<EvolucaoTesourariaPage />} />
+                    <Route path={ROUTES.pastoral.tesouraria.eventos} element={<EventosPage />} />
+                    <Route path="/tesouraria/:competencia" element={<ControleMensalPage />} />
                   </Route>
                 </Route>
 

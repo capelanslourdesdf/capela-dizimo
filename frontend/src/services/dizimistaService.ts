@@ -53,12 +53,6 @@ export async function gerarNumeroCarneDisponivel(): Promise<string> {
   return String(candidato)
 }
 
-export interface CandidatoCarne {
-  dizimista: Dizimista
-  pontuacaoNome: number
-  nascimentoConfere: boolean
-}
-
 /**
  * Dia/mês de nascimento do registro ("dd/mm"). Os importados da planilha guardam só isso; os
  * recadastrados têm a data completa, da qual o dia/mês é derivado.
@@ -67,44 +61,24 @@ export function diaMesDoRegistro(d: Dizimista): string {
   return d.diaMesNascimento?.trim() || isoParaDiaMes(d.dataNascimento ?? '')
 }
 
-const PONTUACAO_MINIMA = 0.7
-/** Sem casar a data, exigimos um nome bem mais parecido para sequer sugerir o registro. */
-const PONTUACAO_MINIMA_SEM_DATA = 0.85
+/** Sem data de nascimento pra corroborar, exigimos o nome bem parecido antes de sugerir o registro. */
+const PONTUACAO_MINIMA_BUSCA_NOME = 0.85
 
 /**
- * Procura o carnê de quem não lembra o número, a partir do nome e do dia/mês de nascimento —
- * o mesmo par usado no login, e a única informação de nascimento que a planilha antiga traz.
- *
- * A comparação de nomes é aproximada (ver utils/busca), porque a base mistura digitação manual
- * com a planilha — THIAGO/TIAGO, LUIS/LUIZ e afins precisam se encontrar.
- *
- * Prioriza quem também bate a data. Se ninguém bater, ainda devolve nomes muito parecidos
- * (com `nascimentoConfere: false`), para evitar criar um carnê duplicado por causa de uma data
- * digitada errada — nesse caso a decisão fica com quem está preenchendo.
+ * Procura o carnê de quem não lembra o número, só pelo nome — a comparação é aproximada (ver
+ * utils/busca), porque a base mistura digitação manual com a planilha antiga (THIAGO/TIAGO,
+ * LUIS/LUIZ e afins precisam se encontrar). A pessoa escolhe o cadastro certo (ou informa que
+ * nenhum é o dela) na lista de resultados, já que não há mais data pra desempatar automaticamente.
  */
-export async function buscarCarnePorNomeENascimento(nome: string, diaMes: string): Promise<CandidatoCarne[]> {
+export async function buscarDizimistasPorNome(nome: string): Promise<Dizimista[]> {
   const todos = await listarDizimistas()
-  const procurado = diaMes.trim()
 
-  const avaliados = todos.map((dizimista) => ({
-    dizimista,
-    pontuacaoNome: similaridadeNome(nome, dizimista.nomeCompleto),
-    nascimentoConfere: !!procurado && diaMesDoRegistro(dizimista) === procurado,
-  }))
-
-  const ordenar = (a: CandidatoCarne, b: CandidatoCarne) =>
-    Number(b.nascimentoConfere) - Number(a.nascimentoConfere) || b.pontuacaoNome - a.pontuacaoNome
-
-  const comData = avaliados
-    .filter((c) => c.nascimentoConfere && c.pontuacaoNome >= PONTUACAO_MINIMA)
-    .sort(ordenar)
-
-  if (comData.length > 0) return comData.slice(0, 8)
-
-  return avaliados
-    .filter((c) => c.pontuacaoNome >= PONTUACAO_MINIMA_SEM_DATA)
-    .sort(ordenar)
+  return todos
+    .map((dizimista) => ({ dizimista, pontuacao: similaridadeNome(nome, dizimista.nomeCompleto) }))
+    .filter((c) => c.pontuacao >= PONTUACAO_MINIMA_BUSCA_NOME)
+    .sort((a, b) => b.pontuacao - a.pontuacao)
     .slice(0, 8)
+    .map((c) => c.dizimista)
 }
 
 /**

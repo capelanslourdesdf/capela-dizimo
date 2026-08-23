@@ -29,10 +29,16 @@ export function TesourariaLayout() {
 
   return (
     <div className="min-h-screen bg-[hsl(0deg_0%_92.54%/35%)]">
-      <AppSidebar navItems={tesourariaNav} areaLabel="Tesouraria" colapsada={colapsada} aoAlternar={alternar} />
+      <AppSidebar
+        navItems={tesourariaNav}
+        areaLabel="Tesouraria"
+        colapsada={colapsada}
+        aoAlternar={alternar}
+        exibirNomeApp={false}
+      />
 
       <div className={cn('transition-[padding] duration-200', colapsada ? 'lg:pl-[76px]' : 'lg:pl-72')}>
-        <AppTopbar navItems={tesourariaNav} areaLabel="Tesouraria" userMenu={userMenu} />
+        <AppTopbar navItems={tesourariaNav} areaLabel="Tesouraria" userMenu={userMenu} exibirNomeApp={false} />
         <main className="px-4 pb-10 pt-6 sm:px-6 lg:px-8">
           {!podeEditar && (
             <div className="mb-4 flex items-center gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3.5 py-2.5 text-sm text-warning-foreground">

@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { FiltroBar } from '@/components/pastoral/FiltroBar'
 import { EmptyState } from '@/components/dashboard/EmptyState'
+import { StatCard } from '@/components/dashboard/StatCard'
 import { RecadastramentoForm } from '@/components/forms/RecadastramentoForm'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -86,6 +87,14 @@ export function RecadastramentosPage() {
           </Button>
         }
       />
+
+      {carregando ? (
+        <Skeleton className="mb-6 h-24 w-full max-w-xs rounded-xl" />
+      ) : (
+        <div className="mb-6 max-w-xs">
+          <StatCard label="Total de recadastramentos" value={String(todos.length)} icon={ClipboardList} />
+        </div>
+      )}
 
       <FiltroBar
         busca={busca}

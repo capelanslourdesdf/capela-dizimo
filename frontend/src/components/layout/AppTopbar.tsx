@@ -15,9 +15,11 @@ interface AppTopbarProps {
   navItems: NavItem[]
   areaLabel: string
   userMenu: ReactNode
+  /** "Meu Dízimo Digital" só aparece na área do dizimista — ver BrandMark. */
+  exibirNomeApp?: boolean
 }
 
-export function AppTopbar({ navItems, areaLabel, userMenu }: AppTopbarProps) {
+export function AppTopbar({ navItems, areaLabel, userMenu, exibirNomeApp = true }: AppTopbarProps) {
   const [open, setOpen] = React.useState(false)
   const tituloDaTela = usePageTitle()
 
@@ -33,7 +35,7 @@ export function AppTopbar({ navItems, areaLabel, userMenu }: AppTopbarProps) {
           <SheetHeader>
             <SheetTitle>
               <Link to={ROUTES.home} onClick={() => setOpen(false)}>
-                <BrandMark subtitle={false} />
+                <BrandMark subtitle={false} mostrarNome={exibirNomeApp} />
               </Link>
             </SheetTitle>
           </SheetHeader>
@@ -62,7 +64,7 @@ export function AppTopbar({ navItems, areaLabel, userMenu }: AppTopbarProps) {
 
       <div className="flex-1 min-w-0">
         <p className="truncate text-base font-semibold text-foreground sm:text-lg lg:hidden">
-          {tituloDaTela || 'Meu Dízimo Digital'}
+          {tituloDaTela || (exibirNomeApp ? 'Meu Dízimo Digital' : areaLabel)}
         </p>
         <p className="hidden truncate text-sm font-medium text-muted-foreground lg:block">{areaLabel}</p>
       </div>

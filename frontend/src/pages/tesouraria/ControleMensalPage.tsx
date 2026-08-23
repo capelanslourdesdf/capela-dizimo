@@ -295,6 +295,7 @@ export function ControleMensalPage() {
   const despesasFiltradas = termoBuscaDespesa
     ? despesasOrdenadas.filter((s) => despesaCombinaBusca(s, termoBuscaDespesa))
     : despesasOrdenadas
+  const totalDespesasFiltradas = despesasFiltradas.reduce((s, sa) => s + sa.valor, 0)
 
   return (
     <div>
@@ -501,6 +502,11 @@ export function ControleMensalPage() {
                     onBuscaChange={setBuscaDespesa}
                     placeholder="Buscar por prestador, solicitante, valor, observação..."
                   />
+                )}
+                {termoBuscaDespesa && (
+                  <p className="-mt-1.5 text-sm text-muted-foreground">
+                    {despesasFiltradas.length} despesa(s) encontrada(s) · Total {formatCurrency(totalDespesasFiltradas)}
+                  </p>
                 )}
                 {despesasOrdenadas.length === 0 ? (
                   <EmptyState icon={TrendingDown} title="Nenhuma despesa lançada neste mês" />

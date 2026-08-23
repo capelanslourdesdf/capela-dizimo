@@ -12,10 +12,12 @@ interface AppSidebarProps {
   areaLabel: string
   colapsada: boolean
   aoAlternar: () => void
+  /** "Meu Dízimo Digital" só aparece na área do dizimista — ver BrandMark. */
+  exibirNomeApp?: boolean
 }
 
 /** Só aparece no computador (lg+) — no celular a navegação é pela gaveta do menu-sanduíche (AppTopbar). */
-export function AppSidebar({ navItems, areaLabel, colapsada, aoAlternar }: AppSidebarProps) {
+export function AppSidebar({ navItems, areaLabel, colapsada, aoAlternar, exibirNomeApp = true }: AppSidebarProps) {
   const { pathname } = useLocation()
 
   return (
@@ -25,7 +27,7 @@ export function AppSidebar({ navItems, areaLabel, colapsada, aoAlternar }: AppSi
         colapsada ? 'w-[76px]' : 'w-72',
       )}
     >
-      <div className="flex h-16 items-center border-b border-border px-4">
+      <div className="flex min-h-16 items-center border-b border-border px-4 py-3">
         {colapsada ? (
           <button
             type="button"
@@ -39,7 +41,7 @@ export function AppSidebar({ navItems, areaLabel, colapsada, aoAlternar }: AppSi
         ) : (
           <div className="flex w-full items-center justify-between">
             <Link to={ROUTES.home}>
-              <BrandMark />
+              <BrandMark mostrarNome={exibirNomeApp} />
             </Link>
           </div>
         )}

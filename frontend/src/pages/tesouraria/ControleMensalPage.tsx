@@ -319,7 +319,7 @@ export function ControleMensalPage() {
 
       {totaisPorCategoria.length > 0 && (
         <Card className="mb-6">
-          <Accordion type="single" collapsible>
+          <Accordion type="single" collapsible defaultValue="categoria">
             <AccordionItem value="categoria" className="border-b-0">
               <AccordionTrigger className="rounded-t-xl px-5 py-5 transition-colors hover:bg-primary/5 hover:no-underline active:bg-primary/10 sm:px-6 sm:py-6">
                 <div className="flex items-center gap-2 text-left">
@@ -329,7 +329,6 @@ export function ControleMensalPage() {
                     <p className="mt-1.5 text-sm font-normal text-muted-foreground">
                       {totaisPorCategoria.length} categoria(s) com lançamento
                     </p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">Clique para expandir</p>
                   </div>
                 </div>
               </AccordionTrigger>

@@ -6,20 +6,23 @@ import { CATEGORIAS_ENTRADA_TESOURARIA, STATUS_CONTROLE_TESOURARIA, categoriaEnt
 import { FORMAS_PAGAMENTO_DEVOLUCAO, formaPagamentoLabel } from '@/constants/devolucao'
 import { formatCompetencia, formatCurrency, formatDate, formatDateLong } from '@/utils/format'
 
+/** Azul de Nossa Senhora de Lourdes — o mesmo azul usado como cor primária no site (--primary, em index.css), convertido pra RGB. */
+const AZUL_NOSSA_SENHORA_LOURDES: [number, number, number] = [11, 146, 218]
+
 /** Ponto em que a última tabela desenhada terminou — usado pra empilhar as seções sem sobrepor. */
 function finalY(doc: jsPDF): number {
   return (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY
 }
 
-/** Quem assina o controle mensal — fixo, como o nome da Capela logo abaixo. */
-const ASSINATURAS = [
+/** Quem consta no fim do controle mensal — fixo, como o nome da Capela logo abaixo. */
+const RESPONSAVEIS = [
   { nome: 'Carlos Eduardo Silva Barbosa', cargo: 'Tesoureiro' },
   { nome: 'Lucylene Valério Rocha', cargo: 'Coordenadora' },
   { nome: 'Luiz Caetano', cargo: 'Pároco' },
 ]
 
-/** Desenha as linhas de assinatura no fim do documento, abrindo página nova se não couber. */
-function desenharAssinaturas(doc: jsPDF, margemEsquerda: number, larguraPagina: number): void {
+/** Desenha os nomes dos responsáveis no fim do documento, abrindo página nova se não couber. Sem linha de assinatura — é só identificação, o documento não é assinado fisicamente. */
+function desenharResponsaveis(doc: jsPDF, margemEsquerda: number, larguraPagina: number): void {
   const alturaPagina = doc.internal.pageSize.getHeight()
   const alturaNecessaria = 30
   let y = finalY(doc) + 24
@@ -30,26 +33,21 @@ function desenharAssinaturas(doc: jsPDF, margemEsquerda: number, larguraPagina: 
   }
 
   const larguraUtil = larguraPagina - margemEsquerda * 2
-  const larguraColuna = larguraUtil / ASSINATURAS.length
+  const larguraColuna = larguraUtil / RESPONSAVEIS.length
 
-  doc.setDrawColor(120)
-  doc.setLineWidth(0.2)
-
-  ASSINATURAS.forEach((assinatura, indice) => {
+  RESPONSAVEIS.forEach((responsavel, indice) => {
     const xInicio = margemEsquerda + indice * larguraColuna + 4
     const xFim = margemEsquerda + (indice + 1) * larguraColuna - 4
     const xCentro = (xInicio + xFim) / 2
 
-    doc.line(xInicio, y, xFim, y)
-
     doc.setFontSize(9)
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(0)
-    doc.text(assinatura.nome, xCentro, y + 5, { align: 'center' })
+    doc.text(responsavel.nome, xCentro, y + 5, { align: 'center' })
 
     doc.setFontSize(8)
     doc.setTextColor(110)
-    doc.text(assinatura.cargo, xCentro, y + 10, { align: 'center' })
+    doc.text(responsavel.cargo, xCentro, y + 10, { align: 'center' })
   })
 
   doc.setTextColor(0)
@@ -118,7 +116,7 @@ export function gerarPdfControleTesouraria(controle: ControleTesouraria): void {
       head: [['Categoria', 'Total']],
       body: totaisPorCategoria.map((c) => [c.categoria, formatCurrency(c.total)]),
       theme: 'striped',
-      headStyles: { fillColor: [51, 65, 85] },
+      headStyles: { fillColor: AZUL_NOSSA_SENHORA_LOURDES },
       styles: { fontSize: 9 },
       columnStyles: { 1: { halign: 'right' } },
       margin: { left: margemEsquerda, right: larguraPagina - margemEsquerda - 90 },
@@ -140,7 +138,7 @@ export function gerarPdfControleTesouraria(controle: ControleTesouraria): void {
       head: [['Forma', 'Total']],
       body: totaisPorForma.map((f) => [f.forma, formatCurrency(f.total)]),
       theme: 'striped',
-      headStyles: { fillColor: [51, 65, 85] },
+      headStyles: { fillColor: AZUL_NOSSA_SENHORA_LOURDES },
       styles: { fontSize: 9 },
       columnStyles: { 1: { halign: 'right' } },
       margin: { left: margemEsquerda, right: larguraPagina - margemEsquerda - 90 },
@@ -165,7 +163,7 @@ export function gerarPdfControleTesouraria(controle: ControleTesouraria): void {
           ])
         : [['Nenhuma receita lançada neste mês.', '', '', '', '']],
     theme: 'striped',
-    headStyles: { fillColor: [51, 65, 85] },
+    headStyles: { fillColor: AZUL_NOSSA_SENHORA_LOURDES },
     styles: { fontSize: 9 },
     columnStyles: { 3: { halign: 'right', cellWidth: 24 } },
     margin: { left: margemEsquerda, right: margemEsquerda },
@@ -191,13 +189,13 @@ export function gerarPdfControleTesouraria(controle: ControleTesouraria): void {
           ])
         : [['Nenhuma despesa lançada neste mês.', '', '', '', '', '', '']],
     theme: 'striped',
-    headStyles: { fillColor: [51, 65, 85] },
+    headStyles: { fillColor: AZUL_NOSSA_SENHORA_LOURDES },
     styles: { fontSize: 9 },
     columnStyles: { 3: { halign: 'right', cellWidth: 22 } },
     margin: { left: margemEsquerda, right: margemEsquerda },
   })
 
-  desenharAssinaturas(doc, margemEsquerda, larguraPagina)
+  desenharResponsaveis(doc, margemEsquerda, larguraPagina)
 
   const totalPaginas = doc.getNumberOfPages()
   for (let pagina = 1; pagina <= totalPaginas; pagina++) {

@@ -117,13 +117,13 @@ export function RecadastramentosPage() {
       />
 
       {carregando ? (
-        <div className="mb-6 grid grid-cols-3 gap-3 sm:max-w-lg">
+        <div className="mb-6 grid grid-cols-3 gap-3 lg:gap-4">
           {Array.from({ length: 3 }).map((_, i) => (
             <Skeleton key={i} className="h-20 w-full rounded-xl sm:h-24" />
           ))}
         </div>
       ) : (
-        <div className="mb-6 grid grid-cols-3 gap-3 sm:max-w-lg">
+        <div className="mb-6 grid grid-cols-3 gap-3 lg:gap-4">
           <StatCard compact label="Recadastrados" value={String(recadastrados.length)} icon={ClipboardList} />
           <StatCard compact label="Não recadastrados" value={String(naoRecadastrados.length)} icon={Users} />
           <StatCard compact label="% recadastrados" value={`${percentualRecadastrados}%`} icon={Percent} />

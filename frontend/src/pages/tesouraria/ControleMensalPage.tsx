@@ -1,15 +1,12 @@
 import * as React from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
-  ArrowDownRight,
   ArrowLeft,
-  ArrowUpRight,
   Eye,
   ExternalLink,
   FileDown,
   FileSpreadsheet,
   Lock,
-  Minus,
   Pencil,
   Plus,
   TrendingDown,
@@ -34,18 +31,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 import {
-  buscarControleTesouraria,
   ehReceitaCalculada,
   obterOuCriarControleTesouraria,
   receitasDizimoDaCompetencia,
   salvarControleTesouraria,
-  saldoDoControle,
 } from '@/services/tesourariaService'
 import { listarTodasDevolucoesPorCarne } from '@/services/devolucaoService'
 import type { ControleTesouraria, Devolucao, EntradaTesouraria, SaidaTesouraria, StatusControleTesouraria } from '@/types'
 import {
   CATEGORIAS_ENTRADA_TESOURARIA,
-  COMPETENCIA_INICIAL_TESOURARIA,
   STATUS_CONTROLE_TESOURARIA,
   URL_CONSULTA_NFE,
   categoriaEntradaLabel,
@@ -53,7 +47,7 @@ import {
 import { formaPagamentoLabel } from '@/constants/devolucao'
 import { gerarPdfControleTesouraria } from '@/utils/pdfTesouraria'
 import { gerarExcelControleTesouraria } from '@/utils/excelTesouraria'
-import { formatCompetencia, formatCurrency, formatDate, maskChaveNfe, subtrairMeses } from '@/utils/format'
+import { formatCompetencia, formatCurrency, formatDate, maskChaveNfe } from '@/utils/format'
 import { ROUTES } from '@/constants/routes'
 import { useTesourariaSessao } from '@/hooks/useTesourariaSessao'
 import { useDefinirPageTitle } from '@/hooks/usePageTitle'
@@ -129,8 +123,6 @@ export function ControleMensalPage() {
   useDefinirPageTitle(competencia ? formatCompetencia(competencia) : 'Tesouraria')
 
   const [controle, setControle] = React.useState<ControleTesouraria | null>(null)
-  const [controleAnterior, setControleAnterior] = React.useState<ControleTesouraria | null>(null)
-  const [mesAnteriorComparavel, setMesAnteriorComparavel] = React.useState(false)
   const [todasDevolucoes, setTodasDevolucoes] = React.useState<Devolucao[]>([])
   const [carregando, setCarregando] = React.useState(true)
 
@@ -150,22 +142,12 @@ export function ControleMensalPage() {
   const carregar = React.useCallback(async () => {
     if (!competencia) return
     setCarregando(true)
-    const competenciaAnterior = subtrairMeses(competencia, 1)
-    // O mês anterior só entra na variação se estiver dentro do período controlado pela
-    // Tesouraria (a partir de COMPETENCIA_INICIAL_TESOURARIA) — antes disso não existe "mês
-    // anterior" nenhum (é o caso de agosto/2026, o primeiro mês). Dentro do período, mesmo que
-    // ninguém tenha aberto aquele mês ainda, ele vale como comparação de saldo zero (nada foi
-    // lançado ali, não é "sem dado").
-    const comparavel = competenciaAnterior >= COMPETENCIA_INICIAL_TESOURARIA
-    // Só precisa do mês atual (e do anterior, quando dá pra comparar) — não do histórico inteiro.
-    const [atual, anterior, porCarne] = await Promise.all([
+    // Só precisa do mês atual — não do histórico inteiro.
+    const [atual, porCarne] = await Promise.all([
       obterOuCriarControleTesouraria(competencia),
-      comparavel ? buscarControleTesouraria(competenciaAnterior) : Promise.resolve(null),
-      listarTodasDevolucoesPorCarne(comparavel ? competenciaAnterior : competencia, competencia),
+      listarTodasDevolucoesPorCarne(competencia, competencia),
     ])
     setControle(atual)
-    setControleAnterior(anterior)
-    setMesAnteriorComparavel(comparavel)
     setTodasDevolucoes(Object.values(porCarne).flat())
     setCarregando(false)
   }, [competencia])
@@ -278,16 +260,6 @@ export function ControleMensalPage() {
   const totalDespesas = controle.saidas.reduce((s, sa) => s + sa.valor, 0)
   const saldo = totalReceitas - totalDespesas
 
-  let saldoAnterior: number | null = null
-  if (mesAnteriorComparavel) {
-    const receitasDizimoAnterior = receitasDizimoDaCompetencia(subtrairMeses(controle.competencia, 1), todasDevolucoes)
-    saldoAnterior = controleAnterior
-      ? saldoDoControle(controleAnterior, receitasDizimoAnterior)
-      : receitasDizimoAnterior.reduce((s, e) => s + e.valor, 0)
-  }
-  const variacao = saldoAnterior !== null ? saldo - saldoAnterior : null
-  const IconeVariacao = variacao === null ? Minus : variacao >= 0 ? ArrowUpRight : ArrowDownRight
-
   const totaisPorCategoria = CATEGORIAS_ENTRADA_TESOURARIA.map((cat) => ({
     label: cat.label,
     total: todasReceitas.filter((e) => e.categoria === cat.value).reduce((s, e) => s + e.valor, 0),
@@ -339,25 +311,17 @@ export function ControleMensalPage() {
         </div>
       </div>
 
-      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-3 lg:gap-4">
         <StatCard compact tom="success" label="Total de receita" value={formatCurrency(totalReceitas)} icon={TrendingUp} />
         <StatCard compact tom="destructive" label="Total de despesas" value={formatCurrency(totalDespesas)} icon={TrendingDown} />
         <StatCard compact tom={saldo >= 0 ? 'success' : 'destructive'} label="Saldo total" value={formatCurrency(saldo)} icon={Wallet} />
-        <StatCard
-          compact
-          tom={variacao === null ? undefined : variacao >= 0 ? 'success' : 'destructive'}
-          label="Variação vs. mês anterior"
-          value={variacao === null ? '—' : `${variacao >= 0 ? '+' : '-'}${formatCurrency(Math.abs(variacao))}`}
-          icon={IconeVariacao}
-          helper={variacao === null ? 'Sem controle no mês anterior' : undefined}
-        />
       </div>
 
       {totaisPorCategoria.length > 0 && (
         <Card className="mb-6">
           <Accordion type="single" collapsible>
             <AccordionItem value="categoria" className="border-b-0">
-              <AccordionTrigger className="px-5 py-5 hover:no-underline sm:px-6 sm:py-6">
+              <AccordionTrigger className="rounded-t-xl px-5 py-5 transition-colors hover:bg-muted/60 hover:no-underline active:bg-muted/60 sm:px-6 sm:py-6">
                 <div className="flex items-center gap-2 text-left">
                   <Wallet className="h-4 w-4 shrink-0 text-primary" />
                   <div>
@@ -396,7 +360,7 @@ export function ControleMensalPage() {
         <Card>
           <Accordion type="single" collapsible>
             <AccordionItem value="receitas" className="border-b-0">
-              <AccordionTrigger className="px-5 py-5 hover:no-underline sm:px-6 sm:py-6">
+              <AccordionTrigger className="rounded-t-xl px-5 py-5 transition-colors hover:bg-muted/60 hover:no-underline active:bg-muted/60 sm:px-6 sm:py-6">
                 <div className="flex items-center gap-2 text-left">
                   <TrendingUp className="h-4 w-4 shrink-0 text-primary" />
                   <div>
@@ -489,7 +453,7 @@ export function ControleMensalPage() {
         <Card>
           <Accordion type="single" collapsible>
             <AccordionItem value="despesas" className="border-b-0">
-              <AccordionTrigger className="px-5 py-5 hover:no-underline sm:px-6 sm:py-6">
+              <AccordionTrigger className="rounded-t-xl px-5 py-5 transition-colors hover:bg-muted/60 hover:no-underline active:bg-muted/60 sm:px-6 sm:py-6">
                 <div className="flex items-center gap-2 text-left">
                   <TrendingDown className="h-4 w-4 shrink-0 text-primary" />
                   <div>

@@ -321,7 +321,7 @@ export function ControleMensalPage() {
         <Card className="mb-6">
           <Accordion type="single" collapsible>
             <AccordionItem value="categoria" className="border-b-0">
-              <AccordionTrigger className="rounded-t-xl px-5 py-5 transition-colors hover:bg-muted/60 hover:no-underline active:bg-muted/60 sm:px-6 sm:py-6">
+              <AccordionTrigger className="rounded-t-xl px-5 py-5 transition-colors hover:bg-primary/5 hover:no-underline active:bg-primary/10 sm:px-6 sm:py-6">
                 <div className="flex items-center gap-2 text-left">
                   <Wallet className="h-4 w-4 shrink-0 text-primary" />
                   <div>
@@ -329,6 +329,7 @@ export function ControleMensalPage() {
                     <p className="mt-1.5 text-sm font-normal text-muted-foreground">
                       {totaisPorCategoria.length} categoria(s) com lançamento
                     </p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">Clique para expandir</p>
                   </div>
                 </div>
               </AccordionTrigger>
@@ -360,7 +361,7 @@ export function ControleMensalPage() {
         <Card>
           <Accordion type="single" collapsible>
             <AccordionItem value="receitas" className="border-b-0">
-              <AccordionTrigger className="rounded-t-xl px-5 py-5 transition-colors hover:bg-muted/60 hover:no-underline active:bg-muted/60 sm:px-6 sm:py-6">
+              <AccordionTrigger className="rounded-t-xl px-5 py-5 transition-colors hover:bg-primary/5 hover:no-underline active:bg-primary/10 sm:px-6 sm:py-6">
                 <div className="flex items-center gap-2 text-left">
                   <TrendingUp className="h-4 w-4 shrink-0 text-primary" />
                   <div>
@@ -370,6 +371,7 @@ export function ControleMensalPage() {
                         ? 'Nenhuma receita lançada'
                         : `${receitasOrdenadas.length} receita(s) · ${formatCurrency(totalReceitas)}`}
                     </p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">Clique para expandir</p>
                   </div>
                 </div>
               </AccordionTrigger>
@@ -453,7 +455,7 @@ export function ControleMensalPage() {
         <Card>
           <Accordion type="single" collapsible>
             <AccordionItem value="despesas" className="border-b-0">
-              <AccordionTrigger className="rounded-t-xl px-5 py-5 transition-colors hover:bg-muted/60 hover:no-underline active:bg-muted/60 sm:px-6 sm:py-6">
+              <AccordionTrigger className="rounded-t-xl px-5 py-5 transition-colors hover:bg-primary/5 hover:no-underline active:bg-primary/10 sm:px-6 sm:py-6">
                 <div className="flex items-center gap-2 text-left">
                   <TrendingDown className="h-4 w-4 shrink-0 text-primary" />
                   <div>
@@ -463,6 +465,7 @@ export function ControleMensalPage() {
                         ? 'Nenhuma despesa lançada'
                         : `${despesasOrdenadas.length} despesa(s) · ${formatCurrency(totalDespesas)}`}
                     </p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">Clique para expandir</p>
                   </div>
                 </div>
               </AccordionTrigger>

@@ -106,8 +106,9 @@ link para a Tesouraria.
 - **Exportar ativos** — baixa um `.txt` com os números de carnê de todos os dizimistas ativos.
 - **Cadastrar novo dizimista** — mesmo formulário do recadastramento, mas o nº do carnê é sempre
   **gerado automaticamente** ao salvar (nunca digitado pelo admin).
-- **Lançar devolução** direto da lista (informando o nº do carnê, ou `-x-` para uma devolução
-  avulsa sem dizimista vinculado), sem precisar abrir a ficha da pessoa.
+- **Lançar devolução** direto da lista (informando o nº do carnê, ou marcando o checkbox
+  "Devolução avulsa" para uma contribuição sem dizimista vinculado), sem precisar abrir a ficha da
+  pessoa.
 - Toque numa linha abre a ficha completa do dizimista.
 
 ### 3.2. Ficha do dizimista (`/pastoral/dizimistas/:numeroCarne`)
@@ -125,19 +126,25 @@ importação da planilha antiga, sem nunca ter se recadastrado, fica de fora), c
 total**, busca por nome/carnê e a data de cada recadastramento. Também permite fazer um
 recadastramento manualmente, pelo mesmo formulário usado no site público.
 
-### 3.4. Lançamento de devoluções em lote (`/pastoral/devolucoes/lote`)
+### 3.4. Lançar devolução (`/pastoral/devolucoes/nova`)
+Tela dedicada para lançar a devolução de **um único** dizimista — mesmo carnê + formulário usado
+nos atalhos das telas acima, só que numa página própria (útil pra quem quer ir direto lançar sem
+passar pela lista de dizimistas). Depois de lançar, o formulário limpa e fica pronto pra lançar a
+próxima em seguida.
+
+### 3.5. Lançamento de devoluções em lote (`/pastoral/devolucoes/lote`)
 Lança a devolução de **vários dizimistas de uma vez**, para o mesmo mês/ano e forma de pagamento:
 uma linha por dizimista (nº do carnê + valor), com botão para adicionar várias linhas de uma vez
 (até 50 por clique). Ao processar, cada linha é validada individualmente — carnês não encontrados
 ou com erro ficam destacados numa lista de falhas, mantidos no formulário para corrigir e
 reprocessar sem redigitar tudo.
 
-### 3.5. Lista de devoluções (`/pastoral/devolucoes/lista`)
+### 3.6. Lista de devoluções (`/pastoral/devolucoes/lista`)
 Todas as devoluções lançadas **num mês específico** (navegação mês a mês), de qualquer dizimista —
 inclusive avulsas —, com busca por carnê/nome, total do mês, e **editar**/**excluir** por
 lançamento.
 
-### 3.6. Configurações (`/pastoral/configuracoes`)
+### 3.7. Configurações (`/pastoral/configuracoes`)
 - **Mínimo de meses ativos**: define quantos meses (dos últimos 6) o dizimista precisa ter
   devolvido para contar como Ativo (ver seção 6.1).
 - **Membros da Pastoral**: cadastro de nomes usados no campo "Lançado por" das devoluções (CRUD
@@ -234,8 +241,11 @@ gerando um número ao mesmo tempo nunca recebam o mesmo, mesmo pulando números 
 carnês físicos antigos.
 
 ### 6.4. Devolução avulsa
-Usa o "carnê" especial `-x-` — não corresponde a nenhum dizimista real, só existe como caminho de
-gravação no Firestore. Serve para registrar uma contribuição de quem doou/dizimou sem carnê.
+Pra registrar uma contribuição de quem doou/dizimou sem carnê, quem lança marca o checkbox
+"Devolução avulsa" (nas telas de lançamento — seções 3.1, 3.4, 3.5 e 3.6) em vez de informar um
+nº de carnê. Por trás, usa o "carnê" especial `000` — puramente numérico de propósito (digitável
+no teclado numérico do celular, mais limpo em relatórios/analytics) — que não corresponde a
+nenhum dizimista real, só existe como caminho de gravação no Firestore.
 
 ---
 
@@ -343,6 +353,15 @@ node scripts/verificar-competencia-devolucoes.mjs
 ```
 Checagem somente leitura: conta quantas devoluções não têm o campo `competencia` preenchido —
 usado para validar com segurança os filtros de leitura por período (seção 7.1).
+
+### Migrar devoluções avulsas (histórico — já executado)
+```bash
+node scripts/migrar-devolucoes-avulsas.mjs --dry-run
+node scripts/migrar-devolucoes-avulsas.mjs
+```
+Move devoluções avulsas gravadas sob o carnê especial antigo (`-x-`) para o atual (`000` — ver
+seção 6.4). Já foi rodado em produção; rodar de novo não faz nada (não sobra mais nenhuma sob a
+chave antiga), mas o script fica registrado caso surja outro ambiente/base com dados antigos.
 
 ### Gerar hash de senha
 ```bash

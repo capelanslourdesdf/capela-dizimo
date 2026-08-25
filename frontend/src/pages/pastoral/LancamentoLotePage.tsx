@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -304,11 +305,6 @@ export function LancamentoLotePage() {
                 </div>
               </div>
 
-              <p className="text-xs text-muted-foreground">
-                Use <span className="font-mono font-medium text-foreground">{CARNE_AVULSO}</span> no nº do carnê pra
-                lançar uma devolução avulsa (sem dizimista cadastrado).
-              </p>
-
               {fields.map((field, index) => (
                 <div
                   key={field.id}
@@ -321,7 +317,23 @@ export function LancamentoLotePage() {
                       control={control}
                       name={`linhas.${index}.numeroCarne`}
                       render={({ field: f }) => (
-                        <Input id={`linhas.${index}.numeroCarne`} inputMode="numeric" placeholder="Nº do carnê" {...f} />
+                        <>
+                          <Input
+                            id={`linhas.${index}.numeroCarne`}
+                            inputMode="numeric"
+                            placeholder="Nº do carnê"
+                            disabled={f.value === CARNE_AVULSO}
+                            {...f}
+                          />
+                          <label className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <Checkbox
+                              className="h-3.5 w-3.5"
+                              checked={f.value === CARNE_AVULSO}
+                              onCheckedChange={(v) => f.onChange(v ? CARNE_AVULSO : '')}
+                            />
+                            Avulsa (sem dizimista cadastrado)
+                          </label>
+                        </>
                       )}
                     />
                   </div>

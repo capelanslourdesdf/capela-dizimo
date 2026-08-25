@@ -3,10 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 
 import { PageHeader } from '@/components/layout/PageHeader'
+import { CampoNumeroCarneDevolucao } from '@/components/pastoral/CampoNumeroCarneDevolucao'
 import { DevolucaoForm } from '@/components/forms/DevolucaoForm'
 import { Card, CardContent } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 
 import { buscarDizimistaPorCarne } from '@/services/dizimistaService'
 import { lancarDevolucao, type DadosDevolucao } from '@/services/devolucaoService'
@@ -17,14 +16,15 @@ import { ROUTES } from '@/constants/routes'
 export function LancamentoUnicoPage() {
   const navigate = useNavigate()
   const [numeroCarne, setNumeroCarne] = React.useState('')
+  const [devolucaoAvulsa, setDevolucaoAvulsa] = React.useState(false)
   // Muda a cada lançamento com sucesso, forçando o DevolucaoForm a remontar com os campos em
   // branco — assim dá pra lançar várias devoluções seguidas sem sair da tela.
   const [formularioKey, setFormularioKey] = React.useState(0)
 
   async function handleSalvar(dados: DadosDevolucao) {
-    const digitado = numeroCarne.trim()
+    const digitado = devolucaoAvulsa ? CARNE_AVULSO : numeroCarne.trim()
     if (!digitado) {
-      throw new Error('Informe o número do carnê (ou -x- para avulsa).')
+      throw new Error('Informe o número do carnê (ou marque "Devolução avulsa").')
     }
 
     // Aceita o carnê digitado com ou sem zeros à esquerda — a devolução é lançada sob o id
@@ -41,6 +41,7 @@ export function LancamentoUnicoPage() {
     await lancarDevolucao(carneReal, dados)
     toast.success('Devolução lançada com sucesso.')
     setNumeroCarne('')
+    setDevolucaoAvulsa(false)
     setFormularioKey((k) => k + 1)
   }
 
@@ -50,20 +51,12 @@ export function LancamentoUnicoPage() {
 
       <Card className="max-w-2xl">
         <CardContent className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="numeroCarne">Nº do carnê</Label>
-            <Input
-              id="numeroCarne"
-              inputMode="numeric"
-              placeholder="Número do carnê"
-              value={numeroCarne}
-              onChange={(e) => setNumeroCarne(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">
-              Use <span className="font-mono font-medium text-foreground">{CARNE_AVULSO}</span> pra lançar uma
-              devolução avulsa (sem dizimista cadastrado).
-            </p>
-          </div>
+          <CampoNumeroCarneDevolucao
+            numeroCarne={numeroCarne}
+            onNumeroCarneChange={setNumeroCarne}
+            avulsa={devolucaoAvulsa}
+            onAvulsaChange={setDevolucaoAvulsa}
+          />
           <DevolucaoForm
             key={formularioKey}
             competenciaPadrao={competenciaAtual()}

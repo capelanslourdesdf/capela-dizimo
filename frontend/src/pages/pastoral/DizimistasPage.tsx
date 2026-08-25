@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 
 import { PageHeader } from '@/components/layout/PageHeader'
 import { FiltroBar } from '@/components/pastoral/FiltroBar'
+import { CampoNumeroCarneDevolucao } from '@/components/pastoral/CampoNumeroCarneDevolucao'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { EmptyState } from '@/components/dashboard/EmptyState'
 import { StatCard } from '@/components/dashboard/StatCard'
@@ -15,8 +16,6 @@ import { DevolucaoForm } from '@/components/forms/DevolucaoForm'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -66,6 +65,7 @@ export function DizimistasPage() {
   const [dizimistaParaExcluir, setDizimistaParaExcluir] = React.useState<Dizimista | null>(null)
   const [modalNovaDevolucao, setModalNovaDevolucao] = React.useState(false)
   const [carneNovaDevolucao, setCarneNovaDevolucao] = React.useState('')
+  const [devolucaoAvulsa, setDevolucaoAvulsa] = React.useState(false)
   // Muda a cada lançamento com sucesso, forçando o DevolucaoForm a remontar com os campos em
   // branco — assim dá pra lançar várias devoluções seguidas sem fechar o diálogo.
   const [formularioNovaDevolucaoKey, setFormularioNovaDevolucaoKey] = React.useState(0)
@@ -192,9 +192,9 @@ export function DizimistasPage() {
   }
 
   async function handleLancarNovaDevolucao(dados: DadosDevolucao) {
-    const digitado = carneNovaDevolucao.trim()
+    const digitado = devolucaoAvulsa ? CARNE_AVULSO : carneNovaDevolucao.trim()
     if (!digitado) {
-      throw new Error('Informe o número do carnê (ou -x- para avulsa).')
+      throw new Error('Informe o número do carnê (ou marque "Devolução avulsa").')
     }
 
     // Aceita o carnê digitado com ou sem zeros à esquerda — usa sempre o id real devolvido pela
@@ -219,6 +219,7 @@ export function DizimistasPage() {
     toast.success('Devolução lançada com sucesso.')
     // Mantém o diálogo aberto pra lançar outra em seguida — limpa o carnê e reseta o formulário.
     setCarneNovaDevolucao('')
+    setDevolucaoAvulsa(false)
     setFormularioNovaDevolucaoKey((k) => k + 1)
   }
 
@@ -250,6 +251,7 @@ export function DizimistasPage() {
               variant="outline"
               onClick={() => {
                 setCarneNovaDevolucao('')
+                setDevolucaoAvulsa(false)
                 setModalNovaDevolucao(true)
               }}
             >
@@ -506,20 +508,12 @@ export function DizimistasPage() {
           </DialogHeader>
           {modalNovaDevolucao && (
             <div className="space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="numeroCarneNovaDevolucao">Nº do carnê</Label>
-                <Input
-                  id="numeroCarneNovaDevolucao"
-                  inputMode="numeric"
-                  placeholder="Número do carnê"
-                  value={carneNovaDevolucao}
-                  onChange={(e) => setCarneNovaDevolucao(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Use <span className="font-mono font-medium text-foreground">{CARNE_AVULSO}</span> pra lançar uma
-                  devolução avulsa (sem dizimista cadastrado).
-                </p>
-              </div>
+              <CampoNumeroCarneDevolucao
+                numeroCarne={carneNovaDevolucao}
+                onNumeroCarneChange={setCarneNovaDevolucao}
+                avulsa={devolucaoAvulsa}
+                onAvulsaChange={setDevolucaoAvulsa}
+              />
               <DevolucaoForm
                 key={formularioNovaDevolucaoKey}
                 competenciaPadrao={competenciaAtual()}

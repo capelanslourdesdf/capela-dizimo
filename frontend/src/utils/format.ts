@@ -1,3 +1,5 @@
+import { CARNE_AVULSO } from '@/constants/devolucao'
+
 export function formatCurrency(valor: number): string {
   return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
@@ -48,9 +50,15 @@ export function formatarNumeroCarne(numeroCarne: string): string {
 /**
  * Remove zeros à esquerda digitados por engano ("001" -> "1", "026" -> "26"), para que o carnê
  * seja encontrado independente de ter sido digitado com ou sem o preenchimento de 3 dígitos.
+ *
+ * `CARNE_AVULSO` ("000") fica de fora dessa regra — é um valor reservado, não um carnê real, e a
+ * mesma lógica de zeros à esquerda o reduziria para "0", quebrando as comparações que dependem do
+ * valor exato salvo no Firestore.
  */
 export function normalizarNumeroCarne(valor: string): string {
-  return valor.trim().replace(/^0+(?=\d)/, '')
+  const bruto = valor.trim()
+  if (bruto === CARNE_AVULSO) return bruto
+  return bruto.replace(/^0+(?=\d)/, '')
 }
 
 export function maskCpf(valor: string): string {

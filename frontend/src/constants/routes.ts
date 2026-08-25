@@ -24,6 +24,7 @@ export const ROUTES = {
     dizimistaDetalhe: (numeroCarne: string) => `/pastoral/dizimistas/${numeroCarne}`,
     recadastramentos: '/pastoral/recadastramentos',
     configuracoes: '/pastoral/configuracoes',
+    lancamentoUnico: '/pastoral/devolucoes/nova',
     lancamentoLote: '/pastoral/devolucoes/lote',
     listaDevolucoes: '/pastoral/devolucoes/lista',
     tesouraria: {

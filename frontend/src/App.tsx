@@ -35,6 +35,7 @@ import { DizimistasPage } from '@/pages/pastoral/DizimistasPage'
 import { DizimistaDetalhePage } from '@/pages/pastoral/DizimistaDetalhePage'
 import { RecadastramentosPage } from '@/pages/pastoral/RecadastramentosPage'
 import { ConfiguracoesPage } from '@/pages/pastoral/ConfiguracoesPage'
+import { LancamentoUnicoPage } from '@/pages/pastoral/LancamentoUnicoPage'
 import { LancamentoLotePage } from '@/pages/pastoral/LancamentoLotePage'
 import { ListaDevolucoesPage } from '@/pages/pastoral/ListaDevolucoesPage'
 import { TesourariaPainelPage } from '@/pages/tesouraria/TesourariaPainelPage'
@@ -83,6 +84,7 @@ function App() {
                     <Route path={ROUTES.pastoral.root} element={<DizimistasPage />} />
                     <Route path="/pastoral/dizimistas/:numeroCarne" element={<DizimistaDetalhePage />} />
                     <Route path={ROUTES.pastoral.recadastramentos} element={<RecadastramentosPage />} />
+                    <Route path={ROUTES.pastoral.lancamentoUnico} element={<LancamentoUnicoPage />} />
                     <Route path={ROUTES.pastoral.lancamentoLote} element={<LancamentoLotePage />} />
                     <Route path={ROUTES.pastoral.listaDevolucoes} element={<ListaDevolucoesPage />} />
 

@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Layers,
   PartyPopper,
+  Plus,
   QrCode,
   Settings,
   TrendingUp,
@@ -33,9 +34,10 @@ export const dizimistaNav: NavItem[] = [
 
 export const pastoralNav: NavItem[] = [
   { label: 'Dizimistas', href: ROUTES.pastoral.root, icon: Users, end: true },
-  { label: 'Recadastramentos', href: ROUTES.pastoral.recadastramentos, icon: ClipboardList },
+  { label: 'Lançar devolução', href: ROUTES.pastoral.lancamentoUnico, icon: Plus },
   { label: 'Lançar devoluções em lote', href: ROUTES.pastoral.lancamentoLote, icon: Layers },
   { label: 'Lista de devoluções', href: ROUTES.pastoral.listaDevolucoes, icon: ArrowLeftRight },
+  { label: 'Recadastramentos', href: ROUTES.pastoral.recadastramentos, icon: ClipboardList },
   { label: 'Tesouraria', href: ROUTES.pastoral.tesouraria.root, icon: Landmark },
   { label: 'Configurações', href: ROUTES.pastoral.configuracoes, icon: Settings },
 ]

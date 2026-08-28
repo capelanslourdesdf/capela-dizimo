@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeftRight, Cake, Download, IdCard, Pencil, Phone, Trash2, UserPlus, Users, Wallet } from 'lucide-react'
+import { ArrowLeftRight, Cake, ChevronLeft, ChevronRight, Download, IdCard, Loader2, Pencil, Phone, Trash2, UserPlus, Users, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -24,28 +24,23 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 import {
   buscarDizimistaPorCarne,
+  contarDizimistas,
   criarDizimistaAdmin,
   diaMesDoRegistro,
   excluirDizimista,
-  listarDizimistas,
+  listarAniversariantesDoMes,
+  listarDizimistasPaginado,
+  listarNumerosCarneAtivos,
+  type CursorDizimistas,
 } from '@/services/dizimistaService'
-import {
-  competenciaDaDevolucao,
-  lancarDevolucao,
-  listarTodasDevolucoesPorCarne,
-  type DadosDevolucao,
-} from '@/services/devolucaoService'
-import { obterMinimoMesesAtivos } from '@/services/configuracaoService'
-import type { DadosCadastraisDizimista, Devolucao, Dizimista } from '@/types'
+import { lancarDevolucao, obterTotaisDevolucaoPorAno, obterTotaisDevolucaoPorMes, type DadosDevolucao } from '@/services/devolucaoService'
+import { obterContagemStatusAgregada, type ContagemStatus } from '@/services/statusAgregadoService'
+import type { DadosCadastraisDizimista, Dizimista } from '@/types'
 import { CARNE_AVULSO } from '@/constants/devolucao'
-import { competenciaAtual, formatarNumeroCarne, formatCurrency, getIniciais } from '@/utils/format'
+import { formatarNumeroCarne, formatCurrency, getIniciais } from '@/utils/format'
+import { aguardarPeloMenos } from '@/utils/async'
 import { baixarArquivoTexto } from '@/utils/download'
-import {
-  calcularStatusDizimista,
-  competenciaDeRegistro,
-  competenciasPagasDoDizimista,
-  type StatusDizimista,
-} from '@/utils/statusDizimista'
+import type { StatusDizimista } from '@/utils/statusDizimista'
 import { ROUTES } from '@/constants/routes'
 
 const STATUS_CONFIG: Record<StatusDizimista, { label: string; variant: 'success' | 'muted' }> = {
@@ -53,124 +48,167 @@ const STATUS_CONFIG: Record<StatusDizimista, { label: string; variant: 'success'
   inativo: { label: 'Inativo', variant: 'muted' },
 }
 
+const ATRASO_DEBOUNCE_BUSCA_MS = 400
+const DURACAO_MINIMA_LOADING_MS = 400
+
 export function DizimistasPage() {
   const navigate = useNavigate()
-  const [dizimistas, setDizimistas] = React.useState<Dizimista[]>([])
-  const [devolucoesPorCarne, setDevolucoesPorCarne] = React.useState<Record<string, Devolucao[]>>({})
-  const [minimoMesesAtivos, setMinimoMesesAtivos] = React.useState<number | null>(null)
-  const [carregando, setCarregando] = React.useState(true)
+
+  // --- Tabela paginada (30 por página, busca e filtro de status resolvidos no Firestore) ---
+  // Cada página buscada fica guardada aqui (por índice), então "página anterior" nunca refaz uma
+  // leitura no Firestore — só reexibe o que já foi buscado nesta visita.
+  const [paginasCache, setPaginasCache] = React.useState<Dizimista[][]>([])
+  const [cursores, setCursores] = React.useState<(CursorDizimistas | null)[]>([null])
+  const [indicePagina, setIndicePagina] = React.useState(0)
+  const [temProximaPagina, setTemProximaPagina] = React.useState(false)
+  const [carregandoTabela, setCarregandoTabela] = React.useState(true)
+  const [erroIndice, setErroIndice] = React.useState<string | null>(null)
+
   const [busca, setBusca] = React.useState('')
+  const [buscaAplicada, setBuscaAplicada] = React.useState('')
   const [filtroStatus, setFiltroStatus] = React.useState<StatusDizimista | 'todos'>('todos')
+
+  // --- Resumo (cards, total por ano, aniversariantes) — vem de agregados, carregado 1x. ---
+  const [carregandoResumo, setCarregandoResumo] = React.useState(true)
+  const [contagemStatus, setContagemStatus] = React.useState<ContagemStatus>({ ativos: 0, inativos: 0 })
+  const [totalDizimistas, setTotalDizimistas] = React.useState(0)
+  const [totaisPorAnoAgregado, setTotaisPorAnoAgregado] = React.useState<Record<string, number>>({})
+  const [totaisPorMesAgregado, setTotaisPorMesAgregado] = React.useState<Record<string, number>>({})
+  const [aniversariantesDoMes, setAniversariantesDoMes] = React.useState<Dizimista[]>([])
+
   const [modalAberto, setModalAberto] = React.useState(false)
   const [dizimistaParaExcluir, setDizimistaParaExcluir] = React.useState<Dizimista | null>(null)
   const [modalNovaDevolucao, setModalNovaDevolucao] = React.useState(false)
   const [carneNovaDevolucao, setCarneNovaDevolucao] = React.useState('')
   const [devolucaoAvulsa, setDevolucaoAvulsa] = React.useState(false)
-  // Muda a cada lançamento com sucesso, forçando o DevolucaoForm a remontar com os campos em
-  // branco — assim dá pra lançar várias devoluções seguidas sem fechar o diálogo.
   const [formularioNovaDevolucaoKey, setFormularioNovaDevolucaoKey] = React.useState(0)
+  const [exportandoAtivos, setExportandoAtivos] = React.useState(false)
 
-  const carregar = React.useCallback(async () => {
-    setCarregando(true)
-    const [todos, devolucoes, minimo] = await Promise.all([
-      listarDizimistas(),
-      listarTodasDevolucoesPorCarne(),
-      obterMinimoMesesAtivos(),
+  const buscarPagina = React.useCallback(
+    async (indice: number, cursor: CursorDizimistas | null) => {
+      const inicio = Date.now()
+      setCarregandoTabela(true)
+      setErroIndice(null)
+      try {
+        const { itens, proximoCursor } = await listarDizimistasPaginado({
+          cursor,
+          busca: buscaAplicada,
+          status: filtroStatus,
+        })
+        await aguardarPeloMenos(inicio, DURACAO_MINIMA_LOADING_MS)
+        setPaginasCache((atual) => {
+          const copia = [...atual]
+          copia[indice] = itens
+          return copia
+        })
+        setCursores((atual) => {
+          const copia = [...atual]
+          copia[indice + 1] = proximoCursor
+          return copia
+        })
+        setTemProximaPagina(!!proximoCursor)
+        setIndicePagina(indice)
+      } catch {
+        // Erro mais comum aqui é índice composto do Firestore ainda não criado (ex.: buscar por
+        // nome com o filtro de status ativo) — a mensagem do próprio erro traz o link para criá-lo.
+        setErroIndice('Não foi possível carregar esta busca agora. Tente novamente em instantes.')
+      } finally {
+        setCarregandoTabela(false)
+      }
+    },
+    [buscaAplicada, filtroStatus],
+  )
+
+  // Busca/filtro mudou: zera a paginação e busca a página 1 de novo.
+  React.useEffect(() => {
+    setPaginasCache([])
+    setCursores([null])
+    buscarPagina(0, null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [buscaAplicada, filtroStatus])
+
+  // Debounce: só dispara a busca no Firestore quando a pessoa para de digitar.
+  React.useEffect(() => {
+    const termo = busca.trim()
+    if (termo === buscaAplicada) return
+    const timer = setTimeout(() => setBuscaAplicada(termo), ATRASO_DEBOUNCE_BUSCA_MS)
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [busca])
+
+  const carregarResumo = React.useCallback(async () => {
+    setCarregandoResumo(true)
+    const mesAtual = new Date().getMonth() + 1
+    const [total, status, porAno, porMes, aniversariantes] = await Promise.all([
+      contarDizimistas(),
+      obterContagemStatusAgregada(),
+      obterTotaisDevolucaoPorAno(),
+      obterTotaisDevolucaoPorMes(),
+      listarAniversariantesDoMes(mesAtual),
     ])
-    setDizimistas(todos)
-    setDevolucoesPorCarne(devolucoes)
-    setMinimoMesesAtivos(minimo)
-    setCarregando(false)
+    setTotalDizimistas(total)
+    setContagemStatus(status)
+    setTotaisPorAnoAgregado(porAno)
+    setTotaisPorMesAgregado(porMes)
+    setAniversariantesDoMes(aniversariantes)
+    setCarregandoResumo(false)
   }, [])
 
   React.useEffect(() => {
-    carregar()
-  }, [carregar])
+    carregarResumo()
+  }, [carregarResumo])
 
-  const statusPorCarne = React.useMemo(() => {
-    const mapa = new Map<string, StatusDizimista>()
-    if (minimoMesesAtivos === null) return mapa
-
-    for (const d of dizimistas) {
-      const devolucoes = devolucoesPorCarne[d.numeroCarne] ?? []
-      const status = calcularStatusDizimista(
-        competenciaDeRegistro(d),
-        competenciasPagasDoDizimista(devolucoes),
-        minimoMesesAtivos,
-      )
-      mapa.set(d.numeroCarne, status)
-    }
-    return mapa
-  }, [dizimistas, devolucoesPorCarne, minimoMesesAtivos])
-
-  const totalAtivos = React.useMemo(
-    () => [...statusPorCarne.values()].filter((s) => s === 'ativo').length,
-    [statusPorCarne],
-  )
-  const totalInativos = React.useMemo(
-    () => [...statusPorCarne.values()].filter((s) => s === 'inativo').length,
-    [statusPorCarne],
-  )
-
-  /** Soma de todas as devoluções (de todos os dizimistas) agrupada por ano, do mais recente pro mais antigo. */
-  const totalPorAno = React.useMemo(() => {
-    const mapa = new Map<string, number>()
-    for (const devolucoes of Object.values(devolucoesPorCarne)) {
-      for (const d of devolucoes) {
-        const ano = competenciaDaDevolucao(d).slice(0, 4)
-        if (!ano) continue
-        mapa.set(ano, (mapa.get(ano) ?? 0) + d.valor)
+  const irParaPagina = React.useCallback(
+    (indice: number) => {
+      if (paginasCache[indice]) {
+        setIndicePagina(indice)
+        setTemProximaPagina(!!cursores[indice + 1])
+        return
       }
-    }
-    return [...mapa.entries()].sort((a, b) => (a[0] < b[0] ? 1 : -1))
-  }, [devolucoesPorCarne])
+      const cursor = cursores[indice]
+      if (cursor === undefined) return
+      buscarPagina(indice, cursor)
+    },
+    [paginasCache, cursores, buscarPagina],
+  )
 
+  /** Reler a página atual do Firestore (ignorando o cache) — usado depois de lançar uma devolução, já que ela pode ter mudado o status do dizimista exibido na tabela. */
+  const recarregarPaginaAtual = React.useCallback(() => {
+    buscarPagina(indicePagina, cursores[indicePagina] ?? null)
+  }, [buscarPagina, indicePagina, cursores])
+
+  const dizimistasDaPagina = paginasCache[indicePagina] ?? []
+
+  const totalPorAno = React.useMemo(
+    () => Object.entries(totaisPorAnoAgregado).sort((a, b) => (a[0] < b[0] ? 1 : -1)),
+    [totaisPorAnoAgregado],
+  )
   const anoAtual = String(new Date().getFullYear())
   const totalAnoAtual = totalPorAno.find(([ano]) => ano === anoAtual)?.[1] ?? 0
   const totalGeral = React.useMemo(() => totalPorAno.reduce((soma, [, valor]) => soma + valor, 0), [totalPorAno])
 
-  /** Total arrecadado em cada mês do ano atual, na ordem Jan..Dez — para o gráfico de evolução. */
   const evolucaoMensalAnoAtual = React.useMemo(() => {
     const porMes = Array(12).fill(0)
-    for (const devolucoes of Object.values(devolucoesPorCarne)) {
-      for (const d of devolucoes) {
-        const competencia = competenciaDaDevolucao(d)
-        if (!competencia.startsWith(anoAtual)) continue
-        const indiceMes = Number(competencia.slice(5, 7)) - 1
-        if (indiceMes >= 0 && indiceMes < 12) porMes[indiceMes] += d.valor
-      }
+    for (let mes = 1; mes <= 12; mes++) {
+      const competencia = `${anoAtual}-${String(mes).padStart(2, '0')}`
+      porMes[mes - 1] = totaisPorMesAgregado[competencia] ?? 0
     }
     return porMes
-  }, [devolucoesPorCarne, anoAtual])
+  }, [totaisPorMesAgregado, anoAtual])
 
-  /** Dizimistas que fazem aniversário no mês atual, ordenados pelo dia. */
-  const aniversariantesDoMes = React.useMemo(() => {
-    const mesAtual = String(new Date().getMonth() + 1).padStart(2, '0')
-
-    return dizimistas
-      .map((d) => ({ dizimista: d, diaMes: diaMesDoRegistro(d) }))
-      .filter(({ diaMes }) => /^\d{2}\/\d{2}$/.test(diaMes) && diaMes.slice(3, 5) === mesAtual)
-      .sort((a, b) => Number(a.diaMes.slice(0, 2)) - Number(b.diaMes.slice(0, 2)))
-  }, [dizimistas])
+  const aniversariantesOrdenados = React.useMemo(
+    () =>
+      aniversariantesDoMes
+        .map((d) => ({ dizimista: d, diaMes: diaMesDoRegistro(d) }))
+        .filter(({ diaMes }) => /^\d{2}\/\d{2}$/.test(diaMes))
+        .sort((a, b) => Number(a.diaMes.slice(0, 2)) - Number(b.diaMes.slice(0, 2))),
+    [aniversariantesDoMes],
+  )
 
   const nomeMesAtual = React.useMemo(() => {
     const nome = new Date().toLocaleDateString('pt-BR', { month: 'long' })
     return nome.charAt(0).toUpperCase() + nome.slice(1)
   }, [])
-
-  const dizimistasFiltrados = React.useMemo(() => {
-    const termo = busca.trim().toLowerCase()
-
-    return dizimistas.filter((d) => {
-      const combinaBusca =
-        !termo ||
-        d.nomeCompleto.toLowerCase().includes(termo) ||
-        d.numeroCarne.includes(termo) ||
-        formatarNumeroCarne(d.numeroCarne).includes(termo)
-      const combinaStatus = filtroStatus === 'todos' || statusPorCarne.get(d.numeroCarne) === filtroStatus
-      return combinaBusca && combinaStatus
-    })
-  }, [dizimistas, busca, filtroStatus, statusPorCarne])
 
   async function handleCadastrar(dados: DadosCadastraisDizimista) {
     const numeroCarne = await criarDizimistaAdmin(dados)
@@ -183,7 +221,12 @@ export function DizimistasPage() {
     if (!dizimistaParaExcluir) return
     try {
       await excluirDizimista(dizimistaParaExcluir.numeroCarne)
-      setDizimistas((atual) => atual.filter((d) => d.numeroCarne !== dizimistaParaExcluir.numeroCarne))
+      setPaginasCache((atual) => {
+        const copia = [...atual]
+        copia[indicePagina] = (copia[indicePagina] ?? []).filter((d) => d.numeroCarne !== dizimistaParaExcluir.numeroCarne)
+        return copia
+      })
+      setTotalDizimistas((atual) => Math.max(0, atual - 1))
       toast.success(`${dizimistaParaExcluir.nomeCompleto} foi excluído(a).`)
       setDizimistaParaExcluir(null)
     } catch {
@@ -197,9 +240,6 @@ export function DizimistasPage() {
       throw new Error('Informe o número do carnê (ou marque "Devolução avulsa").')
     }
 
-    // Aceita o carnê digitado com ou sem zeros à esquerda — usa sempre o id real devolvido pela
-    // busca daqui pra frente, senão a devolução ficaria gravada sob uma chave diferente da do
-    // dizimista de verdade.
     let numeroCarne = digitado
     if (digitado !== CARNE_AVULSO) {
       const dizimista = await buscarDizimistaPorCarne(digitado)
@@ -209,42 +249,46 @@ export function DizimistasPage() {
       numeroCarne = dizimista.numeroCarne
     }
 
-    const nova = await lancarDevolucao(numeroCarne, dados)
-    // Atualiza a lista local (status/totais recalculam sozinhos) em vez de buscar tudo nas
-    // devoluções de novo — evita repetir a leitura mais cara do site a cada lançamento.
-    setDevolucoesPorCarne((atual) => ({
-      ...atual,
-      [numeroCarne]: [...(atual[numeroCarne] ?? []), nova],
-    }))
+    await lancarDevolucao(numeroCarne, dados)
     toast.success('Devolução lançada com sucesso.')
-    // Mantém o diálogo aberto pra lançar outra em seguida — limpa o carnê e reseta o formulário.
+    // O lançamento pode ter mudado o status do dizimista (virou Ativo) e os totais agregados —
+    // recarrega o resumo e a página atual da tabela para refletir isso, em vez de reler tudo.
+    carregarResumo()
+    recarregarPaginaAtual()
     setCarneNovaDevolucao('')
     setDevolucaoAvulsa(false)
     setFormularioNovaDevolucaoKey((k) => k + 1)
   }
 
-  function handleExportarAtivos() {
-    const ativos = dizimistas.filter((d) => statusPorCarne.get(d.numeroCarne) === 'ativo')
-    if (ativos.length === 0) {
-      toast.info('Nenhum dizimista ativo para exportar.')
-      return
+  async function handleExportarAtivos() {
+    setExportandoAtivos(true)
+    try {
+      const carnes = await listarNumerosCarneAtivos()
+      if (carnes.length === 0) {
+        toast.info('Nenhum dizimista ativo para exportar.')
+        return
+      }
+      const conteudo = carnes.map(formatarNumeroCarne).join('\n')
+      const hoje = new Date().toISOString().slice(0, 10)
+      baixarArquivoTexto(`carnes-ativos-${hoje}.txt`, conteudo)
+      toast.success(`${carnes.length} carnê(s) exportado(s).`)
+    } finally {
+      setExportandoAtivos(false)
     }
-
-    const conteudo = ativos.map((d) => formatarNumeroCarne(d.numeroCarne)).join('\n')
-    const hoje = new Date().toISOString().slice(0, 10)
-    baixarArquivoTexto(`carnes-ativos-${hoje}.txt`, conteudo)
-    toast.success(`${ativos.length} carnê(s) exportado(s).`)
   }
+
+  const paginaVazia = !carregandoTabela && dizimistasDaPagina.length === 0
+  const semResultadoNenhum = paginaVazia && indicePagina === 0
 
   return (
     <div>
       <PageHeader
         title="Dizimistas"
-        description={`${dizimistasFiltrados.length} dizimista(s) encontrado(s)`}
+        description={`${totalDizimistas} dizimista(s) cadastrado(s)`}
         actions={
           <>
-            <Button variant="outline" onClick={handleExportarAtivos}>
-              <Download className="h-4 w-4" />
+            <Button variant="outline" onClick={handleExportarAtivos} disabled={exportandoAtivos}>
+              {exportandoAtivos ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
               Exportar ativos
             </Button>
             <Button
@@ -266,12 +310,7 @@ export function DizimistasPage() {
         }
       />
 
-      {/*
-        No mobile as três contagens (ativos, inativos e total) dividem uma única linha em cards
-        compactos, e o valor arrecadado — que é o texto mais longo — ocupa a linha inteira abaixo,
-        para não quebrar. No desktop tudo volta para as quatro colunas de sempre.
-      */}
-      {carregando ? (
+      {carregandoResumo ? (
         <div className="mb-6 grid grid-cols-3 gap-3 lg:grid-cols-4 lg:gap-4">
           {Array.from({ length: 3 }).map((_, i) => (
             <Skeleton key={i} className="h-20 w-full rounded-xl lg:h-24" />
@@ -280,16 +319,16 @@ export function DizimistasPage() {
         </div>
       ) : (
         <div className="mb-6 grid grid-cols-3 gap-3 lg:grid-cols-4 lg:gap-4">
-          <StatCard compact label="Ativos" value={String(totalAtivos)} icon={Users} />
-          <StatCard compact label="Inativos" value={String(totalInativos)} icon={Users} />
-          <StatCard compact label="Total" value={String(dizimistas.length)} icon={Users} />
+          <StatCard compact label="Ativos" value={String(contagemStatus.ativos)} icon={Users} />
+          <StatCard compact label="Inativos" value={String(contagemStatus.inativos)} icon={Users} />
+          <StatCard compact label="Total" value={String(totalDizimistas)} icon={Users} />
           <div className="col-span-3 lg:col-span-1">
             <StatCard label={`Arrecadado em ${anoAtual}`} value={formatCurrency(totalAnoAtual)} icon={Wallet} tom="success" />
           </div>
         </div>
       )}
 
-      {!carregando && totalPorAno.length > 0 && (
+      {!carregandoResumo && totalPorAno.length > 0 && (
         <Card className="mb-6">
           <Accordion type="single" collapsible>
             <AccordionItem value="total-por-ano" className="border-b-0">
@@ -323,7 +362,7 @@ export function DizimistasPage() {
         </Card>
       )}
 
-      {!carregando && (
+      {!carregandoResumo && (
         <Card className="mb-6">
           <Accordion type="single" collapsible>
             <AccordionItem value="aniversariantes" className="border-b-0">
@@ -335,19 +374,19 @@ export function DizimistasPage() {
                       Aniversariantes de {nomeMesAtual}
                     </p>
                     <p className="mt-1.5 text-sm font-normal text-muted-foreground">
-                      {aniversariantesDoMes.length === 0
+                      {aniversariantesOrdenados.length === 0
                         ? 'Nenhum dizimista faz aniversário este mês.'
-                        : `${aniversariantesDoMes.length} dizimista(s) fazem aniversário este mês.`}
+                        : `${aniversariantesOrdenados.length} dizimista(s) fazem aniversário este mês.`}
                     </p>
                   </div>
                 </div>
               </AccordionTrigger>
               <AccordionContent className="px-5 pb-5 sm:px-6 sm:pb-6">
-                {aniversariantesDoMes.length === 0 ? (
+                {aniversariantesOrdenados.length === 0 ? (
                   <p className="text-sm text-muted-foreground">Nenhum aniversariante este mês.</p>
                 ) : (
                   <ul className="divide-y divide-border">
-                    {aniversariantesDoMes.map(({ dizimista: d, diaMes }) => (
+                    {aniversariantesOrdenados.map(({ dizimista: d, diaMes }) => (
                       <li key={d.numeroCarne} className="flex items-center gap-3 py-2.5">
                         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-sm font-semibold text-primary">
                           {diaMes.slice(0, 2)}
@@ -381,13 +420,15 @@ export function DizimistasPage() {
         </Select>
       </FiltroBar>
 
-      {carregando ? (
+      {carregandoTabela ? (
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
             <Skeleton key={i} className="h-16 w-full" />
           ))}
         </div>
-      ) : dizimistasFiltrados.length === 0 ? (
+      ) : erroIndice ? (
+        <EmptyState icon={Users} title="Não foi possível carregar" description={erroIndice} />
+      ) : semResultadoNenhum ? (
         <EmptyState icon={Users} title="Nenhum dizimista encontrado" description="Ajuste a busca ou cadastre um novo dizimista." />
       ) : (
         <>
@@ -403,8 +444,8 @@ export function DizimistasPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {dizimistasFiltrados.map((d) => {
-                  const status = statusPorCarne.get(d.numeroCarne)
+                {dizimistasDaPagina.map((d) => {
+                  const status = d.status
                   return (
                     <TableRow
                       key={d.numeroCarne}
@@ -446,8 +487,8 @@ export function DizimistasPage() {
           </Card>
 
           <div className="space-y-3 lg:hidden">
-            {dizimistasFiltrados.map((d) => {
-              const status = statusPorCarne.get(d.numeroCarne)
+            {dizimistasDaPagina.map((d) => {
+              const status = d.status
               return (
                 <Card
                   key={d.numeroCarne}
@@ -489,6 +530,28 @@ export function DizimistasPage() {
               )
             })}
           </div>
+
+          <div className="mt-4 flex items-center justify-between gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => irParaPagina(indicePagina - 1)}
+              disabled={indicePagina === 0 || carregandoTabela}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Anterior
+            </Button>
+            <p className="text-sm text-muted-foreground">Página {indicePagina + 1}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => irParaPagina(indicePagina + 1)}
+              disabled={!temProximaPagina || carregandoTabela}
+            >
+              Próxima
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </>
       )}
 
@@ -516,7 +579,6 @@ export function DizimistasPage() {
               />
               <DevolucaoForm
                 key={formularioNovaDevolucaoKey}
-                competenciaPadrao={competenciaAtual()}
                 onSalvar={handleLancarNovaDevolucao}
                 onCancelar={() => setModalNovaDevolucao(false)}
               />

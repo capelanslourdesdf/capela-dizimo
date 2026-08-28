@@ -2,5 +2,6 @@
   "buildCommand": "npm run build --workspace frontend",
   "installCommand": "npm install",
   "outputDirectory": "frontend/dist",
-  "rewrites": [{ "source": "/((?!api/).*)", "destination": "/index.html" }]
+  "rewrites": [{ "source": "/((?!api/).*)", "destination": "/index.html" }],
+  "crons": [{ "path": "/api/cron/recalcular-status", "schedule": "0 6 * * *" }]
 }

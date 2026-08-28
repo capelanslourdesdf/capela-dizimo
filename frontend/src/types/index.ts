@@ -47,6 +47,15 @@ export interface Dizimista {
   recadastradoEm?: string
   criadoEm: string
   atualizadoEm: string
+  /**
+   * Ativo/Inativo, recalculado a cada devolução lançada/editada/excluída e, para pegar quem muda
+   * de status só pela passagem do tempo (sem nenhuma gravação), 1x por dia por um Cron
+   * (`api/cron/recalcular-status.ts`). Guardado no próprio documento para a lista de Dizimistas não
+   * precisar reler o histórico de devolução de todo mundo só para montar a tabela.
+   */
+  status?: 'ativo' | 'inativo'
+  /** Mês de nascimento (1-12), derivado de `diaMesNascimento`/`dataNascimento` — permite consultar aniversariantes do mês com um filtro no Firestore, sem varrer a coleção inteira. */
+  mesNascimento?: number
 }
 
 export type DadosCadastraisDizimista = Omit<

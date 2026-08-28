@@ -2,7 +2,7 @@ import * as React from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Loader2, Save, Search } from 'lucide-react'
+import { Loader2, Save } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,8 +11,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
 import type { DadosCadastraisDizimista, Dizimista } from '@/types'
-import { buscarDizimistaPorCarne, buscarDizimistasPorNome, gerarNumeroCarneDisponivel } from '@/services/dizimistaService'
-import { dataBrEhValida, dataBrParaIso, dataIsoParaBr, formatarNumeroCarne, maskDataBr, maskTelefone } from '@/utils/format'
+import { buscarDizimistaPorCarne, gerarNumeroCarneDisponivel } from '@/services/dizimistaService'
+import { dataBrEhValida, dataBrParaIso, dataIsoParaBr, maskDataBr, maskTelefone } from '@/utils/format'
 import { aguardarPeloMenos } from '@/utils/async'
 
 /** Tempo mínimo (ms) que um spinner de busca fica visível, para não parecer estático. */
@@ -156,14 +156,6 @@ export function RecadastramentoForm({
   const [gerandoCarne, setGerandoCarne] = React.useState(false)
   const [statusCarne, setStatusCarne] = React.useState<'encontrado' | 'novo' | 'gerado' | null>(null)
 
-  // Busca do carnê só pelo nome (opção "não sei o número") — sem data pra desempatar, a pessoa
-  // confirma o cadastro certo (ou informa que nenhum é o dela) na lista de resultados.
-  const [nomeBusca, setNomeBusca] = React.useState('')
-  const [buscandoPorNome, setBuscandoPorNome] = React.useState(false)
-  const [erroBusca, setErroBusca] = React.useState<string | null>(null)
-  const [candidatos, setCandidatos] = React.useState<Dizimista[] | null>(null)
-  const [buscaFeita, setBuscaFeita] = React.useState(false)
-
   // Só busca no fluxo público de recadastramento: no cadastro pelo admin o carnê ainda não
   // existe (é gerado ao salvar) e na edição os dados já vêm prontos via prop `dizimista`.
   const deveBuscarPorCarne = exibirCarne && !bloquearCarne && sabeNumeroCarne === 'sim'
@@ -174,10 +166,6 @@ export function RecadastramentoForm({
     ultimoCarneBuscado.current = null
     setStatusCarne(null)
     setErro(null)
-    setNomeBusca('')
-    setErroBusca(null)
-    setCandidatos(null)
-    setBuscaFeita(false)
 
     if (valor === 'sim') {
       setValue('numeroCarne', '', { shouldValidate: false })
@@ -188,24 +176,6 @@ export function RecadastramentoForm({
     }
   }
 
-  /** Preenche o formulário com os dados de um dizimista já cadastrado. */
-  const preencherCom = React.useCallback(
-    (encontrado: Dizimista) => {
-      ultimoCarneBuscado.current = encontrado.numeroCarne
-      reset({
-        ...getValues(),
-        numeroCarne: encontrado.numeroCarne,
-        nomeCompleto: encontrado.nomeCompleto,
-        dataNascimento: dataIsoParaBr(encontrado.dataNascimento),
-        telefone: encontrado.telefone ?? '',
-      })
-      setStatusCarne('encontrado')
-      setCandidatos(null)
-      setBuscaFeita(false)
-    },
-    [reset, getValues],
-  )
-
   /** Gera um carnê novo (até 5 dígitos, a partir de 500) ainda livre na base. */
   async function gerarNovoCarne() {
     setErro(null)
@@ -214,38 +184,10 @@ export function RecadastramentoForm({
       const gerado = await gerarNumeroCarneDisponivel()
       setValue('numeroCarne', gerado, { shouldValidate: true })
       setStatusCarne('gerado')
-      setCandidatos(null)
-      setBuscaFeita(false)
     } catch (err) {
       setErro(err instanceof Error ? err.message : 'Não foi possível gerar um número de carnê.')
     } finally {
       setGerandoCarne(false)
-    }
-  }
-
-  async function handleBuscarCarne() {
-    const nome = nomeBusca.trim()
-
-    if (nome.length < 3) {
-      setErroBusca('Informe o nome completo.')
-      return
-    }
-
-    setErroBusca(null)
-    setCandidatos(null)
-    setBuscaFeita(false)
-    setBuscandoPorNome(true)
-    const inicio = Date.now()
-
-    try {
-      const encontrados = await buscarDizimistasPorNome(nome)
-      await aguardarPeloMenos(inicio, DURACAO_MINIMA_LOADING_MS)
-      setCandidatos(encontrados)
-      setBuscaFeita(true)
-    } catch {
-      setErroBusca('Não foi possível consultar agora. Tente novamente.')
-    } finally {
-      setBuscandoPorNome(false)
     }
   }
 
@@ -335,10 +277,6 @@ export function RecadastramentoForm({
         reset(valoresDoFormulario())
         ultimoCarneBuscado.current = null
         setStatusCarne(null)
-        setNomeBusca('')
-        setErroBusca(null)
-        setCandidatos(null)
-        setBuscaFeita(false)
       }
     } catch (err) {
       setErro(err instanceof Error ? err.message : 'Não foi possível salvar. Tente novamente.')
@@ -388,57 +326,15 @@ export function RecadastramentoForm({
           <Card className="border-primary/30 bg-primary/5">
             <CardContent className="space-y-4 py-5">
               <div>
-                <h3 className="text-sm font-semibold text-foreground">Vamos procurar seu carnê</h3>
+                <h3 className="text-sm font-semibold text-foreground">Não sabe o número do carnê?</h3>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Informe o nome do dizimista para localizarmos o cadastro.
+                  Procure a Pastoral do Dízimo da Capela para confirmar seu número — assim evitamos duplicar seu
+                  cadastro. Se preferir, você pode continuar agora e gerar um número novo.
                 </p>
               </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="nomeBusca">Nome do dizimista</Label>
-                <Input
-                  id="nomeBusca"
-                  placeholder="Nome completo"
-                  value={nomeBusca}
-                  onChange={(e) => setNomeBusca(e.target.value.toUpperCase())}
-                />
-              </div>
-
-              {erroBusca && <p className="text-xs text-destructive">{erroBusca}</p>}
-
-              {buscaFeita && (
-                <div className="space-y-2">
-                  {candidatos && candidatos.length > 0 ? (
-                    <>
-                      <p className="text-xs text-muted-foreground">É algum destes cadastros?</p>
-                      {candidatos.map((d) => (
-                        <button
-                          key={d.numeroCarne}
-                          type="button"
-                          onClick={() => preencherCom(d)}
-                          className="flex w-full items-center justify-between gap-3 rounded-lg border border-input bg-background px-3.5 py-2.5 text-left text-sm hover:border-primary hover:bg-primary/5"
-                        >
-                          <span className="min-w-0">
-                            <span className="block truncate font-medium text-foreground">{d.nomeCompleto}</span>
-                            <span className="block text-xs text-muted-foreground">
-                              Carnê nº {formatarNumeroCarne(d.numeroCarne)}
-                            </span>
-                          </span>
-                        </button>
-                      ))}
-                    </>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">Nenhum cadastro encontrado com esse nome.</p>
-                  )}
-                  <Button type="button" className="w-full" onClick={gerarNovoCarne} disabled={gerandoCarne}>
-                    Não é nenhum desses
-                  </Button>
-                </div>
-              )}
-
-              <Button type="button" className="w-full" onClick={handleBuscarCarne} disabled={buscandoPorNome}>
-                {buscandoPorNome ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                {buscandoPorNome ? 'Procurando...' : 'Buscar'}
+              <Button type="button" className="w-full" onClick={gerarNovoCarne} disabled={gerandoCarne}>
+                Gerar um número novo mesmo assim
               </Button>
             </CardContent>
           </Card>

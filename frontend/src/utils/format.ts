@@ -308,6 +308,14 @@ export function isoParaDiaMes(valorIso?: string): string {
   return match ? `${match[2]}/${match[1]}` : ''
 }
 
+/** "dd/mm" -> 8 (mês, 1-12) — usado para gravar `mesNascimento` e consultar aniversariantes por mês direto no Firestore, sem varrer a coleção inteira. Undefined quando o formato não bate. */
+export function mesDoRegistro(diaMes: string): number | undefined {
+  const match = diaMes.match(/^\d{2}\/(\d{2})$/)
+  if (!match) return undefined
+  const mes = Number(match[1])
+  return mes >= 1 && mes <= 12 ? mes : undefined
+}
+
 export function dataIsoParaBr(valorIso?: string): string {
   const match = (valorIso ?? '').match(/^(\d{4})-(\d{2})-(\d{2})$/)
   if (!match) return ''

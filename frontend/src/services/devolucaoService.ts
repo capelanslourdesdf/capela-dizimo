@@ -4,9 +4,12 @@ import {
   collectionGroup,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
+  increment,
   orderBy,
   query,
+  setDoc,
   updateDoc,
   where,
   type QueryConstraint,
@@ -16,6 +19,77 @@ import { db } from '@/lib/firebase'
 import type { Devolucao, FormaPagamentoDevolucao } from '@/types'
 import { comCache, invalidarCache } from '@/lib/cacheLeitura'
 import { normalizarNumeroCarne } from '@/utils/format'
+import { buscarDizimistaPorCarne } from '@/services/dizimistaService'
+import { obterMinimoMesesAtivos } from '@/services/configuracaoService'
+import { registrarMudancaStatus } from '@/services/statusAgregadoService'
+import { calcularStatusDizimista, competenciaDeRegistro, competenciasPagasDoDizimista } from '@/utils/statusDizimista'
+import { CARNE_AVULSO } from '@/constants/devolucao'
+
+const REF_TOTAIS_POR_ANO = doc(db, 'agregados', 'totaisDevolucaoPorAno')
+const CHAVE_CACHE_TOTAIS_POR_ANO = 'totais-devolucao-por-ano'
+const CHAVE_CACHE_TOTAIS_POR_MES = 'totais-devolucao-por-mes'
+
+function anoDaCompetencia(competencia: string): string {
+  return competencia.slice(0, 4)
+}
+
+/**
+ * Ajusta os totais agregados por ano E por mês (mesmo documento, dois mapas — `totais` e
+ * `totaisPorMes` — mantidos incrementalmente a cada gravação) em vez de somar o histórico inteiro
+ * toda vez que alguém consulta "Total arrecadado por ano" ou o gráfico de evolução mensal — em
+ * escala (milhares de dizimistas, anos de histórico), reler tudo pra somar seria a leitura mais
+ * cara do site, crescendo pra sempre. `increment()` é atômico: seguro mesmo com gravações
+ * concorrentes, sem precisar de transação.
+ *
+ * Recebe os ajustes por COMPETÊNCIA ("aaaa-mm", não só o ano) — permite ao mesmo tempo somar no mês
+ * certo e, agrupando por `anoDaCompetencia`, no ano certo, mesmo quando duas competências do mesmo
+ * ano aparecem na mesma chamada (ex.: edição que muda só o mês, dentro do mesmo ano).
+ */
+async function ajustarTotais(ajustesPorCompetencia: Record<string, number>): Promise<void> {
+  const porAno: Record<string, number> = {}
+  const porMes: Record<string, number> = {}
+
+  for (const [competencia, delta] of Object.entries(ajustesPorCompetencia)) {
+    if (!delta) continue
+    const ano = anoDaCompetencia(competencia)
+    porAno[ano] = (porAno[ano] ?? 0) + delta
+    porMes[competencia] = (porMes[competencia] ?? 0) + delta
+  }
+  if (Object.keys(porAno).length === 0) return
+
+  const totais = Object.fromEntries(Object.entries(porAno).map(([ano, delta]) => [ano, increment(delta)]))
+  const totaisPorMes = Object.fromEntries(Object.entries(porMes).map(([mes, delta]) => [mes, increment(delta)]))
+
+  await setDoc(REF_TOTAIS_POR_ANO, { totais, totaisPorMes }, { merge: true })
+  invalidarCache(CHAVE_CACHE_TOTAIS_POR_ANO)
+  invalidarCache(CHAVE_CACHE_TOTAIS_POR_MES)
+}
+
+/**
+ * Total arrecadado em devoluções, por ano — vem do agregado mantido a cada gravação, não de somar
+ * o histórico inteiro. Cacheado como as demais leituras de lista.
+ */
+export async function obterTotaisDevolucaoPorAno(): Promise<Record<string, number>> {
+  return comCache(CHAVE_CACHE_TOTAIS_POR_ANO, async () => {
+    const snap = await getDoc(REF_TOTAIS_POR_ANO)
+    if (!snap.exists()) return {}
+    return (snap.data() as { totais?: Record<string, number> }).totais ?? {}
+  })
+}
+
+/**
+ * Total arrecadado em devoluções, por competência ("aaaa-mm") — todos os meses já lançados, de
+ * todos os anos. Vem do mesmo agregado, sem varrer o histórico. Quem usa filtra os 12 meses do ano
+ * que interessa (ex.: gráfico de evolução mensal) — o mapa inteiro é pequeno (um número por mês, há
+ * décadas de sobra dentro do limite de tamanho de um documento do Firestore).
+ */
+export async function obterTotaisDevolucaoPorMes(): Promise<Record<string, number>> {
+  return comCache(CHAVE_CACHE_TOTAIS_POR_MES, async () => {
+    const snap = await getDoc(REF_TOTAIS_POR_ANO)
+    if (!snap.exists()) return {}
+    return (snap.data() as { totaisPorMes?: Record<string, number> }).totaisPorMes ?? {}
+  })
+}
 
 /**
  * Devoluções de um único dizimista — cacheada por 60s (chave inclui o carnê) porque é lida de
@@ -68,6 +142,39 @@ export async function listarTodasDevolucoesPorCarne(desde?: string, ate?: string
 
     return porCarne
   })
+}
+
+/**
+ * Recalcula e grava o status (Ativo/Inativo) de UM dizimista depois de lançar, editar ou excluir
+ * uma devolução dele — e ajusta o agregado de contagem (`statusAgregadoService.ts`) se o status
+ * mudou. Sem isso, a tela de Dizimistas só saberia que alguém voltou a ficar Ativo no próximo
+ * recálculo diário (ver `api/cron/recalcular-status.ts`), até 24h depois do lançamento.
+ *
+ * "000" (`CARNE_AVULSO`) não é um dizimista de verdade — não tem documento próprio, então não há
+ * status para recalcular.
+ */
+async function recomputarStatusAposDevolucao(numeroCarne: string): Promise<void> {
+  const carne = normalizarNumeroCarne(numeroCarne)
+  if (carne === CARNE_AVULSO) return
+
+  const [dizimista, devolucoes, minimo] = await Promise.all([
+    buscarDizimistaPorCarne(carne),
+    listarDevolucoes(carne),
+    obterMinimoMesesAtivos(),
+  ])
+  if (!dizimista) return
+
+  const statusAnterior = dizimista.status ?? null
+  const statusNovo = calcularStatusDizimista(
+    competenciaDeRegistro(dizimista),
+    competenciasPagasDoDizimista(devolucoes),
+    minimo,
+  )
+  if (statusAnterior === statusNovo) return
+
+  await setDoc(doc(db, 'dizimistas', carne), { status: statusNovo }, { merge: true })
+  await registrarMudancaStatus(statusAnterior, statusNovo)
+  invalidarCache('dizimistas')
 }
 
 /**
@@ -129,7 +236,9 @@ export async function lancarDevolucao(numeroCarne: string, dados: DadosDevolucao
   const observacao = dados.observacao?.trim() || null
   const criadoEm = new Date().toISOString()
   const novoDoc = await addDoc(ref, { ...dados, observacao, criadoEm })
+  await ajustarTotais({ [dados.competencia]: dados.valor })
   invalidarCache('devolucoes')
+  await recomputarStatusAposDevolucao(numeroCarne)
   return { id: novoDoc.id, ...dados, observacao: observacao ?? undefined, criadoEm }
 }
 
@@ -143,15 +252,46 @@ export async function atualizarDevolucao(
   dados: DadosDevolucao,
 ): Promise<void> {
   const ref = doc(db, 'dizimistas', normalizarNumeroCarne(numeroCarne), 'devolucoes', devolucaoId)
+
+  // Lê o valor/competência antigos antes de sobrescrever — precisa deles pra tirar do ano certo
+  // do agregado antes de somar no ano novo (o valor e o mês podem mudar na edição).
+  const anterior = await getDoc(ref)
+  const dadosAnteriores = anterior.data() as Omit<Devolucao, 'id'> | undefined
+
   await updateDoc(ref, {
     ...dados,
     observacao: dados.observacao?.trim() || null,
   })
+
+  if (dadosAnteriores) {
+    const competenciaAntiga = competenciaDaDevolucao(dadosAnteriores as Devolucao)
+    const competenciaNova = dados.competencia
+    await ajustarTotais(
+      competenciaAntiga === competenciaNova
+        ? { [competenciaNova]: dados.valor - dadosAnteriores.valor }
+        : { [competenciaAntiga]: -dadosAnteriores.valor, [competenciaNova]: dados.valor },
+    )
+  }
+
   invalidarCache('devolucoes')
+  await recomputarStatusAposDevolucao(numeroCarne)
 }
 
 /** Remove uma devolução lançada. Só a área da Pastoral tem acesso a essa ação. */
 export async function excluirDevolucao(numeroCarne: string, devolucaoId: string): Promise<void> {
-  await deleteDoc(doc(db, 'dizimistas', normalizarNumeroCarne(numeroCarne), 'devolucoes', devolucaoId))
+  const ref = doc(db, 'dizimistas', normalizarNumeroCarne(numeroCarne), 'devolucoes', devolucaoId)
+
+  // Lê antes de excluir — precisa do valor/competência pra tirar do total do ano certo no agregado.
+  const existente = await getDoc(ref)
+  const dadosExistentes = existente.data() as Omit<Devolucao, 'id'> | undefined
+
+  await deleteDoc(ref)
+
+  if (dadosExistentes) {
+    const competencia = competenciaDaDevolucao(dadosExistentes as Devolucao)
+    await ajustarTotais({ [competencia]: -dadosExistentes.valor })
+  }
+
   invalidarCache('devolucoes')
+  await recomputarStatusAposDevolucao(numeroCarne)
 }

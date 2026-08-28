@@ -33,10 +33,11 @@ informar quem é a pessoa:
 
 1. **"Já tenho o número do carnê"** — digita o número; o site busca automaticamente (com
    debounce) e, se encontrar, pré-preenche os dados para conferência/edição.
-2. **"Não sei o número do carnê"** — busca **só pelo nome** (campo de data foi removido desse
-   fluxo), com comparação aproximada de texto (tolera pequenas diferenças de grafia — variações
-   como "THIAGO/TIAGO" e afins). A pessoa escolhe o cadastro certo numa lista de resultados, ou
-   toca em **"Não é nenhum desses"** para cair na opção 3.
+2. **"Não sei o número do carnê"** — mostra uma orientação pra procurar a Pastoral do Dízimo
+   pessoalmente (evita duplicar o cadastro), com a opção de gerar um número novo mesmo assim (cai
+   na opção 3). Não existe mais busca automática por nome aqui — ela lia a coleção inteira de
+   dizimistas a cada busca, um custo que cresce com o tamanho da base e não tem como ser evitado
+   com uma comparação de texto aproximada (não dá pra fazer no próprio Firestore).
 3. **"Cadastrar dizimista sem carnê (gerar um novo)"** — o site gera automaticamente um número de
    carnê ainda livre (a partir de 500, até 5 dígitos) e a pessoa preenche os dados do zero.
 
@@ -261,12 +262,22 @@ nenhum dizimista real, só existe como caminho de gravação no Firestore.
 
 ### 7.1. Leituras no Firestore
 As telas que leem listas grandes (devoluções, dizimistas, controles/eventos da Tesouraria,
-configurações, membros da Pastoral) usam um **cache em memória de 60s**
-(`frontend/src/lib/cacheLeitura.ts`) — evita repetir a mesma leitura cara quando a pessoa navega
-entre telas que pedem os mesmos dados em sequência, invalidado automaticamente a cada gravação.
-Consultas que decidem **disponibilidade antes de gravar** (ex.: geração de número de carnê,
-checagem de recadastramento existente) nunca passam por esse cache — são sempre lidas ao vivo,
-dentro de transações do Firestore, para nunca haver colisão.
+configurações, membros da Pastoral) usam um **cache de 5 minutos** (`frontend/src/lib/cacheLeitura.ts`)
+— evita repetir a mesma leitura cara quando a pessoa navega entre telas que pedem os mesmos dados
+em sequência, invalidado automaticamente a cada gravação. O cache também é persistido em
+`localStorage`: sobrevive a um F5 ou a fechar e reabrir a aba, então quem passa o dia voltando numa
+tela que lê uma coleção grande (ex.: Dizimistas) não paga a leitura completa de novo a cada
+recarregamento — só volta a ler do Firestore depois que o cache expira, ou na hora, se alguém
+gravar algo na mesma aba. Consultas que decidem **disponibilidade antes de gravar** (ex.: geração
+de número de carnê, checagem de recadastramento existente) nunca passam por esse cache — são
+sempre lidas ao vivo, dentro de transações do Firestore, para nunca haver colisão.
+
+O **"Total arrecadado por ano"** (tela Dizimistas) não soma o histórico inteiro a cada carregamento
+— isso cresceria sem limite conforme a base e os anos de dízimo se acumulam. Em vez disso, um
+documento agregado (`agregados/totaisDevolucaoPorAno`) é atualizado de forma incremental
+(`increment()`, atômico) a cada devolução lançada, editada ou excluída, e a tela só lê esse
+resumo pronto. As demais leituras da tela (status ativo/inativo, gráfico do ano corrente) ficam
+limitadas à janela recente (ano corrente + últimos 6 meses), não ao histórico completo.
 
 ---
 
@@ -363,6 +374,16 @@ Move devoluções avulsas gravadas sob o carnê especial antigo (`-x-`) para o a
 seção 6.4). Já foi rodado em produção; rodar de novo não faz nada (não sobra mais nenhuma sob a
 chave antiga), mas o script fica registrado caso surja outro ambiente/base com dados antigos.
 
+### Preencher totais de devolução por ano (histórico — já executado)
+```bash
+node scripts/preencher-totais-devolucao-por-ano.mjs --dry-run
+node scripts/preencher-totais-devolucao-por-ano.mjs
+```
+Soma o histórico de devoluções já existente (todos os dizimistas + avulsas) e grava o ponto de
+partida do agregado `agregados/totaisDevolucaoPorAno` (seção 7.1). Só precisa rodar uma vez — daí
+em diante o agregado se mantém sozinho a cada gravação. Já foi rodado em produção; só voltaria a
+ser necessário se o agregado for apagado ou zerado por engano.
+
 ### Gerar hash de senha
 ```bash
 npm run gerar:hash-senha -- "minha-senha"
@@ -409,6 +430,7 @@ Coleções principais:
 | `membrosPastoral` | auto | Nomes usados no campo "Lançado por" |
 | `configuracoes` | `geral` | Configurações gerais (mínimo de meses ativos) |
 | `contadores` | `proximoNumeroCarne` | Contador do próximo nº de carnê livre a gerar |
+| `agregados` | `totaisDevolucaoPorAno` | Total de devoluções por ano, mantido incrementalmente (seção 7.1) |
 
 As regras (`firestore.rules`) são abertas nesta fase — qualquer cliente lê e grava. Isso é
 intencional para agilizar esta etapa do projeto, mas deve ser revisto antes de uma exposição mais

@@ -146,6 +146,43 @@ function FaixaFixada({
   )
 }
 
+const VALORES_RAPIDOS = [20, 30, 50, 100, 200]
+
+/**
+ * Botões de valor pré-definido — clicar já preenche o campo, sem precisar digitar. Reduz o
+ * esforço de decisão de quem só quer contribuir com um valor comum, mas o campo abaixo continua
+ * editável pra quem quer um valor diferente.
+ */
+function SeletorValorRapido({
+  valorAtual,
+  onSelecionar,
+}: {
+  valorAtual: string
+  onSelecionar: (valorFormatado: string) => void
+}) {
+  const numerico = moedaParaNumero(valorAtual)
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {VALORES_RAPIDOS.map((v) => (
+        <button
+          key={v}
+          type="button"
+          onClick={() => onSelecionar(maskMoedaCentavos(String(v * 100)))}
+          className={cn(
+            'rounded-full border px-4 py-2 text-sm font-semibold transition-colors',
+            numerico === v
+              ? 'border-primary bg-primary text-primary-foreground'
+              : 'border-input bg-white text-foreground hover:border-primary/50',
+          )}
+        >
+          {formatCurrency(v)}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 /** Card de escolha da forma de pagamento — fundo branco, com o ícone da forma correspondente. */
 function CardMetodo({
   icon,
@@ -477,6 +514,7 @@ export function FazerDevolucaoPage() {
                           <Label htmlFor="valorMultiplo" className="text-base">
                             {modoValorMultiplo === 'distribuir' ? 'Valor total a distribuir' : 'Valor de cada mês'}
                           </Label>
+                          <SeletorValorRapido valorAtual={valorMultiplo} onSelecionar={setValorMultiplo} />
                           <div className="relative">
                             <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-base text-muted-foreground">
                               R$
@@ -559,6 +597,7 @@ export function FazerDevolucaoPage() {
                                 <Label htmlFor="valor" className="text-base">
                                   Valor
                                 </Label>
+                                <SeletorValorRapido valorAtual={valor} onSelecionar={setValor} />
                                 <div className="relative">
                                   <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-base text-muted-foreground">
                                     R$

@@ -154,8 +154,9 @@ const VALORES_RAPIDOS = [20, 30, 50, 100, 200]
  * editável pra quem quer um valor diferente.
  *
  * Uma linha só, sem quebrar: se não couberem todos, a faixa rola horizontalmente (arrastável no
- * touch) e "sangra" até a borda do card (ignora o padding do pai), pra já dar a dica visual de
- * que tem mais chip pra rolar — igual um carrossel de chips nativo de app.
+ * touch). O início da faixa (`pl-3.5`) fica alinhado com o "R$" do campo logo abaixo (que também
+ * começa a `left-3.5` da borda do input) — só o fim "sangra" até a borda do card (`-mr-5`/`-mr-6`,
+ * ignorando o padding do pai), pra dar a dica visual de que tem mais chip pra rolar.
  */
 function SeletorValorRapido({
   valorAtual,
@@ -167,14 +168,14 @@ function SeletorValorRapido({
   const numerico = moedaParaNumero(valorAtual)
 
   return (
-    <div className="no-scrollbar -mx-5 flex snap-x snap-mandatory gap-2 overflow-x-auto px-5 sm:-mx-6 sm:px-6">
+    <div className="no-scrollbar -mr-5 flex snap-x snap-mandatory gap-1.5 overflow-x-auto pl-3.5 pr-5 sm:-mr-6 sm:pr-6">
       {VALORES_RAPIDOS.map((v) => (
         <button
           key={v}
           type="button"
           onClick={() => onSelecionar(maskMoedaCentavos(String(v * 100)))}
           className={cn(
-            'shrink-0 snap-start whitespace-nowrap rounded-full border px-5 py-2.5 text-sm font-semibold transition-colors',
+            'shrink-0 snap-start whitespace-nowrap rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-colors',
             numerico === v
               ? 'border-primary bg-primary text-primary-foreground'
               : 'border-input bg-white text-foreground hover:border-primary/50',

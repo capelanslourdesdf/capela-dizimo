@@ -1,15 +1,6 @@
 import * as React from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  ArrowDownRight,
-  ArrowLeftRight,
-  ArrowRight,
-  ArrowUpRight,
-  Minus,
-  TrendingDown,
-  TrendingUp,
-  Wallet,
-} from 'lucide-react'
+import { ArrowLeftRight, ArrowRight, TrendingDown, TrendingUp, Wallet } from 'lucide-react'
 
 import { PageHeader } from '@/components/layout/PageHeader'
 import { StatCard } from '@/components/dashboard/StatCard'
@@ -19,11 +10,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 
-import { listarControlesTesouraria, receitasDizimoDaCompetencia, saldoDoControle } from '@/services/tesourariaService'
+import { listarControlesTesouraria, receitasDizimoDaCompetencia } from '@/services/tesourariaService'
 import { listarTodasDevolucoesPorCarne } from '@/services/devolucaoService'
 import type { ControleTesouraria, Devolucao } from '@/types'
 import { COMPETENCIA_INICIAL_TESOURARIA, STATUS_CONTROLE_TESOURARIA } from '@/constants/tesouraria'
-import { formatCompetencia, formatCurrency, subtrairMeses } from '@/utils/format'
+import { formatCompetencia, formatCurrency } from '@/utils/format'
 import { ROUTES } from '@/constants/routes'
 import { useTesourariaSessao } from '@/hooks/useTesourariaSessao'
 
@@ -52,26 +43,11 @@ export function TesourariaPainelPage() {
   const receitasDizimoSelecionada = competenciaSelecionada
     ? receitasDizimoDaCompetencia(competenciaSelecionada, todasDevolucoes)
     : []
-  const competenciaAnterior = competenciaSelecionada ? subtrairMeses(competenciaSelecionada, 1) : ''
-  // O mês antes de agosto/2026 nunca existe (é o início do período controlado) — só aí a
-  // variação fica indisponível. Qualquer outro mês anterior conta como saldo zero se ainda não
-  // tiver sido aberto por ninguém.
-  const mesAnteriorComparavel = competenciaAnterior >= COMPETENCIA_INICIAL_TESOURARIA
-  const controleAnteriorSelecionado = controles.find((c) => c.competencia === competenciaAnterior) ?? null
-  const receitasDizimoAnterior = mesAnteriorComparavel ? receitasDizimoDaCompetencia(competenciaAnterior, todasDevolucoes) : []
-  const saldoAnteriorSelecionado = mesAnteriorComparavel
-    ? controleAnteriorSelecionado
-      ? saldoDoControle(controleAnteriorSelecionado, receitasDizimoAnterior)
-      : receitasDizimoAnterior.reduce((s, e) => s + e.valor, 0)
-    : null
-
   const receitaSelecionada =
     (controleSelecionado ? controleSelecionado.entradas.reduce((s, e) => s + e.valor, 0) : 0) +
     receitasDizimoSelecionada.reduce((s, e) => s + e.valor, 0)
   const despesaSelecionada = controleSelecionado ? controleSelecionado.saidas.reduce((s, sa) => s + sa.valor, 0) : 0
   const saldoSelecionado = receitaSelecionada - despesaSelecionada
-  const variacaoSelecionada = saldoAnteriorSelecionado !== null ? saldoSelecionado - saldoAnteriorSelecionado : null
-  const IconeVariacao = variacaoSelecionada === null ? Minus : variacaoSelecionada >= 0 ? ArrowUpRight : ArrowDownRight
 
   return (
     <div>
@@ -107,21 +83,10 @@ export function TesourariaPainelPage() {
                     variant={controleSelecionado.status === 'fechado' ? 'muted' : 'success'}
                   />
                 </div>
-                <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+                <div className="mb-4 grid grid-cols-3 gap-3 lg:gap-4">
                   <StatCard compact tom="success" label="Total em receita" value={formatCurrency(receitaSelecionada)} icon={TrendingUp} />
                   <StatCard compact tom="destructive" label="Total em despesas" value={formatCurrency(despesaSelecionada)} icon={TrendingDown} />
                   <StatCard compact label="Saldo total" value={formatCurrency(saldoSelecionado)} icon={Wallet} />
-                  <StatCard
-                    compact
-                    label="Variação vs. mês anterior"
-                    value={
-                      variacaoSelecionada === null
-                        ? '—'
-                        : `${variacaoSelecionada >= 0 ? '+' : '-'}${formatCurrency(Math.abs(variacaoSelecionada))}`
-                    }
-                    icon={IconeVariacao}
-                    helper={variacaoSelecionada === null ? 'Sem controle no mês anterior' : undefined}
-                  />
                 </div>
                 <Button
                   variant="outline"

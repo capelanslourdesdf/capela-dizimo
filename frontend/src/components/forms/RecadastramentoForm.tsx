@@ -322,20 +322,14 @@ export function RecadastramentoForm({
           </p>
         )}
 
-        {exibirCarne && !bloquearCarne && sabeNumeroCarne === 'nao' && statusCarne === null && (
+        {exibirCarne && !bloquearCarne && sabeNumeroCarne === 'nao' && (
           <Card className="border-primary/30 bg-primary/5">
-            <CardContent className="space-y-4 py-5">
-              <div>
-                <h3 className="text-sm font-semibold text-foreground">Não sabe o número do carnê?</h3>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Procure a Pastoral do Dízimo da Capela para confirmar seu número — assim evitamos duplicar seu
-                  cadastro. Se preferir, você pode continuar agora e gerar um número novo.
-                </p>
-              </div>
-
-              <Button type="button" className="w-full" onClick={gerarNovoCarne} disabled={gerandoCarne}>
-                Gerar um número novo mesmo assim
-              </Button>
+            <CardContent className="space-y-1 py-5">
+              <h3 className="text-sm font-semibold text-foreground">Não sabe o número do carnê?</h3>
+              <p className="text-xs text-muted-foreground">
+                Procure a Pastoral do Dízimo da Capela pessoalmente para confirmar seu número — assim evitamos
+                duplicar seu cadastro. Não é possível continuar o recadastramento por aqui sem ele.
+              </p>
             </CardContent>
           </Card>
         )}
@@ -405,7 +399,7 @@ export function RecadastramentoForm({
         </div>
       </div>
 
-      <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
+      <Button type="submit" size="lg" className="w-full" disabled={isSubmitting || sabeNumeroCarne === 'nao'}>
         <Save className="h-4 w-4" />
         {isSubmitting ? 'Salvando...' : 'Salvar dados'}
       </Button>

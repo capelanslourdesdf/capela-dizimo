@@ -153,10 +153,13 @@ const VALORES_RAPIDOS = [20, 30, 50, 100, 200]
  * esforço de decisão de quem só quer contribuir com um valor comum, mas o campo abaixo continua
  * editável pra quem quer um valor diferente.
  *
- * Uma linha só, sem quebrar: se não couberem todos, a faixa rola horizontalmente (arrastável no
- * touch). O início da faixa (`pl-3.5`) fica alinhado com o "R$" do campo logo abaixo (que também
- * começa a `left-3.5` da borda do input) — só o fim "sangra" até a borda do card (`-mr-5`/`-mr-6`,
- * ignorando o padding do pai), pra dar a dica visual de que tem mais chip pra rolar.
+ * Uma linha só, sem quebrar: se não couberem todos, a faixa rola horizontalmente. No touch já rola
+ * nativamente (arrastando com o dedo); no mouse (desktop) o próprio container vira arrastável
+ * (clicar e arrastar), já que `overflow-x-auto` sozinho não responde a arrasto de mouse. O início
+ * da faixa (`pl-3.5`) fica alinhado com o "R$" do campo logo abaixo (que também começa a
+ * `left-3.5` da borda do input) — o fim "sangra" até a borda do card (`-mr-5`/`-mr-6`, ignorando o
+ * padding do pai) e ganha um degradê por cima, pra ficar claro que ainda tem chip pra rolar (some
+ * sozinho quando chega no fim da lista).
  */
 function SeletorValorRapido({
   valorAtual,
@@ -166,24 +169,85 @@ function SeletorValorRapido({
   onSelecionar: (valorFormatado: string) => void
 }) {
   const numerico = moedaParaNumero(valorAtual)
+  const scrollRef = React.useRef<HTMLDivElement>(null)
+  const arrasto = React.useRef({ ativo: false, moveu: false, inicioX: 0, scrollInicial: 0 })
+  const [arrastando, setArrastando] = React.useState(false)
+  const [temMaisPraRolar, setTemMaisPraRolar] = React.useState(false)
+
+  const atualizarFade = React.useCallback(() => {
+    const el = scrollRef.current
+    if (!el) return
+    setTemMaisPraRolar(el.scrollLeft < el.scrollWidth - el.clientWidth - 1)
+  }, [])
+
+  React.useEffect(() => {
+    atualizarFade()
+    window.addEventListener('resize', atualizarFade)
+    return () => window.removeEventListener('resize', atualizarFade)
+  }, [atualizarFade])
+
+  // Escuta mousemove/mouseup na window (em vez de usar setPointerCapture no próprio container):
+  // capturar o ponteiro no container redireciona o "click" pra ele também, o que faria os botões
+  // de valor pararem de responder a clique normal — assim eles continuam clicáveis, e o arrasto
+  // funciona mesmo que o mouse saia da faixa antes de soltar o botão.
+  function handlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    // Touch/caneta já rolam de forma nativa (overflow-x-auto) — só o mouse precisa desse "arrastar pra rolar".
+    if (e.pointerType !== 'mouse') return
+    const el = scrollRef.current
+    if (!el) return
+
+    arrasto.current = { ativo: true, moveu: false, inicioX: e.clientX, scrollInicial: el.scrollLeft }
+    setArrastando(true)
+
+    function mover(ev: PointerEvent) {
+      if (!arrasto.current.ativo) return
+      const delta = ev.clientX - arrasto.current.inicioX
+      if (Math.abs(delta) > 3) arrasto.current.moveu = true
+      el!.scrollLeft = arrasto.current.scrollInicial - delta
+    }
+    function soltar() {
+      arrasto.current.ativo = false
+      setArrastando(false)
+      window.removeEventListener('pointermove', mover)
+      window.removeEventListener('pointerup', soltar)
+    }
+    window.addEventListener('pointermove', mover)
+    window.addEventListener('pointerup', soltar)
+  }
 
   return (
-    <div className="no-scrollbar -mr-5 flex snap-x snap-mandatory gap-1.5 overflow-x-auto pl-3.5 pr-5 sm:-mr-6 sm:pr-6">
-      {VALORES_RAPIDOS.map((v) => (
-        <button
-          key={v}
-          type="button"
-          onClick={() => onSelecionar(maskMoedaCentavos(String(v * 100)))}
-          className={cn(
-            'shrink-0 snap-start whitespace-nowrap rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-colors',
-            numerico === v
-              ? 'border-primary bg-primary text-primary-foreground'
-              : 'border-input bg-white text-foreground hover:border-primary/50',
-          )}
-        >
-          {formatCurrency(v)}
-        </button>
-      ))}
+    <div className="relative -mr-5 sm:-mr-6">
+      <div
+        ref={scrollRef}
+        onScroll={atualizarFade}
+        onPointerDown={handlePointerDown}
+        className={cn(
+          'no-scrollbar flex gap-1.5 overflow-x-auto pl-3.5 pr-5 sm:pr-6',
+          arrastando ? 'cursor-grabbing select-none' : 'cursor-grab snap-x snap-mandatory',
+        )}
+      >
+        {VALORES_RAPIDOS.map((v) => (
+          <button
+            key={v}
+            type="button"
+            onClick={() => {
+              if (arrasto.current.moveu) return // solto de um arrasto — não conta como clique
+              onSelecionar(maskMoedaCentavos(String(v * 100)))
+            }}
+            className={cn(
+              'shrink-0 snap-start whitespace-nowrap rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-colors',
+              numerico === v
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-input bg-white text-foreground hover:border-primary/50',
+            )}
+          >
+            {formatCurrency(v)}
+          </button>
+        ))}
+      </div>
+      {temMaisPraRolar && (
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-card to-transparent" />
+      )}
     </div>
   )
 }

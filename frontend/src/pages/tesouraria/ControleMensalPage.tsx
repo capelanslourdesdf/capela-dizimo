@@ -20,6 +20,7 @@ import { toast } from 'sonner'
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Checkbox } from '@/components/ui/checkbox'
+import { CalendarioResumoDiario, type ResumoDia } from '@/components/dashboard/CalendarioResumoDiario'
 import { EmptyState } from '@/components/dashboard/EmptyState'
 import { StatCard } from '@/components/dashboard/StatCard'
 import { StatusBadge } from '@/components/dashboard/StatusBadge'
@@ -173,6 +174,8 @@ export function ControleMensalPage() {
   const [modalStatus, setModalStatus] = React.useState(false)
   const [buscaDespesa, setBuscaDespesa] = React.useState('')
   const [despesasSelecionadas, setDespesasSelecionadas] = React.useState<Set<string>>(new Set())
+  const [diaSelecionadoReceita, setDiaSelecionadoReceita] = React.useState<string | null>(null)
+  const [diaSelecionadoDespesa, setDiaSelecionadoDespesa] = React.useState<string | null>(null)
 
   const carregar = React.useCallback(async () => {
     if (!competencia) return
@@ -180,6 +183,8 @@ export function ControleMensalPage() {
     // Evita que uma seleção feita no mês anterior "vaze" pra cá ao trocar de competência sem
     // remontar a página (a seleção é local, por isso não é limpa sozinha na troca de rota).
     setDespesasSelecionadas(new Set())
+    setDiaSelecionadoReceita(null)
+    setDiaSelecionadoDespesa(null)
     // Só precisa do mês atual — não do histórico inteiro.
     const [atual, porCarne] = await Promise.all([
       obterOuCriarControleTesouraria(competencia),
@@ -307,6 +312,104 @@ export function ControleMensalPage() {
     )
   }
 
+  /** Uma linha de receita — usada tanto na lista do dia selecionado no calendário quanto no grupo "sem data". */
+  function renderReceita(e: EntradaTesouraria) {
+    const calculada = ehReceitaCalculada(e.id)
+    return (
+      <div
+        key={e.id}
+        className="flex flex-col gap-2 rounded-lg border border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+      >
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <p className="font-medium text-foreground">{categoriaEntradaLabel(e.categoria)}</p>
+            {calculada && <StatusBadge label="Calculado" variant="outline" />}
+          </div>
+          <p className="text-xs text-muted-foreground">{formaPagamentoLabel(e.formaPagamento)}</p>
+          {e.observacao && <p className="mt-0.5 whitespace-pre-wrap text-xs text-muted-foreground">{e.observacao}</p>}
+        </div>
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-1 sm:justify-end">
+          <p className="font-medium text-success">{formatCurrency(e.valor)}</p>
+          <div className="flex items-center">
+            <Button variant="ghost" size="icon" onClick={() => setReceitaEmVisualizacao(e)} aria-label="Ver detalhes da receita">
+              <Eye className="h-4 w-4" />
+            </Button>
+            {podeEditar && !calculada && (
+              <>
+                <Button variant="ghost" size="icon" onClick={() => handleEditarReceita(e)} aria-label="Editar receita">
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  onClick={() => setReceitaParaRemover(e)}
+                  aria-label="Remover receita"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  /** Uma linha de despesa — usada tanto na lista do dia selecionado no calendário quanto no grupo "sem data". */
+  function renderDespesa(s: SaidaTesouraria) {
+    return (
+      <div
+        key={s.id}
+        className="flex flex-col gap-2 rounded-lg border border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+      >
+        <div className="flex min-w-0 items-start gap-2.5">
+          {podeEditar && !s.quitado && (
+            <Checkbox
+              className="mt-1"
+              checked={despesasSelecionadas.has(s.id)}
+              onCheckedChange={() => handleAlternarSelecaoDespesa(s.id)}
+              aria-label={`Selecionar despesa de ${s.prestador}`}
+            />
+          )}
+          <div className="min-w-0">
+            <p className="font-medium text-foreground">{s.prestador}</p>
+            <p className="text-xs text-muted-foreground">Solicitado por {s.solicitante}</p>
+            {s.observacao && <p className="mt-0.5 whitespace-pre-wrap text-xs text-muted-foreground">{s.observacao}</p>}
+          </div>
+        </div>
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 sm:justify-end">
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusBadge label={s.quitado ? 'Quitada' : 'Pendente'} variant={s.quitado ? 'success' : 'warning'} />
+            {s.possuiNfe && <StatusBadge label="Possui NF-e" variant="outline" />}
+            <p className="font-medium text-destructive">{formatCurrency(s.valor)}</p>
+          </div>
+          <div className="flex items-center">
+            <Button variant="ghost" size="icon" onClick={() => setDespesaEmVisualizacao(s)} aria-label="Ver detalhes da despesa">
+              <Eye className="h-4 w-4" />
+            </Button>
+            {podeEditar && (
+              <>
+                <Button variant="ghost" size="icon" onClick={() => handleEditarDespesa(s)} aria-label="Editar despesa">
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  onClick={() => setDespesaParaRemover(s)}
+                  aria-label="Remover despesa"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (carregando || !controle) {
     return (
       <div className="space-y-4">
@@ -340,6 +443,27 @@ export function ControleMensalPage() {
     : despesasOrdenadas
   const totalDespesasFiltradas = despesasFiltradas.reduce((s, sa) => s + sa.valor, 0)
   const pendentesFiltradas = despesasFiltradas.filter((s) => !s.quitado)
+
+  // Agrupado por dia para o calendário — dias sem lançamento simplesmente não entram no mapa (o
+  // calendário desenha o mês inteiro sozinho, célula por célula). O grupo "sem data" (raro, de
+  // lançamentos antigos) não tem como aparecer numa célula do calendário — vira uma lista à parte.
+  const gruposReceitasPorDia = agruparPorDia(receitasOrdenadas, (e) => e.data ?? '')
+  const resumosReceitasPorDia = new Map<string, ResumoDia>(
+    gruposReceitasPorDia
+      .filter((g) => g.dia)
+      .map((g) => [g.dia, { total: g.itens.reduce((s, e) => s + e.valor, 0), quantidade: g.itens.length }]),
+  )
+  const grupoReceitaSelecionado = gruposReceitasPorDia.find((g) => g.dia === diaSelecionadoReceita) ?? null
+  const receitasSemData = gruposReceitasPorDia.find((g) => g.chave === CHAVE_SEM_DATA)?.itens ?? []
+
+  const gruposDespesasPorDia = agruparPorDia(despesasFiltradas, (s) => s.dia ?? '')
+  const resumosDespesasPorDia = new Map<string, ResumoDia>(
+    gruposDespesasPorDia
+      .filter((g) => g.dia)
+      .map((g) => [g.dia, { total: g.itens.reduce((s, e) => s + e.valor, 0), quantidade: g.itens.length }]),
+  )
+  const grupoDespesaSelecionado = gruposDespesasPorDia.find((g) => g.dia === diaSelecionadoDespesa) ?? null
+  const despesasSemData = gruposDespesasPorDia.find((g) => g.chave === CHAVE_SEM_DATA)?.itens ?? []
 
   return (
     <div>
@@ -445,81 +569,27 @@ export function ControleMensalPage() {
                 {receitasOrdenadas.length === 0 ? (
                   <EmptyState icon={TrendingUp} title="Nenhuma receita lançada neste mês" />
                 ) : (
-                  <Accordion type="multiple" className="space-y-2">
-                    {agruparPorDia(receitasOrdenadas, (e) => e.data ?? '').map((grupo) => {
-                      const totalGrupo = grupo.itens.reduce((s, e) => s + e.valor, 0)
-                      return (
-                        <AccordionItem key={grupo.chave} value={grupo.chave} className="rounded-lg border border-border">
-                          <AccordionTrigger className="px-3.5 py-3 hover:bg-primary/5 hover:no-underline active:bg-primary/10">
-                            <div className="flex flex-1 items-center justify-between gap-2 text-left">
-                              <span className="text-sm font-medium text-foreground">
-                                {grupo.dia ? formatDate(grupo.dia) : 'Sem data informada'}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                {grupo.itens.length} · {formatCurrency(totalGrupo)}
-                              </span>
-                            </div>
-                          </AccordionTrigger>
-                          <AccordionContent className="space-y-2.5 px-3.5 pb-3.5">
-                            {grupo.itens.map((e) => {
-                              const calculada = ehReceitaCalculada(e.id)
-                              return (
-                                <div
-                                  key={e.id}
-                                  className="flex flex-col gap-2 rounded-lg border border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-                                >
-                                  <div className="min-w-0">
-                                    <div className="flex flex-wrap items-center gap-1.5">
-                                      <p className="font-medium text-foreground">{categoriaEntradaLabel(e.categoria)}</p>
-                                      {calculada && <StatusBadge label="Calculado" variant="outline" />}
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">{formaPagamentoLabel(e.formaPagamento)}</p>
-                                    {e.observacao && (
-                                      <p className="mt-0.5 whitespace-pre-wrap text-xs text-muted-foreground">{e.observacao}</p>
-                                    )}
-                                  </div>
-                                  <div className="flex shrink-0 flex-wrap items-center justify-between gap-1 sm:justify-end">
-                                    <p className="font-medium text-success">{formatCurrency(e.valor)}</p>
-                                    <div className="flex items-center">
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => setReceitaEmVisualizacao(e)}
-                                        aria-label="Ver detalhes da receita"
-                                      >
-                                        <Eye className="h-4 w-4" />
-                                      </Button>
-                                      {podeEditar && !calculada && (
-                                        <>
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => handleEditarReceita(e)}
-                                            aria-label="Editar receita"
-                                          >
-                                            <Pencil className="h-4 w-4" />
-                                          </Button>
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                            onClick={() => setReceitaParaRemover(e)}
-                                            aria-label="Remover receita"
-                                          >
-                                            <Trash2 className="h-4 w-4" />
-                                          </Button>
-                                        </>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              )
-                            })}
-                          </AccordionContent>
-                        </AccordionItem>
-                      )
-                    })}
-                  </Accordion>
+                  <>
+                    <CalendarioResumoDiario
+                      competencia={controle.competencia}
+                      resumosPorDia={resumosReceitasPorDia}
+                      diaSelecionado={diaSelecionadoReceita}
+                      onSelecionarDia={(dia) => setDiaSelecionadoReceita((atual) => (atual === dia ? null : dia))}
+                      tom="success"
+                    />
+                    {grupoReceitaSelecionado && (
+                      <div className="space-y-2.5 pt-1">
+                        <p className="text-sm font-medium text-foreground">{formatDate(grupoReceitaSelecionado.dia)}</p>
+                        {grupoReceitaSelecionado.itens.map(renderReceita)}
+                      </div>
+                    )}
+                    {receitasSemData.length > 0 && (
+                      <div className="space-y-2.5 pt-1">
+                        <p className="text-sm font-medium text-foreground">Sem data informada</p>
+                        {receitasSemData.map(renderReceita)}
+                      </div>
+                    )}
+                  </>
                 )}
               </AccordionContent>
             </AccordionItem>
@@ -591,89 +661,27 @@ export function ControleMensalPage() {
                 ) : despesasFiltradas.length === 0 ? (
                   <EmptyState icon={TrendingDown} title="Nenhuma despesa encontrada para essa busca" />
                 ) : (
-                  <Accordion type="multiple" className="space-y-2">
-                    {agruparPorDia(despesasFiltradas, (s) => s.dia ?? '').map((grupo) => {
-                      const totalGrupo = grupo.itens.reduce((soma, item) => soma + item.valor, 0)
-                      return (
-                        <AccordionItem key={grupo.chave} value={grupo.chave} className="rounded-lg border border-border">
-                          <AccordionTrigger className="px-3.5 py-3 hover:bg-primary/5 hover:no-underline active:bg-primary/10">
-                            <div className="flex flex-1 items-center justify-between gap-2 text-left">
-                              <span className="text-sm font-medium text-foreground">
-                                {grupo.dia ? formatDate(grupo.dia) : 'Sem data informada'}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                {grupo.itens.length} · {formatCurrency(totalGrupo)}
-                              </span>
-                            </div>
-                          </AccordionTrigger>
-                          <AccordionContent className="space-y-2.5 px-3.5 pb-3.5">
-                            {grupo.itens.map((s) => (
-                              <div
-                                key={s.id}
-                                className="flex flex-col gap-2 rounded-lg border border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-                              >
-                                <div className="flex min-w-0 items-start gap-2.5">
-                                  {podeEditar && !s.quitado && (
-                                    <Checkbox
-                                      className="mt-1"
-                                      checked={despesasSelecionadas.has(s.id)}
-                                      onCheckedChange={() => handleAlternarSelecaoDespesa(s.id)}
-                                      aria-label={`Selecionar despesa de ${s.prestador}`}
-                                    />
-                                  )}
-                                  <div className="min-w-0">
-                                    <p className="font-medium text-foreground">{s.prestador}</p>
-                                    <p className="text-xs text-muted-foreground">Solicitado por {s.solicitante}</p>
-                                    {s.observacao && (
-                                      <p className="mt-0.5 whitespace-pre-wrap text-xs text-muted-foreground">{s.observacao}</p>
-                                    )}
-                                  </div>
-                                </div>
-                                <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 sm:justify-end">
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    <StatusBadge label={s.quitado ? 'Quitada' : 'Pendente'} variant={s.quitado ? 'success' : 'warning'} />
-                                    {s.possuiNfe && <StatusBadge label="Possui NF-e" variant="outline" />}
-                                    <p className="font-medium text-destructive">{formatCurrency(s.valor)}</p>
-                                  </div>
-                                  <div className="flex items-center">
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={() => setDespesaEmVisualizacao(s)}
-                                      aria-label="Ver detalhes da despesa"
-                                    >
-                                      <Eye className="h-4 w-4" />
-                                    </Button>
-                                    {podeEditar && (
-                                      <>
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          onClick={() => handleEditarDespesa(s)}
-                                          aria-label="Editar despesa"
-                                        >
-                                          <Pencil className="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                          onClick={() => setDespesaParaRemover(s)}
-                                          aria-label="Remover despesa"
-                                        >
-                                          <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                      </>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </AccordionContent>
-                        </AccordionItem>
-                      )
-                    })}
-                  </Accordion>
+                  <>
+                    <CalendarioResumoDiario
+                      competencia={controle.competencia}
+                      resumosPorDia={resumosDespesasPorDia}
+                      diaSelecionado={diaSelecionadoDespesa}
+                      onSelecionarDia={(dia) => setDiaSelecionadoDespesa((atual) => (atual === dia ? null : dia))}
+                      tom="destructive"
+                    />
+                    {grupoDespesaSelecionado && (
+                      <div className="space-y-2.5 pt-1">
+                        <p className="text-sm font-medium text-foreground">{formatDate(grupoDespesaSelecionado.dia)}</p>
+                        {grupoDespesaSelecionado.itens.map(renderDespesa)}
+                      </div>
+                    )}
+                    {despesasSemData.length > 0 && (
+                      <div className="space-y-2.5 pt-1">
+                        <p className="text-sm font-medium text-foreground">Sem data informada</p>
+                        {despesasSemData.map(renderDespesa)}
+                      </div>
+                    )}
+                  </>
                 )}
               </AccordionContent>
             </AccordionItem>

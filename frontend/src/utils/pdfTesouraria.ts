@@ -71,8 +71,10 @@ export function gerarPdfControleTesouraria(controle: ControleTesouraria): void {
   const totalDespesas = controle.saidas.reduce((soma, s) => soma + s.valor, 0)
   const saldo = totalReceitas - totalDespesas
 
-  const receitasOrdenadas = [...controle.entradas].sort((a, b) => (a.data < b.data ? 1 : a.data > b.data ? -1 : 0))
-  const despesasOrdenadas = [...controle.saidas].sort((a, b) => (a.dia < b.dia ? 1 : a.dia > b.dia ? -1 : 0))
+  // Mais antigo primeiro (dia 1, 2, 3... 30, 31) — diferente do resto do site, que mostra o mais
+  // recente primeiro; aqui é um relatório do mês, faz mais sentido ler em ordem cronológica.
+  const receitasOrdenadas = [...controle.entradas].sort((a, b) => (a.data < b.data ? -1 : a.data > b.data ? 1 : 0))
+  const despesasOrdenadas = [...controle.saidas].sort((a, b) => (a.dia < b.dia ? -1 : a.dia > b.dia ? 1 : 0))
 
   doc.setFontSize(16)
   doc.setFont('helvetica', 'bold')
@@ -214,7 +216,7 @@ export function gerarPdfControleTesouraria(controle: ControleTesouraria): void {
   if (despesasOrdenadas.some((s) => s.possuiNfe)) {
     doc.setFontSize(7.5)
     doc.setTextColor(20, 90, 160)
-    doc.textWithLink('Consultar NF-e no portal da Receita (cole a chave de acesso lá)', margemEsquerda, finalY(doc) + 6, {
+    doc.textWithLink('Clique aqui para consultar a NF-e no portal da Receita', margemEsquerda, finalY(doc) + 6, {
       url: URL_CONSULTA_NFE,
     })
     doc.setTextColor(0)

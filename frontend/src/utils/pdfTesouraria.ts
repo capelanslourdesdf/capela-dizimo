@@ -59,7 +59,7 @@ function desenharResponsaveis(doc: jsPDF, margemEsquerda: number, larguraPagina:
  * de página sozinha se a lista for longa).
  */
 export function gerarPdfControleTesouraria(controle: ControleTesouraria): void {
-  const doc = new jsPDF()
+  const doc = new jsPDF({ orientation: 'landscape' })
   const margemEsquerda = 14
   const larguraPagina = doc.internal.pageSize.getWidth()
 

@@ -46,6 +46,9 @@ que os dados são salvos marca `recadastradoEm` — essa data é a referência a
 dizimista passa a ser cobrado/acompanhado (ver seção 6.1); recadastramentos seguintes não mudam
 essa data.
 
+A data de nascimento aceita qualquer ano até o atual, sem limite inferior (a Pastoral às vezes
+precisa registrar datas bem antigas, de cópias de registros físicos antigos).
+
 ---
 
 ## 2. Área do dizimista (`/dizimista/...`)
@@ -70,7 +73,9 @@ Fluxo de **demonstração** (não lança nada de verdade no financeiro — aviso
 1. Escolhe a forma: **Pix** ou **Cartão de crédito/débito**.
 2. Escolhe um ou vários meses do ano na grade (meses já pagos aparecem marcados).
 3. Se escolher mais de um mês, decide como dividir o valor: **valor total dividido** entre os
-   meses (sem perder centavo de arredondamento) ou **o mesmo valor** repetido em cada mês.
+   meses (sem perder centavo de arredondamento) ou **o mesmo valor** repetido em cada mês. O campo
+   de valor traz chips de sugestão (R$20/30/50/100/200) numa faixa horizontal arrastável — com
+   mouse (clicar e arrastar) ou toque — que indica com um degradê quando tem mais opção pra rolar.
 4. **Pix**: gera um QR Code e um código "copia e cola" fictícios, com cronômetro de expiração
    (5 min) e botão de copiar.
 5. **Cartão**: formulário completo (número, validade, CVV, nome do titular, CPF/CNPJ), com
@@ -94,15 +99,20 @@ registrada** no site: ninguém consegue chegar nela hoje. Fica pronta para ativa
 ## 3. Área administrativa — Pastoral (`/pastoral/...`)
 
 Acesso por perfil + senha (`/pastoral/entrar`). Três perfis podem entrar: **Pastoral do Dízimo**,
-**Coordenadora** e **Tesoureiro** — o perfil "Pastoral do Dízimo" não enxerga Configurações nem o
-link para a Tesouraria.
+**Coordenadora** e **Tesoureiro** — mas cada um enxerga (e consegue acessar, mesmo digitando a URL
+direto) um recorte diferente das telas. Ver a tabela completa na seção 5.
 
 ### 3.1. Dizimistas (`/pastoral`) — tela inicial
-- Lista completa de dizimistas, com busca (nome ou nº do carnê) e filtro por status
-  (Ativo/Inativo/Todos).
-- Cartões de resumo: total de ativos, inativos, total geral e **valor arrecadado no ano**.
-- Bloco expansível **"Total arrecadado por ano"**, com gráfico de evolução mensal do ano corrente
-  e o total de cada ano anterior.
+- Lista **paginada** (30 dizimistas por página, com "anterior"/"próxima") em vez de trazer a base
+  inteira de uma vez — importante em escala de milhares de dizimistas. Busca por nome ou nº do
+  carnê roda no próprio Firestore (não mais no navegador): é uma busca por **prefixo** (encontra
+  quem o nome ou o carnê **começam** com o termo digitado, não quem contém em qualquer posição) —
+  com indicador de carregamento enquanto busca. Filtro por status (Ativo/Inativo/Todos) também
+  roda no Firestore, combinável com a busca.
+- Cartões de resumo: total de ativos, inativos e total geral. **Coordenadora e Tesoureiro** também
+  veem o card de **valor arrecadado no ano** e o bloco expansível **"Total arrecadado por ano"**
+  (gráfico de evolução mensal do ano corrente + total de cada ano anterior) — a **Pastoral do
+  Dízimo não vê nenhum dos dois**.
 - Bloco expansível **"Aniversariantes do mês"**.
 - **Exportar ativos** — baixa um `.txt` com os números de carnê de todos os dizimistas ativos.
 - **Cadastrar novo dizimista** — mesmo formulário do recadastramento, mas o nº do carnê é sempre
@@ -111,6 +121,9 @@ link para a Tesouraria.
   "Devolução avulsa" para uma contribuição sem dizimista vinculado), sem precisar abrir a ficha da
   pessoa.
 - Toque numa linha abre a ficha completa do dizimista.
+
+O status Ativo/Inativo exibido aqui vem de um campo gravado no próprio dizimista (`status`),
+mantido em dia automaticamente — ver seção 6.1.
 
 ### 3.2. Ficha do dizimista (`/pastoral/dizimistas/:numeroCarne`)
 - Dados cadastrais completos, badge de status (Ativo/Inativo), avatar com iniciais.
@@ -133,8 +146,14 @@ nos atalhos das telas acima, só que numa página própria (útil pra quem quer 
 passar pela lista de dizimistas). Depois de lançar, o formulário limpa e fica pronto pra lançar a
 próxima em seguida.
 
+O formulário pede **Data da devolução** (dd/mm/aaaa, não mais "mês/ano") — a competência (mês de
+referência, usada no status do dizimista) é calculada automaticamente a partir dela, nunca digitada
+à parte. O padrão já vem preenchido com hoje (ou o dia 1 do mês, se a tela já sugeriu outro mês,
+como ao lançar a partir da Lista de devoluções de um mês passado). Esse dia também é o que aparece
+no calendário de receitas da Tesouraria (seção 4.2, a partir de setembro/2026).
+
 ### 3.5. Lançamento de devoluções em lote (`/pastoral/devolucoes/lote`)
-Lança a devolução de **vários dizimistas de uma vez**, para o mesmo mês/ano e forma de pagamento:
+Lança a devolução de **vários dizimistas de uma vez**, todos na mesma data e forma de pagamento:
 uma linha por dizimista (nº do carnê + valor), com botão para adicionar várias linhas de uma vez
 (até 50 por clique). Ao processar, cada linha é validada individualmente — carnês não encontrados
 ou com erro ficam destacados numa lista de falhas, mantidos no formulário para corrigir e
@@ -151,8 +170,8 @@ lançamento.
 - **Membros da Pastoral**: cadastro de nomes usados no campo "Lançado por" das devoluções (CRUD
   completo — criar, renomear, excluir).
 
-Só Coordenadora e Tesoureiro têm acesso a esta tela (Pastoral do Dízimo não vê o link nem consegue
-acessar a URL direto).
+Só o Tesoureiro tem acesso a esta tela (Pastoral do Dízimo e Coordenadora não veem o link nem
+conseguem acessar a URL direto — ver seção 5.1).
 
 ---
 
@@ -170,10 +189,16 @@ leitura**.
 Os dados começam a partir de **agosto de 2026** (`COMPETENCIA_INICIAL_TESOURARIA`) — meses
 anteriores não são controlados pelo site.
 
+Dentro da área da Pastoral, o item "Tesouraria" no menu (atalho para cá) só aparece para
+**Coordenadora** e **Tesoureiro** — a Pastoral do Dízimo não vê o atalho (mas, como o login daqui é
+separado, ela também não conseguiria entrar mesmo com o link).
+
 ### 4.1. Painel (`/tesouraria`)
 Balancete do mês selecionável (total em receita, total em despesas, saldo) e a lista de todos os
 meses controlados, do mais recente ao mais antigo, cada um já com receita/despesa/saldo
-calculados — inclusive meses ainda não abertos por ninguém aparecem com totais zerados.
+calculados — inclusive meses ainda não abertos por ninguém aparecem com totais zerados. Os valores
+de cada mês ficam em colunas de largura fixa (Receita/Despesas/Saldo sempre na mesma posição, mês a
+mês), em vez de deslizar conforme o tamanho do número.
 
 ### 4.2. Controle mensal (`/tesouraria/:competencia`, ex. `/tesouraria/2026-08`)
 A tela principal de lançamento:
@@ -182,19 +207,33 @@ A tela principal de lançamento:
   Ação solidária, Doações. A categoria **Dízimo é calculada automaticamente** a partir das
   devoluções lançadas pela Pastoral naquele mês (por forma de pagamento) — nunca é um lançamento
   manual, e nunca duplica ou fica desatualizada se uma devolução for editada/excluída depois.
-- **Lista de receitas do mês** (accordion): cada lançamento com data, categoria, forma de
-  pagamento, valor e observação (com quebras de linha preservadas) — **lançar**, **editar** e
-  **excluir** (as receitas calculadas de dízimo não podem ser editadas/excluídas diretamente, só
-  refletem as devoluções).
-- **Lista de despesas do mês** (accordion): dia, quem solicitou, empresa/prestador, valor, se está
-  **quitada**, se **possui NF-e** (com atalho para copiar a chave de acesso e abrir a consulta
-  oficial da Receita), observação. Tem **busca por todos os campos** (prestador, solicitante,
-  valor, observação, status) com o total do resultado filtrado. **Lançar**, **editar**, **excluir**.
+- **Lista de receitas do mês** e **Lista de despesas do mês**: em vez de uma lista corrida, mostram
+  um **calendário do mês inteiro** — cada dia com lançamento exibe um resumo (R$ + quantidade),
+  verde para receita e vermelho para despesa; dias sem nada ficam apagados e não são clicáveis.
+  Clicar num dia abre um **popup** com a lista completa daquele dia (lançar, editar, excluir,
+  observação com quebras de linha preservadas). Lançamentos sem dia conhecido (raro, de antes de
+  existir esse controle) aparecem numa lista à parte, "Sem data informada".
+  - A receita de **Dízimo** aparece no **dia real** de cada devolução a partir de **setembro de
+    2026** (quando o lançamento de devolução passou a coletar o dia exato — seção 3.4). O mês de
+    **agosto de 2026** é a exceção: como não havia controle de dia nele, o dízimo daquele mês
+    continua aparecendo agregado (até 3 lançamentos "Calculado", um por forma de pagamento) no
+    **último dia do mês**.
+  - Despesas **pendentes** podem ser **selecionadas em lote** (uma a uma ou via "Selecionar todas
+    as pendentes", respeitando a busca) e marcadas como **quitadas de uma vez só** — a seleção
+    mostra uma lista de conferência (dia, prestador, valor) antes de confirmar, com opção de tirar
+    alguma da seleção ali mesmo.
+  - Despesas com **NF-e** guardam a chave de acesso, com atalho pra copiar e abrir a consulta
+    oficial da Receita.
+  - Tem **busca por todos os campos** das despesas (prestador, solicitante, valor, observação,
+    status) com o total do resultado filtrado.
 - **Fechar mês / reabrir mês** — trava o mês contra novos lançamentos (reversível).
 - **Gerar PDF** e **Exportar Excel** — relatório completo do mês (resumo, receitas por categoria,
-  receitas por forma de pagamento, receitas e despesas detalhadas). O PDF usa o azul de Nossa
-  Senhora de Lourdes nos cabeçalhos das tabelas e traz, ao final, os nomes do Tesoureiro,
-  Coordenadora e Pároco (sem linha de assinatura — é só identificação).
+  receitas por forma de pagamento, receitas e despesas detalhadas). Despesas com NF-e trazem a
+  **chave de acesso completa** e um **link clicável** para a consulta oficial da Receita (o PDF traz
+  o link no rodapé da seção de despesas; o Excel traz uma coluna própria "Consultar NF-e" com o
+  link em cada linha que tiver nota). O PDF usa o azul de Nossa Senhora de Lourdes nos cabeçalhos
+  das tabelas e traz, ao final, os nomes do Tesoureiro, Coordenadora e Pároco (sem linha de
+  assinatura — é só identificação).
 
 ### 4.3. Evolução (`/tesouraria/evolucao`)
 Gráfico de entradas x saídas mês a mês, desde o início do controle da Tesouraria.
@@ -207,16 +246,36 @@ com cartões de total arrecadado/despesa/saldo do ano selecionado. Criar, editar
 
 ## 5. Papéis de acesso
 
-| Perfil | Entra na Pastoral | Entra na Tesouraria | Vê Configurações | Edita na Tesouraria |
-|---|---|---|---|---|
-| **Pastoral do Dízimo** | Sim | Não | Não | — |
-| **Coordenadora** | Sim | Sim | Sim | Não (só leitura) |
-| **Tesoureiro** | Sim | Sim | Sim | Sim |
-| **Secretaria Paroquial** | Não | Sim | — | Não (só leitura) |
+| Perfil | Entra na Pastoral | Entra na Tesouraria | Edita na Tesouraria |
+|---|---|---|---|
+| **Pastoral do Dízimo** | Sim | Não | — |
+| **Coordenadora** | Sim | Sim | Não (só leitura) |
+| **Tesoureiro** | Sim | Sim | Sim |
+| **Secretaria Paroquial** | Não | Sim | Não (só leitura) |
 
 Coordenadora e Tesoureiro usam a **mesma senha** nos dois logins (é a mesma pessoa, dois portões
 diferentes). Cada perfil tem sua própria senha, verificada no navegador via hash SHA-256 (ver
 seção 9) — não existe usuário/senha único.
+
+### 5.1. O que cada perfil vê e usa dentro da área da Pastoral
+
+Dentro da própria área da Pastoral, cada perfil tem um recorte diferente do menu — e isso não é só
+visual: quem não pode usar uma tela também é barrado se tentar acessar a URL dela direto (redirecionado
+de volta para Dizimistas), ver `podeAcessarRotaPastoral` em `constants/papeisAcesso.ts`.
+
+| Tela | Pastoral do Dízimo | Coordenadora | Tesoureiro |
+|---|---|---|---|
+| Dizimistas (lista + ficha) | Sim | Sim | Sim |
+| Lançar devolução | Sim | Não | Sim |
+| Lançar devoluções em lote | Sim | Não | Sim |
+| Lista de devoluções | Não | Não | Sim |
+| Recadastramentos | Não | Não | Sim |
+| Configurações | Não | Não | Sim |
+| Tesouraria (atalho no menu) | Não | Sim | Sim |
+
+Além disso, dentro de Dizimistas, o **total arrecadado no ano** (card e o bloco "Total arrecadado
+por ano") só aparece para Coordenadora e Tesoureiro — a Pastoral do Dízimo não vê esses valores em
+nenhum lugar da tela (ver `podeVerTotalArrecadado`, no mesmo arquivo).
 
 ---
 
@@ -229,6 +288,20 @@ nunca recua antes do próprio recadastramento da pessoa no site: quem se cadastr
 meses tem o mínimo exigido reduzido na mesma proporção. Dizimistas que só existem pela importação
 da planilha antiga (nunca se recadastraram) contam com a janela cheia de 6 meses, sem limite
 inferior.
+
+O resultado fica gravado no próprio documento do dizimista (campo `status`), pra a lista de
+Dizimistas não precisar reler o histórico de devolução de todo mundo só pra montar a tabela (ver
+seção 7.1). Esse campo é mantido de duas formas:
+- **Na hora**, sempre que uma devolução daquele dizimista é lançada, editada ou excluída (recalcula
+  só a pessoa afetada).
+- **1x por dia**, por um Cron da Vercel (`api/cron/recalcular-status.ts`, agendado em `vercel.json`)
+  que recalcula todo mundo do zero — pega quem muda de Ativo pra Inativo só pela passagem do tempo
+  (ex.: parou de devolver e, meses depois, ninguém mexeu no cadastro dele), caso que a atualização
+  "na hora" não cobre sozinha.
+
+A contagem agregada de Ativos/Inativos (mostrada nos cards de Dizimistas) segue o mesmo padrão do
+"Total arrecadado por ano" (seção 7.1): um documento (`agregados/statusDizimistas`) mantido por
+incremento, não por somar a base inteira a cada carregamento.
 
 ### 6.2. Meses pendentes
 Contagem sempre a partir de **janeiro do ano corrente até o mês atual**, sem exceção por data de
@@ -261,23 +334,51 @@ nenhum dizimista real, só existe como caminho de gravação no Firestore.
 - **Geração de relatórios**: `jspdf` + `jspdf-autotable` (PDF) e `xlsx` (Excel), no navegador.
 
 ### 7.1. Leituras no Firestore
-As telas que leem listas grandes (devoluções, dizimistas, controles/eventos da Tesouraria,
-configurações, membros da Pastoral) usam um **cache de 5 minutos** (`frontend/src/lib/cacheLeitura.ts`)
-— evita repetir a mesma leitura cara quando a pessoa navega entre telas que pedem os mesmos dados
-em sequência, invalidado automaticamente a cada gravação. O cache também é persistido em
+As telas que leem listas grandes (devoluções, controles/eventos da Tesouraria, configurações,
+membros da Pastoral) usam um **cache de 5 minutos** (`frontend/src/lib/cacheLeitura.ts`) — evita
+repetir a mesma leitura cara quando a pessoa navega entre telas que pedem os mesmos dados em
+sequência, invalidado automaticamente a cada gravação. O cache também é persistido em
 `localStorage`: sobrevive a um F5 ou a fechar e reabrir a aba, então quem passa o dia voltando numa
-tela que lê uma coleção grande (ex.: Dizimistas) não paga a leitura completa de novo a cada
-recarregamento — só volta a ler do Firestore depois que o cache expira, ou na hora, se alguém
-gravar algo na mesma aba. Consultas que decidem **disponibilidade antes de gravar** (ex.: geração
-de número de carnê, checagem de recadastramento existente) nunca passam por esse cache — são
-sempre lidas ao vivo, dentro de transações do Firestore, para nunca haver colisão.
+tela que lê uma coleção grande não paga a leitura completa de novo a cada recarregamento — só volta
+a ler do Firestore depois que o cache expira, ou na hora, se alguém gravar algo na mesma aba.
+Consultas que decidem **disponibilidade antes de gravar** (ex.: geração de número de carnê,
+checagem de recadastramento existente) nunca passam por esse cache — são sempre lidas ao vivo,
+dentro de transações do Firestore, para nunca haver colisão.
 
-O **"Total arrecadado por ano"** (tela Dizimistas) não soma o histórico inteiro a cada carregamento
-— isso cresceria sem limite conforme a base e os anos de dízimo se acumulam. Em vez disso, um
-documento agregado (`agregados/totaisDevolucaoPorAno`) é atualizado de forma incremental
-(`increment()`, atômico) a cada devolução lançada, editada ou excluída, e a tela só lê esse
-resumo pronto. As demais leituras da tela (status ativo/inativo, gráfico do ano corrente) ficam
-limitadas à janela recente (ano corrente + últimos 6 meses), não ao histórico completo.
+**A tela de Dizimistas é a única que não lê a coleção inteira nem com cache** — em escala de
+milhares de dizimistas, isso continuaria crescendo sem limite. Em vez disso:
+- A **tabela** é paginada direto no Firestore (`limit`/`startAfter`, 30 por página) — cada
+  carregamento de página custa só os documentos daquela página, nunca a base inteira.
+- A **busca** também roda como consulta do Firestore, não como filtro no navegador — como o
+  Firestore não faz busca por "contém" nativamente, é uma busca por **prefixo** (`where(campo, '>=',
+  termo).where(campo, '<=', termo + '\uf8ff')`), a única forma de buscar sem ler a base inteira a
+  cada tecla. Combinar o filtro de status com a busca por nome exige um **índice composto**
+  (`dizimistas`, campos `status` + `nomeCompleto`, ambos crescentes) — já criado manualmente no
+  Firebase Console; se precisar recriar em outro projeto, o próprio erro do Firestore no console do
+  navegador traz um link pronto para criá-lo.
+- O status **Ativo/Inativo** e o **mês de nascimento** (usado nos aniversariantes) ficam gravados
+  em campos do próprio documento (`status`, `mesNascimento`), consultáveis direto — ver seção 6.1
+  para como `status` é mantido em dia.
+- O card **"Total"** usa uma agregação nativa do Firestore (`getCountFromServer`) — conta os
+  documentos sem ler cada um.
+- **"Exportar ativos"** é a única ação que ainda lê vários documentos de uma vez (todos os Ativos) —
+  aceitável por ser uma ação explícita e ocasional, não algo disparado a cada carregamento da tela.
+
+O **"Total arrecadado por ano"** (tela Dizimistas) também não soma o histórico inteiro a cada
+carregamento. Um documento agregado (`agregados/totaisDevolucaoPorAno`) guarda dois mapas —
+`totais` (por ano) e `totaisPorMes` (por competência "aaaa-mm", usado no gráfico de evolução
+mensal e no calendário de receitas da Tesouraria) — atualizados de forma incremental (`increment()`,
+atômico) a cada devolução lançada, editada ou excluída; a tela só lê esse resumo pronto. As demais
+leituras da tela (gráfico do ano corrente) ficam limitadas à janela recente, não ao histórico
+completo.
+
+### 7.2. Cron diário (Vercel)
+Um único job agendado (`api/cron/recalcular-status.ts`, ver `vercel.json` → `crons`) roda 1x por
+dia (madrugada, horário de Brasília) e recalcula do zero o `status` e o `mesNascimento` de todos os
+dizimistas, além de reconstruir `agregados/statusDizimistas`. É o único mecanismo que pega quem
+muda de Ativo pra Inativo só pela passagem do tempo (seção 6.1) — sem gravação nenhuma disparando
+isso. Protegido por um token (`CRON_SECRET`, seção 9): a Vercel manda esse token automaticamente
+quando a variável está configurada no projeto.
 
 ---
 
@@ -314,6 +415,9 @@ valor (Firebase Console e painel de integrações do Mercado Pago). Resumo:
   `VITE_SENHA_TESOUREIRO_HASH`, `VITE_SENHA_SECRETARIA_PAROQUIAL_HASH` — hash SHA-256 da senha de
   cada perfil (gere com `npm run gerar:hash-senha -- "sua-senha"`). Sem a variável definida, cada
   perfil cai numa senha padrão de desenvolvimento — troque antes de divulgar o site.
+- `CRON_SECRET` — protege o endpoint do Cron diário (seção 7.2). Qualquer valor secreto seu;
+  configure no painel da Vercel (Settings → Environment Variables). Sem essa variável, o Cron ainda
+  funciona (as regras do Firestore já são abertas), só fica sem essa checagem extra.
 
 ---
 
@@ -384,6 +488,18 @@ partida do agregado `agregados/totaisDevolucaoPorAno` (seção 7.1). Só precisa
 em diante o agregado se mantém sozinho a cada gravação. Já foi rodado em produção; só voltaria a
 ser necessário se o agregado for apagado ou zerado por engano.
 
+### Recalcular status, mês de nascimento e agregados (histórico — já executado)
+```bash
+node scripts/recalcular-status-e-agregados.mjs --dry-run
+node scripts/recalcular-status-e-agregados.mjs
+```
+Mesmo cálculo do Cron diário (seção 7.2), rodado manualmente: recalcula `status` e `mesNascimento`
+de todos os dizimistas e reconstrói `agregados/statusDizimistas` e
+`agregados/totaisDevolucaoPorAno` (incluindo `totaisPorMes`) a partir do histórico de devoluções já
+existente. Só precisa rodar uma vez para estabelecer o ponto de partida — daí em diante o Cron e as
+gravações do dia a dia mantêm tudo em dia sozinhos. Já foi rodado em produção; só voltaria a ser
+necessário se algum desses agregados for apagado ou corrompido.
+
 ### Gerar hash de senha
 ```bash
 npm run gerar:hash-senha -- "minha-senha"
@@ -398,21 +514,21 @@ Gera o SHA-256 em hex de uma senha, para preencher qualquer uma das variáveis
 ```text
 frontend/
   src/
-  ├── components/     # ui/ (shadcn), layout/, forms/, dashboard/, pastoral/
+  ├── components/     # ui/ (shadcn), layout/, forms/, dashboard/ (inclui CalendarioResumoDiario), pastoral/
   ├── pages/           # public/, auth/, dizimista/, pastoral/, tesouraria/
   ├── layouts/         # PublicLayout, AuthLayout, DizimistaLayout, PastoralLayout, TesourariaLayout
   ├── routes/          # ProtectedDizimistaRoute, ProtectedAdminRoute, ProtectedTesourariaRoute,
-  │                     # ProtegerContraPastoralDizimo
+  │                     # ProtegerRotaPastoral (regra de acesso por papel, seção 5.1)
   ├── hooks/           # useDizimistaSessao, useAdminSessao, useTesourariaSessao
   ├── services/        # dizimistaService, devolucaoService, tesourariaService, pagamentoService,
-  │                     # configuracaoService, membroPastoralService (Firestore + API)
+  │                     # configuracaoService, membroPastoralService, statusAgregadoService (Firestore + API)
   ├── lib/             # firebase.ts (init), cacheLeitura.ts (cache de leituras)
   ├── types/           # Dizimista, Devolucao, ControleTesouraria, EntradaTesouraria, SaidaTesouraria,
   │                     # EventoTesouraria, MembroPastoral, PagamentoPix
-  └── constants/       # rotas, navegação, papéis de acesso, senhas, categorias, storage
+  └── constants/       # rotas, navegação, papéis de acesso (inclui regras por tela, seção 5.1), senhas, categorias, storage
 
 backend/               # módulos TS puros: mercadopago/, firestore/, carne/
-api/                    # funções serverless: dizimistas/, mercadopago/
+api/                    # funções serverless: dizimistas/, mercadopago/, cron/ (recálculo diário, seção 7.2)
 scripts/                # importação/normalização de dados (ver seção 10)
 ```
 
@@ -424,13 +540,14 @@ Coleções principais:
 
 | Coleção | ID do documento | Conteúdo |
 |---|---|---|
-| `dizimistas` | nº do carnê | Dados cadastrais; subcoleções `pagamentos` e `devolucoes` |
+| `dizimistas` | nº do carnê | Dados cadastrais (inclui `status` e `mesNascimento`, seção 6.1/7.1); subcoleções `pagamentos` e `devolucoes` (devoluções incluem `data`, o dia exato, a partir de set/2026 — seção 3.4) |
 | `tesouraria` | competência (`aaaa-mm`) | Controle mensal — entradas e saídas embutidas no documento |
 | `tesourariaEventos` | auto | Eventos (nome, ano, data, arrecadado, despesa) |
 | `membrosPastoral` | auto | Nomes usados no campo "Lançado por" |
 | `configuracoes` | `geral` | Configurações gerais (mínimo de meses ativos) |
 | `contadores` | `proximoNumeroCarne` | Contador do próximo nº de carnê livre a gerar |
-| `agregados` | `totaisDevolucaoPorAno` | Total de devoluções por ano, mantido incrementalmente (seção 7.1) |
+| `agregados` | `totaisDevolucaoPorAno` | Total de devoluções por ano e por mês (`totais`, `totaisPorMes`), mantido incrementalmente (seção 7.1) |
+| `agregados` | `statusDizimistas` | Contagem de Ativos/Inativos, mantida incrementalmente e recalculada 1x/dia (seção 6.1/7.2) |
 
 As regras (`firestore.rules`) são abertas nesta fase — qualquer cliente lê e grava. Isso é
 intencional para agilizar esta etapa do projeto, mas deve ser revisto antes de uma exposição mais

@@ -639,21 +639,45 @@ export function ControleMensalPage() {
                   </p>
                 )}
                 {podeEditar && pendentesFiltradas.length > 0 && (
-                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-muted/30 px-3.5 py-2.5">
-                    <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
-                      <Checkbox
-                        checked={pendentesFiltradas.every((s) => despesasSelecionadas.has(s.id))}
-                        onCheckedChange={() => handleAlternarSelecionarTodasPendentes(pendentesFiltradas)}
-                      />
-                      {despesasSelecionadas.size > 0
-                        ? `${despesasSelecionadas.size} selecionada(s)`
-                        : `Selecionar todas as pendentes (${pendentesFiltradas.length})`}
-                    </label>
+                  <div className="rounded-lg border border-border bg-muted/30 p-3.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
+                        <Checkbox
+                          checked={pendentesFiltradas.every((s) => despesasSelecionadas.has(s.id))}
+                          onCheckedChange={() => handleAlternarSelecionarTodasPendentes(pendentesFiltradas)}
+                        />
+                        {despesasSelecionadas.size > 0
+                          ? `${despesasSelecionadas.size} selecionada(s)`
+                          : `Selecionar todas as pendentes (${pendentesFiltradas.length})`}
+                      </label>
+                      {despesasSelecionadas.size > 0 && (
+                        <Button size="sm" onClick={handleMarcarSelecionadasComoQuitadas}>
+                          <CheckCheck className="h-3.5 w-3.5" />
+                          Marcar como quitada(s)
+                        </Button>
+                      )}
+                    </div>
+                    {/* Lista de conferência: mostra exatamente quais despesas serão quitadas — a
+                        seleção pode vir de dias diferentes do calendário, então sem isso não dá pra
+                        saber quais são só pelo número. Vem de `despesasOrdenadas` (não da lista
+                        filtrada pela busca), pra continuar certa mesmo que a busca mude depois de
+                        selecionar. */}
                     {despesasSelecionadas.size > 0 && (
-                      <Button size="sm" onClick={handleMarcarSelecionadasComoQuitadas}>
-                        <CheckCheck className="h-3.5 w-3.5" />
-                        Marcar como quitada(s)
-                      </Button>
+                      <ul className="mt-3 max-h-52 space-y-1 overflow-y-auto border-t border-border pt-3">
+                        {despesasOrdenadas
+                          .filter((s) => despesasSelecionadas.has(s.id))
+                          .map((s) => (
+                            <li key={s.id} className="flex items-center justify-between gap-2 py-1 text-sm">
+                              <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2">
+                                <Checkbox checked onCheckedChange={() => handleAlternarSelecaoDespesa(s.id)} />
+                                <span className="min-w-0 truncate text-foreground">
+                                  {s.dia ? formatDate(s.dia) : '—'} · {s.prestador}
+                                </span>
+                              </label>
+                              <span className="shrink-0 font-medium text-destructive">{formatCurrency(s.valor)}</span>
+                            </li>
+                          ))}
+                      </ul>
                     )}
                   </div>
                 )}

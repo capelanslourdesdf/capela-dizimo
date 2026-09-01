@@ -42,6 +42,8 @@ import { aguardarPeloMenos } from '@/utils/async'
 import { baixarArquivoTexto } from '@/utils/download'
 import type { StatusDizimista } from '@/utils/statusDizimista'
 import { ROUTES } from '@/constants/routes'
+import { useAdminSessao } from '@/hooks/useAdminSessao'
+import { podeVerTotalArrecadado } from '@/constants/papeisAcesso'
 
 const STATUS_CONFIG: Record<StatusDizimista, { label: string; variant: 'success' | 'muted' }> = {
   ativo: { label: 'Ativo', variant: 'success' },
@@ -53,6 +55,8 @@ const DURACAO_MINIMA_LOADING_MS = 400
 
 export function DizimistasPage() {
   const navigate = useNavigate()
+  const { papel } = useAdminSessao()
+  const podeVerTotal = podeVerTotalArrecadado(papel)
 
   // --- Tabela paginada (30 por página, busca e filtro de status resolvidos no Firestore) ---
   // Cada página buscada fica guardada aqui (por índice), então "página anterior" nunca refaz uma
@@ -311,24 +315,26 @@ export function DizimistasPage() {
       />
 
       {carregandoResumo ? (
-        <div className="mb-6 grid grid-cols-3 gap-3 lg:grid-cols-4 lg:gap-4">
+        <div className={podeVerTotal ? 'mb-6 grid grid-cols-3 gap-3 lg:grid-cols-4 lg:gap-4' : 'mb-6 grid grid-cols-3 gap-3 lg:gap-4'}>
           {Array.from({ length: 3 }).map((_, i) => (
             <Skeleton key={i} className="h-20 w-full rounded-xl lg:h-24" />
           ))}
-          <Skeleton className="col-span-3 h-20 w-full rounded-xl lg:col-span-1 lg:h-24" />
+          {podeVerTotal && <Skeleton className="col-span-3 h-20 w-full rounded-xl lg:col-span-1 lg:h-24" />}
         </div>
       ) : (
-        <div className="mb-6 grid grid-cols-3 gap-3 lg:grid-cols-4 lg:gap-4">
+        <div className={podeVerTotal ? 'mb-6 grid grid-cols-3 gap-3 lg:grid-cols-4 lg:gap-4' : 'mb-6 grid grid-cols-3 gap-3 lg:gap-4'}>
           <StatCard compact label="Ativos" value={String(contagemStatus.ativos)} icon={Users} />
           <StatCard compact label="Inativos" value={String(contagemStatus.inativos)} icon={Users} />
           <StatCard compact label="Total" value={String(totalDizimistas)} icon={Users} />
-          <div className="col-span-3 lg:col-span-1">
-            <StatCard label={`Arrecadado em ${anoAtual}`} value={formatCurrency(totalAnoAtual)} icon={Wallet} tom="success" />
-          </div>
+          {podeVerTotal && (
+            <div className="col-span-3 lg:col-span-1">
+              <StatCard label={`Arrecadado em ${anoAtual}`} value={formatCurrency(totalAnoAtual)} icon={Wallet} tom="success" />
+            </div>
+          )}
         </div>
       )}
 
-      {!carregandoResumo && totalPorAno.length > 0 && (
+      {!carregandoResumo && podeVerTotal && totalPorAno.length > 0 && (
         <Card className="mb-6">
           <Accordion type="single" collapsible>
             <AccordionItem value="total-por-ano" className="border-b-0">

@@ -2,9 +2,9 @@ import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
 import type { ControleTesouraria } from '@/types'
-import { CATEGORIAS_ENTRADA_TESOURARIA, STATUS_CONTROLE_TESOURARIA, categoriaEntradaLabel } from '@/constants/tesouraria'
+import { CATEGORIAS_ENTRADA_TESOURARIA, STATUS_CONTROLE_TESOURARIA, URL_CONSULTA_NFE, categoriaEntradaLabel } from '@/constants/tesouraria'
 import { FORMAS_PAGAMENTO_DEVOLUCAO, formaPagamentoLabel } from '@/constants/devolucao'
-import { formatCompetencia, formatCurrency, formatDate, formatDateLong } from '@/utils/format'
+import { formatCompetencia, formatCurrency, formatDate, formatDateLong, maskChaveNfe } from '@/utils/format'
 
 /** Azul de Nossa Senhora de Lourdes — o mesmo azul usado como cor primária no site (--primary, em index.css), convertido pra RGB. */
 const AZUL_NOSSA_SENHORA_LOURDES: [number, number, number] = [11, 146, 218]
@@ -175,7 +175,7 @@ export function gerarPdfControleTesouraria(controle: ControleTesouraria): void {
 
   autoTable(doc, {
     startY: finalY(doc) + 14,
-    head: [['Dia', 'Solicitante', 'Empresa/Prestador', 'Valor', 'Quitado', 'NF-e', 'Observação']],
+    head: [['Dia', 'Solicitante', 'Empresa/Prestador', 'Valor', 'Quitado', 'Chave de acesso NF-e', 'Observação']],
     body:
       despesasOrdenadas.length > 0
         ? despesasOrdenadas.map((s) => [
@@ -184,16 +184,25 @@ export function gerarPdfControleTesouraria(controle: ControleTesouraria): void {
             s.prestador,
             formatCurrency(s.valor),
             s.quitado ? 'Sim' : 'Não',
-            s.possuiNfe ? 'Sim' : 'Não',
+            s.possuiNfe && s.chaveNfe ? maskChaveNfe(s.chaveNfe) : '—',
             s.observacao || '—',
           ])
         : [['Nenhuma despesa lançada neste mês.', '', '', '', '', '', '']],
     theme: 'striped',
     headStyles: { fillColor: AZUL_NOSSA_SENHORA_LOURDES },
     styles: { fontSize: 9 },
-    columnStyles: { 3: { halign: 'right', cellWidth: 22 } },
+    columnStyles: { 3: { halign: 'right', cellWidth: 22 }, 5: { cellWidth: 40, fontSize: 7.5 } },
     margin: { left: margemEsquerda, right: margemEsquerda },
   })
+
+  if (despesasOrdenadas.some((s) => s.possuiNfe)) {
+    doc.setFontSize(7.5)
+    doc.setTextColor(20, 90, 160)
+    doc.textWithLink('Consultar NF-e no portal da Receita (cole a chave de acesso lá)', margemEsquerda, finalY(doc) + 6, {
+      url: URL_CONSULTA_NFE,
+    })
+    doc.setTextColor(0)
+  }
 
   desenharResponsaveis(doc, margemEsquerda, larguraPagina)
 

@@ -1,7 +1,7 @@
 import * as XLSX from 'xlsx'
 
 import type { ControleTesouraria } from '@/types'
-import { STATUS_CONTROLE_TESOURARIA, categoriaEntradaLabel } from '@/constants/tesouraria'
+import { STATUS_CONTROLE_TESOURARIA, URL_CONSULTA_NFE, categoriaEntradaLabel } from '@/constants/tesouraria'
 import { formaPagamentoLabel } from '@/constants/devolucao'
 import { dataIsoParaBr, formatCompetencia } from '@/utils/format'
 
@@ -44,7 +44,7 @@ export function gerarExcelControleTesouraria(controle: ControleTesouraria): void
   XLSX.utils.book_append_sheet(wb, receitas, 'Receitas')
 
   const despesas = XLSX.utils.aoa_to_sheet([
-    ['Dia', 'Quem solicitou', 'Empresa/Prestador', 'Valor', 'Quitado', 'Possui NF-e', 'Chave NF-e', 'Observação'],
+    ['Dia', 'Quem solicitou', 'Empresa/Prestador', 'Valor', 'Quitado', 'Possui NF-e', 'Chave NF-e', 'Consultar NF-e', 'Observação'],
     ...despesasOrdenadas.map((s) => [
       s.dia ? dataIsoParaBr(s.dia) : '',
       s.solicitante,
@@ -53,9 +53,21 @@ export function gerarExcelControleTesouraria(controle: ControleTesouraria): void
       s.quitado ? 'Sim' : 'Não',
       s.possuiNfe ? 'Sim' : 'Não',
       s.possuiNfe ? s.chaveNfe || '' : '',
+      s.possuiNfe ? 'Abrir portal da Receita' : '',
       s.observacao || '',
     ]),
   ])
+
+  // Link clicável pro portal da Receita (coluna H) em cada linha com NF-e — a chave (coluna G)
+  // ainda precisa ser colada manualmente lá (o portal exige isso + captcha, não tem link que abra
+  // a nota direto), mas assim já economiza ter que digitar o endereço do portal.
+  despesasOrdenadas.forEach((s, indice) => {
+    if (!s.possuiNfe) return
+    const endereco = XLSX.utils.encode_cell({ r: indice + 1, c: 7 })
+    const celula = despesas[endereco]
+    if (celula) celula.l = { Target: URL_CONSULTA_NFE, Tooltip: 'Consultar NF-e no portal da Receita' }
+  })
+
   XLSX.utils.book_append_sheet(wb, despesas, 'Despesas')
 
   XLSX.writeFile(wb, `tesouraria-${controle.competencia}.xlsx`)

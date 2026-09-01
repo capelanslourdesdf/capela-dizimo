@@ -24,6 +24,11 @@ export function podeEditarTesouraria(papel: PapelAcesso | null): boolean {
   return papel === 'tesoureiro'
 }
 
+/** Na área da Pastoral, só Coordenadora e Tesoureiro veem o total arrecadado em dízimo no ano (cards e o card "Total arrecadado por ano" em Dizimistas) — a Pastoral do Dízimo não enxerga esses valores. */
+export function podeVerTotalArrecadado(papel: PapelAcesso | null): boolean {
+  return papel === 'coordenadora' || papel === 'tesoureiro'
+}
+
 /** Rotas da área da Pastoral que a "Pastoral do Dízimo" pode usar — só o dia a dia de dizimistas/devoluções. */
 const ROTAS_PASTORAL_DIZIMO: string[] = [ROUTES.pastoral.root, ROUTES.pastoral.lancamentoUnico, ROUTES.pastoral.lancamentoLote]
 

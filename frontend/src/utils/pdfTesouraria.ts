@@ -62,6 +62,10 @@ export function gerarPdfControleTesouraria(controle: ControleTesouraria): void {
   const doc = new jsPDF({ orientation: 'landscape' })
   const margemEsquerda = 14
   const larguraPagina = doc.internal.pageSize.getWidth()
+  const larguraUtil = larguraPagina - margemEsquerda * 2
+  const espacoEntreColunas = 10
+  const larguraMeiaColuna = (larguraUtil - espacoEntreColunas) / 2
+  const xColunaDireita = margemEsquerda + larguraMeiaColuna + espacoEntreColunas
 
   const totalReceitas = controle.entradas.reduce((soma, e) => soma + e.valor, 0)
   const totalDespesas = controle.saidas.reduce((soma, s) => soma + s.valor, 0)
@@ -90,7 +94,7 @@ export function gerarPdfControleTesouraria(controle: ControleTesouraria): void {
   autoTable(doc, {
     startY: 38,
     theme: 'plain',
-    styles: { fontSize: 10, cellPadding: { top: 1.5, bottom: 1.5, left: 0, right: 6 } },
+    styles: { fontSize: 11, cellPadding: { top: 2, bottom: 2, left: 0, right: 10 } },
     body: [
       ['Total de receitas', formatCurrency(totalReceitas)],
       ['Total de despesas', formatCurrency(totalDespesas)],
@@ -98,7 +102,7 @@ export function gerarPdfControleTesouraria(controle: ControleTesouraria): void {
     ],
     columnStyles: { 0: { fontStyle: 'bold' }, 1: { halign: 'right' } },
     margin: { left: margemEsquerda },
-    tableWidth: 90,
+    tableWidth: 110,
   })
 
   const totaisPorCategoria = CATEGORIAS_ENTRADA_TESOURARIA.map((cat) => ({
@@ -106,51 +110,59 @@ export function gerarPdfControleTesouraria(controle: ControleTesouraria): void {
     total: controle.entradas.filter((e) => e.categoria === cat.value).reduce((soma, e) => soma + e.valor, 0),
   })).filter((c) => c.total > 0)
 
+  const totaisPorForma = FORMAS_PAGAMENTO_DEVOLUCAO.map((forma) => ({
+    forma: forma.label,
+    total: controle.entradas.filter((e) => e.formaPagamento === forma.value).reduce((soma, e) => soma + e.valor, 0),
+  })).filter((f) => f.total > 0)
+
+  // Duas colunas lado a lado — a página em paisagem sobra muito espaço à direita se essas duas
+  // tabelas ficarem empilhadas uma embaixo da outra, só do lado esquerdo (como no modo retrato).
+  const yLinhaCategoriaForma = finalY(doc) + 12
+
   if (totaisPorCategoria.length > 0) {
     doc.setFontSize(11)
     doc.setFont('helvetica', 'bold')
-    doc.text('Receitas por categoria', margemEsquerda, finalY(doc) + 10)
+    doc.text('Receitas por categoria', margemEsquerda, yLinhaCategoriaForma)
 
     autoTable(doc, {
-      startY: finalY(doc) + 14,
+      startY: yLinhaCategoriaForma + 4,
       head: [['Categoria', 'Total']],
       body: totaisPorCategoria.map((c) => [c.categoria, formatCurrency(c.total)]),
       theme: 'striped',
       headStyles: { fillColor: AZUL_NOSSA_SENHORA_LOURDES },
       styles: { fontSize: 9 },
       columnStyles: { 1: { halign: 'right' } },
-      margin: { left: margemEsquerda, right: larguraPagina - margemEsquerda - 90 },
+      margin: { left: margemEsquerda, right: larguraPagina - margemEsquerda - larguraMeiaColuna },
     })
   }
-
-  const totaisPorForma = FORMAS_PAGAMENTO_DEVOLUCAO.map((forma) => ({
-    forma: forma.label,
-    total: controle.entradas.filter((e) => e.formaPagamento === forma.value).reduce((soma, e) => soma + e.valor, 0),
-  })).filter((f) => f.total > 0)
 
   if (totaisPorForma.length > 0) {
     doc.setFontSize(11)
     doc.setFont('helvetica', 'bold')
-    doc.text('Receitas por forma de pagamento', margemEsquerda, finalY(doc) + 10)
+    doc.text('Receitas por forma de pagamento', xColunaDireita, yLinhaCategoriaForma)
 
     autoTable(doc, {
-      startY: finalY(doc) + 14,
+      startY: yLinhaCategoriaForma + 4,
       head: [['Forma', 'Total']],
       body: totaisPorForma.map((f) => [f.forma, formatCurrency(f.total)]),
       theme: 'striped',
       headStyles: { fillColor: AZUL_NOSSA_SENHORA_LOURDES },
       styles: { fontSize: 9 },
       columnStyles: { 1: { halign: 'right' } },
-      margin: { left: margemEsquerda, right: larguraPagina - margemEsquerda - 90 },
+      margin: { left: xColunaDireita, right: margemEsquerda },
     })
   }
 
+  // A primeira página fica só com o resumo geral — receitas e despesas detalhadas sempre começam
+  // a partir da segunda página em diante (cada uma na sua própria página, ver abaixo).
+  doc.addPage()
+
   doc.setFontSize(11)
   doc.setFont('helvetica', 'bold')
-  doc.text('Receitas detalhadas', margemEsquerda, finalY(doc) + 10)
+  doc.text('Receitas detalhadas', margemEsquerda, 18)
 
   autoTable(doc, {
-    startY: finalY(doc) + 14,
+    startY: 22,
     head: [['Data', 'Categoria', 'Forma', 'Valor', 'Observação']],
     body:
       receitasOrdenadas.length > 0
@@ -169,12 +181,16 @@ export function gerarPdfControleTesouraria(controle: ControleTesouraria): void {
     margin: { left: margemEsquerda, right: margemEsquerda },
   })
 
+  // Despesas sempre começam numa página nova, mesmo que as receitas detalhadas tenham acabado de
+  // sobrar espaço na página atual — não faz sentido as duas seções dividirem a mesma página.
+  doc.addPage()
+
   doc.setFontSize(11)
   doc.setFont('helvetica', 'bold')
-  doc.text('Despesas', margemEsquerda, finalY(doc) + 10)
+  doc.text('Despesas', margemEsquerda, 18)
 
   autoTable(doc, {
-    startY: finalY(doc) + 14,
+    startY: 22,
     head: [['Dia', 'Solicitante', 'Empresa/Prestador', 'Valor', 'Quitado', 'Chave de acesso NF-e', 'Observação']],
     body:
       despesasOrdenadas.length > 0

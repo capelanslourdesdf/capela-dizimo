@@ -129,10 +129,22 @@ export function TesourariaPainelPage() {
                       variant={c.status === 'fechado' ? 'muted' : 'success'}
                     />
                   </div>
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground sm:text-sm">
-                    <span>Receita: {formatCurrency(entradasMes)}</span>
-                    <span>Despesas: {formatCurrency(saidasMes)}</span>
-                    <span className="font-medium text-foreground">Saldo: {formatCurrency(entradasMes - saidasMes)}</span>
+                  {/* Largura fixa (não "encolhe pro conteúdo") e 3 colunas iguais — assim "Receita"/"Despesas"/"Saldo"
+                      caem sempre na mesma posição de um mês pro outro, em vez de deslizar conforme o
+                      tamanho do valor de cada mês. */}
+                  <div className="grid grid-cols-3 gap-2 text-right sm:w-80 sm:shrink-0 sm:gap-3">
+                    <div>
+                      <p className="text-[11px] text-muted-foreground">Receita</p>
+                      <p className="text-sm font-medium tabular-nums text-foreground">{formatCurrency(entradasMes)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-muted-foreground">Despesas</p>
+                      <p className="text-sm font-medium tabular-nums text-foreground">{formatCurrency(saidasMes)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-muted-foreground">Saldo</p>
+                      <p className="text-sm font-semibold tabular-nums text-foreground">{formatCurrency(entradasMes - saidasMes)}</p>
+                    </div>
                   </div>
                 </button>
               )

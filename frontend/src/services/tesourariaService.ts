@@ -53,6 +53,28 @@ export function receitasDizimoDaCompetencia(competencia: string, todasDevolucoes
   }).filter((entrada): entrada is EntradaTesouraria => entrada !== null)
 }
 
+/**
+ * Uma receita "dízimo" por devolução (não agrupada por forma de pagamento), datada do dia real da
+ * devolução — usada só no calendário do Controle Mensal, pra distribuir o dízimo nos dias certos
+ * em vez de tudo empilhado no dia 1 (que é o que `receitasDizimoDaCompetencia` faz de propósito,
+ * pros totais/relatórios, que não precisam do detalhe por dia). Usa `data` quando a devolução tem
+ * (lançamentos antigos), senão o dia em que foi lançada (`criadoEm`) — não é necessariamente o dia
+ * exato em que a pessoa pagou, mas é o melhor dado disponível pra devoluções mais recentes, que já
+ * não guardam mais `data`.
+ */
+export function receitasDizimoPorDia(competencia: string, todasDevolucoes: Devolucao[]): EntradaTesouraria[] {
+  const doMes = todasDevolucoes.filter((d) => competenciaDaDevolucao(d) === competencia)
+
+  return doMes.map((d) => ({
+    id: `${PREFIXO_RECEITA_CALCULADA}${d.id}`,
+    data: d.data || d.criadoEm.slice(0, 10),
+    categoria: 'dizimo',
+    valor: d.valor,
+    formaPagamento: d.formaPagamento,
+    observacao: 'Dízimo — devolução lançada no Administrativo.',
+  }))
+}
+
 /** Competências ("aaaa-mm") controladas pela Tesouraria: de `COMPETENCIA_INICIAL_TESOURARIA` até o mês vigente. */
 export function competenciasControleTesouraria(): string[] {
   const atual = competenciaAtual()

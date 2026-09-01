@@ -37,6 +37,7 @@ import {
   ehReceitaCalculada,
   obterOuCriarControleTesouraria,
   receitasDizimoDaCompetencia,
+  receitasDizimoPorDia,
   salvarControleTesouraria,
 } from '@/services/tesourariaService'
 import { listarTodasDevolucoesPorCarne } from '@/services/devolucaoService'
@@ -447,7 +448,13 @@ export function ControleMensalPage() {
   // Agrupado por dia para o calendário — dias sem lançamento simplesmente não entram no mapa (o
   // calendário desenha o mês inteiro sozinho, célula por célula). O grupo "sem data" (raro, de
   // lançamentos antigos) não tem como aparecer numa célula do calendário — vira uma lista à parte.
-  const gruposReceitasPorDia = agruparPorDia(receitasOrdenadas, (e) => e.data ?? '')
+  // O calendário usa o dízimo detalhado por devolução (1 entrada por devolução, no dia certo dela)
+  // em vez do agregado por forma de pagamento (`receitasDizimoDaCompetencia`, usado no total do
+  // topo/relatórios) — senão todo o dízimo do mês apareceria empilhado no dia 1.
+  const receitasParaCalendario = [...controle.entradas, ...receitasDizimoPorDia(controle.competencia, todasDevolucoes)].sort(
+    (a, b) => (a.data < b.data ? 1 : a.data > b.data ? -1 : 0),
+  )
+  const gruposReceitasPorDia = agruparPorDia(receitasParaCalendario, (e) => e.data ?? '')
   const resumosReceitasPorDia = new Map<string, ResumoDia>(
     gruposReceitasPorDia
       .filter((g) => g.dia)
@@ -574,15 +581,9 @@ export function ControleMensalPage() {
                       competencia={controle.competencia}
                       resumosPorDia={resumosReceitasPorDia}
                       diaSelecionado={diaSelecionadoReceita}
-                      onSelecionarDia={(dia) => setDiaSelecionadoReceita((atual) => (atual === dia ? null : dia))}
+                      onSelecionarDia={setDiaSelecionadoReceita}
                       tom="success"
                     />
-                    {grupoReceitaSelecionado && (
-                      <div className="space-y-2.5 pt-1">
-                        <p className="text-sm font-medium text-foreground">{formatDate(grupoReceitaSelecionado.dia)}</p>
-                        {grupoReceitaSelecionado.itens.map(renderReceita)}
-                      </div>
-                    )}
                     {receitasSemData.length > 0 && (
                       <div className="space-y-2.5 pt-1">
                         <p className="text-sm font-medium text-foreground">Sem data informada</p>
@@ -666,15 +667,9 @@ export function ControleMensalPage() {
                       competencia={controle.competencia}
                       resumosPorDia={resumosDespesasPorDia}
                       diaSelecionado={diaSelecionadoDespesa}
-                      onSelecionarDia={(dia) => setDiaSelecionadoDespesa((atual) => (atual === dia ? null : dia))}
+                      onSelecionarDia={setDiaSelecionadoDespesa}
                       tom="destructive"
                     />
-                    {grupoDespesaSelecionado && (
-                      <div className="space-y-2.5 pt-1">
-                        <p className="text-sm font-medium text-foreground">{formatDate(grupoDespesaSelecionado.dia)}</p>
-                        {grupoDespesaSelecionado.itens.map(renderDespesa)}
-                      </div>
-                    )}
                     {despesasSemData.length > 0 && (
                       <div className="space-y-2.5 pt-1">
                         <p className="text-sm font-medium text-foreground">Sem data informada</p>
@@ -688,6 +683,24 @@ export function ControleMensalPage() {
           </Accordion>
         </Card>
       </div>
+
+      <Dialog open={!!grupoReceitaSelecionado} onOpenChange={(open) => !open && setDiaSelecionadoReceita(null)}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{grupoReceitaSelecionado ? formatDate(grupoReceitaSelecionado.dia) : ''}</DialogTitle>
+          </DialogHeader>
+          {grupoReceitaSelecionado && <div className="space-y-2.5">{grupoReceitaSelecionado.itens.map(renderReceita)}</div>}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!grupoDespesaSelecionado} onOpenChange={(open) => !open && setDiaSelecionadoDespesa(null)}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{grupoDespesaSelecionado ? formatDate(grupoDespesaSelecionado.dia) : ''}</DialogTitle>
+          </DialogHeader>
+          {grupoDespesaSelecionado && <div className="space-y-2.5">{grupoDespesaSelecionado.itens.map(renderDespesa)}</div>}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={modalReceita} onOpenChange={setModalReceita}>
         <DialogContent className="max-h-[85vh] overflow-y-auto">

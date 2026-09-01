@@ -26,11 +26,14 @@ function diaDaSemanaDoPrimeiro(ano: number, mes: number): number {
   return new Date(ano, mes - 1, 1).getDay()
 }
 
-/** Sem "R$" (o card em volta já dá o contexto) e sem centavos quando o valor é redondo — cabe melhor numa célula pequena. */
+/** "R$" grudado no número (sem espaço) e sem centavos quando o valor é redondo — cabe melhor numa célula pequena. */
 function valorCompacto(valor: number): string {
   const arredondado = Math.round(valor)
-  if (Math.abs(valor - arredondado) < 0.005) return arredondado.toLocaleString('pt-BR')
-  return valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  const numero =
+    Math.abs(valor - arredondado) < 0.005
+      ? arredondado.toLocaleString('pt-BR')
+      : valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return `R$${numero}`
 }
 
 /**
@@ -89,7 +92,7 @@ export function CalendarioResumoDiario({
               type="button"
               onClick={() => onSelecionarDia(dia)}
               className={cn(
-                'flex min-h-[3.25rem] flex-col items-center justify-center gap-0.5 rounded-lg border px-0.5 py-1 text-xs font-medium transition-colors',
+                'flex min-h-[3.25rem] flex-col items-center justify-center gap-0.5 rounded-lg border px-0.5 py-1 font-medium transition-colors',
                 selecionado
                   ? tom === 'success'
                     ? 'border-success bg-success text-success-foreground'
@@ -99,7 +102,7 @@ export function CalendarioResumoDiario({
                     : 'border-destructive/30 bg-destructive/10 text-destructive hover:border-destructive',
               )}
             >
-              <span className="leading-none">{numeroDia}</span>
+              <span className="text-sm leading-none">{numeroDia}</span>
               <span className="text-[10px] leading-none opacity-90">{valorCompacto(resumo.total)}</span>
             </button>
           )

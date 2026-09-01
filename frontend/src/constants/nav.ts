@@ -42,12 +42,29 @@ export const pastoralNav: NavItem[] = [
   { label: 'Configurações', href: ROUTES.pastoral.configuracoes, icon: Settings },
 ]
 
-/** A "Pastoral do Dízimo" não enxerga Configurações nem Tesouraria — os outros dois perfis veem o menu todo. */
+/**
+ * O que cada papel enxerga no menu da área da Pastoral — lista explícita (não é "tudo menos X"),
+ * já que cada papel tem um recorte bem diferente:
+ * - Tesoureiro: tudo.
+ * - Pastoral do Dízimo: só o dia a dia de dizimistas/devoluções, nada de Tesouraria/Recadastramentos/Configurações.
+ * - Coordenadora: só acompanha Dizimistas e Tesouraria — "Tesouraria" aqui é o mesmo item de sempre,
+ *   que leva pro login dela (decoupled, ver useTesourariaSessao) caso ainda não esteja logada lá.
+ * "Tesouraria" leva pra fora desta área (rota própria, sessão própria) — por isso não conta como
+ * algo que a Pastoral do Dízimo "usa": ela nem tem acesso a esse login separado.
+ */
+const ITENS_POR_PAPEL: Record<PapelAcesso, 'todos' | string[]> = {
+  tesoureiro: 'todos',
+  pastoral_dizimo: [ROUTES.pastoral.root, ROUTES.pastoral.lancamentoUnico, ROUTES.pastoral.lancamentoLote],
+  coordenadora: [ROUTES.pastoral.root, ROUTES.pastoral.tesouraria.root],
+  // Não é um papel da área da Pastoral (só de Tesouraria) — por segurança, não mostra nada aqui.
+  secretaria_paroquial: [],
+}
+
 export function pastoralNavParaPapel(papel: PapelAcesso | null): NavItem[] {
-  if (papel !== 'pastoral_dizimo') return pastoralNav
-  return pastoralNav.filter(
-    (item) => item.href !== ROUTES.pastoral.configuracoes && item.href !== ROUTES.pastoral.tesouraria.root,
-  )
+  if (!papel) return []
+  const permitidos = ITENS_POR_PAPEL[papel]
+  if (permitidos === 'todos') return pastoralNav
+  return pastoralNav.filter((item) => permitidos.includes(item.href))
 }
 
 export const tesourariaNav: NavItem[] = [

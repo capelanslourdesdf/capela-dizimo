@@ -1,3 +1,5 @@
+import { ROUTES } from '@/constants/routes'
+
 export type PapelAcesso = 'pastoral_dizimo' | 'coordenadora' | 'tesoureiro' | 'secretaria_paroquial'
 
 export const PAPEL_LABEL: Record<PapelAcesso, string> = {
@@ -22,7 +24,27 @@ export function podeEditarTesouraria(papel: PapelAcesso | null): boolean {
   return papel === 'tesoureiro'
 }
 
-/** A "Pastoral do Dízimo" não enxerga Configurações nem a Tesouraria — os outros dois perfis veem tudo. */
-export function podeAcessarConfiguracoesETesouraria(papel: PapelAcesso | null): boolean {
-  return papel !== 'pastoral_dizimo'
+/** Rotas da área da Pastoral que a "Pastoral do Dízimo" pode usar — só o dia a dia de dizimistas/devoluções. */
+const ROTAS_PASTORAL_DIZIMO: string[] = [ROUTES.pastoral.root, ROUTES.pastoral.lancamentoUnico, ROUTES.pastoral.lancamentoLote]
+
+/** Rotas da área da Pastoral que a Coordenadora pode usar — só acompanha a lista de Dizimistas (Tesouraria é login/rota à parte). */
+const ROTAS_COORDENADORA: string[] = [ROUTES.pastoral.root]
+
+/**
+ * Confere se o papel pode acessar a rota `pathname` dentro da área da Pastoral — bloqueia
+ * navegação direta por URL, não só esconde o item do menu (ver `pastoralNavParaPapel`, em
+ * constants/nav.ts, que cobre a mesma regra pro menu, com a mesma lista de rotas por papel).
+ *
+ * A ficha de um dizimista (`/pastoral/dizimistas/:numeroCarne`) conta como parte de "Dizimistas":
+ * quem pode ver a lista também pode abrir uma ficha, mesmo sem ela aparecer como item próprio do
+ * menu.
+ */
+export function podeAcessarRotaPastoral(papel: PapelAcesso | null, pathname: string): boolean {
+  if (papel === 'tesoureiro') return true
+  if (pathname.startsWith('/pastoral/dizimistas/')) {
+    return papel === 'pastoral_dizimo' || papel === 'coordenadora'
+  }
+  if (papel === 'pastoral_dizimo') return ROTAS_PASTORAL_DIZIMO.includes(pathname)
+  if (papel === 'coordenadora') return ROTAS_COORDENADORA.includes(pathname)
+  return false
 }

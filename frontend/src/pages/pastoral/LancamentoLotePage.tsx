@@ -308,7 +308,7 @@ export function LancamentoLotePage() {
               {fields.map((field, index) => (
                 <div
                   key={field.id}
-                  className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+                  className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-start"
                   onFocus={(e) => e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'center' })}
                 >
                   <div className="space-y-1.5">
@@ -360,17 +360,21 @@ export function LancamentoLotePage() {
                       />
                     </div>
                   </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="justify-self-end sm:justify-self-auto"
-                    disabled={fields.length <= 1}
-                    onClick={() => remove(index)}
-                    aria-label="Remover linha"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="space-y-1.5">
+                    {/* Espaço invisível do tamanho do rótulo, só na 1ª linha — mantém o botão alinhado com os campos, não com o rótulo. */}
+                    {index === 0 && <Label className="invisible hidden sm:block">Remover</Label>}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="justify-self-end sm:justify-self-auto"
+                      disabled={fields.length <= 1}
+                      onClick={() => remove(index)}
+                      aria-label="Remover linha"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -378,7 +382,7 @@ export function LancamentoLotePage() {
             <Button type="submit" size="lg" className="w-full" disabled={processando}>
               {processando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Layers className="h-4 w-4" />}
               {processando
-                ? `Processando ${getValues('linhas').length} linha(s)...`
+                ? `Processando ${getValues('linhas').length} devolução(ões)...`
                 : 'Processar lote'}
             </Button>
           </form>

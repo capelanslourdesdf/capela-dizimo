@@ -2,6 +2,7 @@ import * as React from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
+  CheckCheck,
   Eye,
   ExternalLink,
   FileDown,
@@ -18,6 +19,7 @@ import {
 import { toast } from 'sonner'
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
+import { Checkbox } from '@/components/ui/checkbox'
 import { EmptyState } from '@/components/dashboard/EmptyState'
 import { StatCard } from '@/components/dashboard/StatCard'
 import { StatusBadge } from '@/components/dashboard/StatusBadge'
@@ -85,6 +87,38 @@ function montarReceita(id: string, dados: DadosReceitaTesouraria): EntradaTesour
   }
 }
 
+const CHAVE_SEM_DATA = '__sem-data__'
+
+interface GrupoPorDia<T> {
+  chave: string
+  dia: string
+  itens: T[]
+}
+
+/**
+ * Agrupa receitas/despesas por dia, do mais recente pro mais antigo — os itens sem data conhecida
+ * (raros, de lançamentos antigos) ficam num grupo à parte, sempre por último. Preserva a ordem
+ * relativa dos itens dentro de cada dia (a lista já vem ordenada de quem chama).
+ */
+function agruparPorDia<T>(itens: T[], dataDoItem: (item: T) => string): GrupoPorDia<T>[] {
+  const grupos = new Map<string, T[]>()
+  for (const item of itens) {
+    const dia = dataDoItem(item)
+    const chave = dia || CHAVE_SEM_DATA
+    const lista = grupos.get(chave) ?? []
+    lista.push(item)
+    grupos.set(chave, lista)
+  }
+
+  return [...grupos.entries()]
+    .map(([chave, lista]) => ({ chave, dia: chave === CHAVE_SEM_DATA ? '' : chave, itens: lista }))
+    .sort((a, b) => {
+      if (a.chave === CHAVE_SEM_DATA) return 1
+      if (b.chave === CHAVE_SEM_DATA) return -1
+      return a.dia < b.dia ? 1 : a.dia > b.dia ? -1 : 0
+    })
+}
+
 /** Compara o termo de busca com todos os campos da despesa (inclusive os exibidos como texto/rótulo). */
 function despesaCombinaBusca(s: SaidaTesouraria, termo: string): boolean {
   const partes = [
@@ -138,10 +172,14 @@ export function ControleMensalPage() {
 
   const [modalStatus, setModalStatus] = React.useState(false)
   const [buscaDespesa, setBuscaDespesa] = React.useState('')
+  const [despesasSelecionadas, setDespesasSelecionadas] = React.useState<Set<string>>(new Set())
 
   const carregar = React.useCallback(async () => {
     if (!competencia) return
     setCarregando(true)
+    // Evita que uma seleção feita no mês anterior "vaze" pra cá ao trocar de competência sem
+    // remontar a página (a seleção é local, por isso não é limpa sozinha na troca de rota).
+    setDespesasSelecionadas(new Set())
     // Só precisa do mês atual — não do histórico inteiro.
     const [atual, porCarne] = await Promise.all([
       obterOuCriarControleTesouraria(competencia),
@@ -220,6 +258,34 @@ export function ControleMensalPage() {
     toast.success('Despesa removida.')
   }
 
+  function handleAlternarSelecaoDespesa(id: string) {
+    setDespesasSelecionadas((atual) => {
+      const copia = new Set(atual)
+      if (copia.has(id)) copia.delete(id)
+      else copia.add(id)
+      return copia
+    })
+  }
+
+  /** Seleciona (ou limpa a seleção de) todas as despesas pendentes atualmente visíveis (respeitando a busca). */
+  function handleAlternarSelecionarTodasPendentes(pendentesVisiveis: SaidaTesouraria[]) {
+    setDespesasSelecionadas((atual) => {
+      const todasJaSelecionadas = pendentesVisiveis.length > 0 && pendentesVisiveis.every((s) => atual.has(s.id))
+      return todasJaSelecionadas ? new Set() : new Set(pendentesVisiveis.map((s) => s.id))
+    })
+  }
+
+  /** Marca todas as despesas selecionadas como quitadas numa única gravação, em vez de uma por uma. */
+  async function handleMarcarSelecionadasComoQuitadas() {
+    if (!competencia || !controle || despesasSelecionadas.size === 0) return
+    const novasSaidas = controle.saidas.map((s) => (despesasSelecionadas.has(s.id) ? { ...s, quitado: true } : s))
+    const quantidade = despesasSelecionadas.size
+    await salvarControleTesouraria(competencia, { status: controle.status, entradas: controle.entradas, saidas: novasSaidas })
+    setControle({ ...controle, saidas: novasSaidas, atualizadoEm: new Date().toISOString() })
+    setDespesasSelecionadas(new Set())
+    toast.success(`${quantidade} despesa(s) marcada(s) como quitada(s).`)
+  }
+
   async function handleConfirmarStatus() {
     if (!competencia || !controle) return
     const novoStatus: StatusControleTesouraria = controle.status === 'em_andamento' ? 'fechado' : 'em_andamento'
@@ -273,6 +339,7 @@ export function ControleMensalPage() {
     ? despesasOrdenadas.filter((s) => despesaCombinaBusca(s, termoBuscaDespesa))
     : despesasOrdenadas
   const totalDespesasFiltradas = despesasFiltradas.reduce((s, sa) => s + sa.valor, 0)
+  const pendentesFiltradas = despesasFiltradas.filter((s) => !s.quitado)
 
   return (
     <div>
@@ -378,62 +445,81 @@ export function ControleMensalPage() {
                 {receitasOrdenadas.length === 0 ? (
                   <EmptyState icon={TrendingUp} title="Nenhuma receita lançada neste mês" />
                 ) : (
-                  receitasOrdenadas.map((e) => {
-                    const calculada = ehReceitaCalculada(e.id)
-                    return (
-                      <div
-                        key={e.id}
-                        className="flex flex-col gap-2 rounded-lg border border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-                      >
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <p className="font-medium text-foreground">{categoriaEntradaLabel(e.categoria)}</p>
-                            {calculada && <StatusBadge label="Calculado" variant="outline" />}
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            {e.data ? formatDate(e.data) : '—'} · {formaPagamentoLabel(e.formaPagamento)}
-                          </p>
-                          {e.observacao && (
-                            <p className="mt-0.5 whitespace-pre-wrap text-xs text-muted-foreground">{e.observacao}</p>
-                          )}
-                        </div>
-                        <div className="flex shrink-0 flex-wrap items-center justify-between gap-1 sm:justify-end">
-                          <p className="font-medium text-success">{formatCurrency(e.valor)}</p>
-                          <div className="flex items-center">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setReceitaEmVisualizacao(e)}
-                              aria-label="Ver detalhes da receita"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            {podeEditar && !calculada && (
-                              <>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleEditarReceita(e)}
-                                  aria-label="Editar receita"
+                  <Accordion type="multiple" className="space-y-2">
+                    {agruparPorDia(receitasOrdenadas, (e) => e.data ?? '').map((grupo) => {
+                      const totalGrupo = grupo.itens.reduce((s, e) => s + e.valor, 0)
+                      return (
+                        <AccordionItem key={grupo.chave} value={grupo.chave} className="rounded-lg border border-border">
+                          <AccordionTrigger className="px-3.5 py-3 hover:bg-primary/5 hover:no-underline active:bg-primary/10">
+                            <div className="flex flex-1 items-center justify-between gap-2 text-left">
+                              <span className="text-sm font-medium text-foreground">
+                                {grupo.dia ? formatDate(grupo.dia) : 'Sem data informada'}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {grupo.itens.length} · {formatCurrency(totalGrupo)}
+                              </span>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="space-y-2.5 px-3.5 pb-3.5">
+                            {grupo.itens.map((e) => {
+                              const calculada = ehReceitaCalculada(e.id)
+                              return (
+                                <div
+                                  key={e.id}
+                                  className="flex flex-col gap-2 rounded-lg border border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                                 >
-                                  <Pencil className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                  onClick={() => setReceitaParaRemover(e)}
-                                  aria-label="Remover receita"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })
+                                  <div className="min-w-0">
+                                    <div className="flex flex-wrap items-center gap-1.5">
+                                      <p className="font-medium text-foreground">{categoriaEntradaLabel(e.categoria)}</p>
+                                      {calculada && <StatusBadge label="Calculado" variant="outline" />}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">{formaPagamentoLabel(e.formaPagamento)}</p>
+                                    {e.observacao && (
+                                      <p className="mt-0.5 whitespace-pre-wrap text-xs text-muted-foreground">{e.observacao}</p>
+                                    )}
+                                  </div>
+                                  <div className="flex shrink-0 flex-wrap items-center justify-between gap-1 sm:justify-end">
+                                    <p className="font-medium text-success">{formatCurrency(e.valor)}</p>
+                                    <div className="flex items-center">
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => setReceitaEmVisualizacao(e)}
+                                        aria-label="Ver detalhes da receita"
+                                      >
+                                        <Eye className="h-4 w-4" />
+                                      </Button>
+                                      {podeEditar && !calculada && (
+                                        <>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => handleEditarReceita(e)}
+                                            aria-label="Editar receita"
+                                          >
+                                            <Pencil className="h-4 w-4" />
+                                          </Button>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                            onClick={() => setReceitaParaRemover(e)}
+                                            aria-label="Remover receita"
+                                          >
+                                            <Trash2 className="h-4 w-4" />
+                                          </Button>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </AccordionContent>
+                        </AccordionItem>
+                      )
+                    })}
+                  </Accordion>
                 )}
               </AccordionContent>
             </AccordionItem>
@@ -481,65 +567,113 @@ export function ControleMensalPage() {
                     {despesasFiltradas.length} despesa(s) encontrada(s) · Total {formatCurrency(totalDespesasFiltradas)}
                   </p>
                 )}
+                {podeEditar && pendentesFiltradas.length > 0 && (
+                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-muted/30 px-3.5 py-2.5">
+                    <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
+                      <Checkbox
+                        checked={pendentesFiltradas.every((s) => despesasSelecionadas.has(s.id))}
+                        onCheckedChange={() => handleAlternarSelecionarTodasPendentes(pendentesFiltradas)}
+                      />
+                      {despesasSelecionadas.size > 0
+                        ? `${despesasSelecionadas.size} selecionada(s)`
+                        : `Selecionar todas as pendentes (${pendentesFiltradas.length})`}
+                    </label>
+                    {despesasSelecionadas.size > 0 && (
+                      <Button size="sm" onClick={handleMarcarSelecionadasComoQuitadas}>
+                        <CheckCheck className="h-3.5 w-3.5" />
+                        Marcar como quitada(s)
+                      </Button>
+                    )}
+                  </div>
+                )}
                 {despesasOrdenadas.length === 0 ? (
                   <EmptyState icon={TrendingDown} title="Nenhuma despesa lançada neste mês" />
                 ) : despesasFiltradas.length === 0 ? (
                   <EmptyState icon={TrendingDown} title="Nenhuma despesa encontrada para essa busca" />
                 ) : (
-                  despesasFiltradas.map((s) => (
-                    <div
-                      key={s.id}
-                      className="flex flex-col gap-2 rounded-lg border border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-                    >
-                      <div className="min-w-0">
-                        <p className="font-medium text-foreground">{s.prestador}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {s.dia ? formatDate(s.dia) : '—'} · Solicitado por {s.solicitante}
-                        </p>
-                        {s.observacao && (
-                          <p className="mt-0.5 whitespace-pre-wrap text-xs text-muted-foreground">{s.observacao}</p>
-                        )}
-                      </div>
-                      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 sm:justify-end">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <StatusBadge label={s.quitado ? 'Quitada' : 'Pendente'} variant={s.quitado ? 'success' : 'warning'} />
-                          {s.possuiNfe && <StatusBadge label="Possui NF-e" variant="outline" />}
-                          <p className="font-medium text-destructive">{formatCurrency(s.valor)}</p>
-                        </div>
-                        <div className="flex items-center">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setDespesaEmVisualizacao(s)}
-                            aria-label="Ver detalhes da despesa"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          {podeEditar && (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleEditarDespesa(s)}
-                                aria-label="Editar despesa"
+                  <Accordion type="multiple" className="space-y-2">
+                    {agruparPorDia(despesasFiltradas, (s) => s.dia ?? '').map((grupo) => {
+                      const totalGrupo = grupo.itens.reduce((soma, item) => soma + item.valor, 0)
+                      return (
+                        <AccordionItem key={grupo.chave} value={grupo.chave} className="rounded-lg border border-border">
+                          <AccordionTrigger className="px-3.5 py-3 hover:bg-primary/5 hover:no-underline active:bg-primary/10">
+                            <div className="flex flex-1 items-center justify-between gap-2 text-left">
+                              <span className="text-sm font-medium text-foreground">
+                                {grupo.dia ? formatDate(grupo.dia) : 'Sem data informada'}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {grupo.itens.length} · {formatCurrency(totalGrupo)}
+                              </span>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="space-y-2.5 px-3.5 pb-3.5">
+                            {grupo.itens.map((s) => (
+                              <div
+                                key={s.id}
+                                className="flex flex-col gap-2 rounded-lg border border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                               >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                onClick={() => setDespesaParaRemover(s)}
-                                aria-label="Remover despesa"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))
+                                <div className="flex min-w-0 items-start gap-2.5">
+                                  {podeEditar && !s.quitado && (
+                                    <Checkbox
+                                      className="mt-1"
+                                      checked={despesasSelecionadas.has(s.id)}
+                                      onCheckedChange={() => handleAlternarSelecaoDespesa(s.id)}
+                                      aria-label={`Selecionar despesa de ${s.prestador}`}
+                                    />
+                                  )}
+                                  <div className="min-w-0">
+                                    <p className="font-medium text-foreground">{s.prestador}</p>
+                                    <p className="text-xs text-muted-foreground">Solicitado por {s.solicitante}</p>
+                                    {s.observacao && (
+                                      <p className="mt-0.5 whitespace-pre-wrap text-xs text-muted-foreground">{s.observacao}</p>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 sm:justify-end">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <StatusBadge label={s.quitado ? 'Quitada' : 'Pendente'} variant={s.quitado ? 'success' : 'warning'} />
+                                    {s.possuiNfe && <StatusBadge label="Possui NF-e" variant="outline" />}
+                                    <p className="font-medium text-destructive">{formatCurrency(s.valor)}</p>
+                                  </div>
+                                  <div className="flex items-center">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => setDespesaEmVisualizacao(s)}
+                                      aria-label="Ver detalhes da despesa"
+                                    >
+                                      <Eye className="h-4 w-4" />
+                                    </Button>
+                                    {podeEditar && (
+                                      <>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          onClick={() => handleEditarDespesa(s)}
+                                          aria-label="Editar despesa"
+                                        >
+                                          <Pencil className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                          onClick={() => setDespesaParaRemover(s)}
+                                          aria-label="Remover despesa"
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </AccordionContent>
+                        </AccordionItem>
+                      )
+                    })}
+                  </Accordion>
                 )}
               </AccordionContent>
             </AccordionItem>

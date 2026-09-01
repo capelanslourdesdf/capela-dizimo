@@ -15,7 +15,7 @@ import { DizimistaLayout } from '@/layouts/DizimistaLayout'
 import { ProtectedAdminRoute } from '@/routes/ProtectedAdminRoute'
 import { ProtectedTesourariaRoute } from '@/routes/ProtectedTesourariaRoute'
 import { ProtectedDizimistaRoute } from '@/routes/ProtectedDizimistaRoute'
-import { ProtegerContraPastoralDizimo } from '@/routes/ProtegerContraPastoralDizimo'
+import { ProtegerRotaPastoral } from '@/routes/ProtegerRotaPastoral'
 import { ScrollToTop } from '@/routes/ScrollToTop'
 
 import { HomePage } from '@/pages/public/HomePage'
@@ -81,16 +81,15 @@ function App() {
 
                 <Route element={<ProtectedAdminRoute />}>
                   <Route element={<PastoralLayout />}>
-                    <Route path={ROUTES.pastoral.root} element={<DizimistasPage />} />
-                    <Route path="/pastoral/dizimistas/:numeroCarne" element={<DizimistaDetalhePage />} />
-                    <Route path={ROUTES.pastoral.recadastramentos} element={<RecadastramentosPage />} />
-                    <Route path={ROUTES.pastoral.lancamentoUnico} element={<LancamentoUnicoPage />} />
-                    <Route path={ROUTES.pastoral.lancamentoLote} element={<LancamentoLotePage />} />
-                    <Route path={ROUTES.pastoral.listaDevolucoes} element={<ListaDevolucoesPage />} />
-
-                    {/* O perfil "Pastoral do Dízimo" não tem acesso a Configurações — ver
-                        constants/papeisAcesso.ts. */}
-                    <Route element={<ProtegerContraPastoralDizimo />}>
+                    {/* Cada papel só acessa um recorte destas rotas (mesmo digitando a URL direto)
+                        — ver `podeAcessarRotaPastoral` em constants/papeisAcesso.ts. */}
+                    <Route element={<ProtegerRotaPastoral />}>
+                      <Route path={ROUTES.pastoral.root} element={<DizimistasPage />} />
+                      <Route path="/pastoral/dizimistas/:numeroCarne" element={<DizimistaDetalhePage />} />
+                      <Route path={ROUTES.pastoral.recadastramentos} element={<RecadastramentosPage />} />
+                      <Route path={ROUTES.pastoral.lancamentoUnico} element={<LancamentoUnicoPage />} />
+                      <Route path={ROUTES.pastoral.lancamentoLote} element={<LancamentoLotePage />} />
+                      <Route path={ROUTES.pastoral.listaDevolucoes} element={<ListaDevolucoesPage />} />
                       <Route path={ROUTES.pastoral.configuracoes} element={<ConfiguracoesPage />} />
                     </Route>
                   </Route>

@@ -128,7 +128,9 @@ export function dataBrEhValida(valorBr: string): boolean {
   const dia = Number(match[1])
   const mes = Number(match[2])
   const ano = Number(match[3])
-  if (ano < 1900 || ano > new Date().getFullYear()) return false
+  // Sem limite inferior de propósito — a Pastoral às vezes precisa registrar datas bem antigas
+  // (ex.: cópias de registros antigos, "02/09/1700"). Só não aceita ano no futuro.
+  if (ano < 1 || ano > new Date().getFullYear()) return false
 
   const data = new Date(ano, mes - 1, dia)
   return data.getFullYear() === ano && data.getMonth() === mes - 1 && data.getDate() === dia

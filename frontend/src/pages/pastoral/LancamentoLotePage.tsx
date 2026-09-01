@@ -19,12 +19,13 @@ import { lancarDevolucao } from '@/services/devolucaoService'
 import { listarMembrosPastoral } from '@/services/membroPastoralService'
 import type { FormaPagamentoDevolucao, MembroPastoral } from '@/types'
 import {
+  dataBrEhValida,
+  dataBrParaIso,
+  dataIsoParaBr,
   finalizarMoeda,
   formatCurrency,
-  maskMesAno,
+  maskDataBr,
   maskMoeda,
-  mesAnoEhValido,
-  mesAnoParaCompetencia,
   moedaParaNumero,
 } from '@/utils/format'
 import { CARNE_AVULSO, FORMAS_PAGAMENTO_DEVOLUCAO } from '@/constants/devolucao'
@@ -35,10 +36,10 @@ const linhaSchema = z.object({
 })
 
 const schema = z.object({
-  competencia: z
+  data: z
     .string()
-    .regex(/^\d{2}\/\d{4}$/, 'Use o formato mm/aaaa.')
-    .refine((valor) => mesAnoEhValido(valor), 'Informe um mês/ano válido.'),
+    .regex(/^\d{2}\/\d{2}\/\d{4}$/, 'Use o formato dd/mm/aaaa.')
+    .refine((valor) => dataBrEhValida(valor), 'Informe uma data válida.'),
   formaPagamento: z.enum(['pix', 'cartao', 'dinheiro']),
   lancadoPor: z.string().min(1, 'Informe quem está lançando.'),
   linhas: z.array(linhaSchema).min(1),
@@ -53,7 +54,9 @@ const MAX_LINHAS_POR_VEZ = 50
 
 function valoresIniciais(): FormValues {
   return {
-    competencia: '',
+    // Mesma competência (mês de referência) pra todo o lote, derivada dessa data — a maioria dos
+    // lotes é lançada no mesmo dia, por isso o padrão já vem preenchido com hoje.
+    data: dataIsoParaBr(new Date().toISOString().slice(0, 10)),
     formaPagamento: 'pix',
     lancadoPor: '',
     linhas: [{ ...linhaVazia }],
@@ -122,7 +125,8 @@ export function LancamentoLotePage() {
     }
 
     setProcessando(true)
-    const competencia = mesAnoParaCompetencia(values.competencia)
+    const dataIso = dataBrParaIso(values.data)
+    const competencia = dataIso.slice(0, 7)
     const resultados: ResultadoLinha[] = []
 
     for (const linha of linhasPreenchidas) {
@@ -135,6 +139,7 @@ export function LancamentoLotePage() {
             valor,
             formaPagamento: values.formaPagamento as FormaPagamentoDevolucao,
             competencia,
+            data: dataIso,
             lancadoPor: values.lancadoPor,
           })
           resultados.push({
@@ -159,6 +164,7 @@ export function LancamentoLotePage() {
           valor,
           formaPagamento: values.formaPagamento as FormaPagamentoDevolucao,
           competencia,
+          data: dataIso,
           lancadoPor: values.lancadoPor,
         })
 
@@ -207,7 +213,7 @@ export function LancamentoLotePage() {
     <div>
       <PageHeader
         title="Lançamento de devoluções em lote"
-        description="Lance a devolução de vários dizimistas de uma vez para um mesmo mês/ano."
+        description="Lance a devolução de vários dizimistas de uma vez, todas na mesma data."
       />
 
       <Card className="max-w-3xl">
@@ -221,21 +227,21 @@ export function LancamentoLotePage() {
 
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-1.5">
-                <Label htmlFor="competencia">Mês/ano da devolução</Label>
+                <Label htmlFor="data">Data da devolução</Label>
                 <Controller
                   control={control}
-                  name="competencia"
+                  name="data"
                   render={({ field }) => (
                     <Input
-                      id="competencia"
+                      id="data"
                       inputMode="numeric"
-                      placeholder="mm/aaaa"
+                      placeholder="dd/mm/aaaa"
                       value={field.value}
-                      onChange={(e) => field.onChange(maskMesAno(e.target.value))}
+                      onChange={(e) => field.onChange(maskDataBr(e.target.value))}
                     />
                   )}
                 />
-                {errors.competencia && <p className="text-xs text-destructive">{errors.competencia.message}</p>}
+                {errors.data && <p className="text-xs text-destructive">{errors.data.message}</p>}
               </div>
 
               <div className="space-y-1.5">

@@ -26,14 +26,14 @@ function diaDaSemanaDoPrimeiro(ano: number, mes: number): number {
   return new Date(ano, mes - 1, 1).getDay()
 }
 
-/** "R$" grudado no número (sem espaço) e sem centavos quando o valor é redondo — cabe melhor numa célula pequena. */
+/** "R$ " com espaço antes do número, sem centavos quando o valor é redondo — cabe melhor numa célula pequena. */
 function valorCompacto(valor: number): string {
   const arredondado = Math.round(valor)
   const numero =
     Math.abs(valor - arredondado) < 0.005
       ? arredondado.toLocaleString('pt-BR')
       : valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-  return `R$${numero}`
+  return `R$ ${numero}`
 }
 
 /**

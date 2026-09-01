@@ -37,7 +37,7 @@ import {
   ehReceitaCalculada,
   obterOuCriarControleTesouraria,
   receitasDizimoDaCompetencia,
-  receitasDizimoPorDia,
+  receitasDizimoParaCalendario,
   salvarControleTesouraria,
 } from '@/services/tesourariaService'
 import { listarTodasDevolucoesPorCarne } from '@/services/devolucaoService'
@@ -448,12 +448,12 @@ export function ControleMensalPage() {
   // Agrupado por dia para o calendário — dias sem lançamento simplesmente não entram no mapa (o
   // calendário desenha o mês inteiro sozinho, célula por célula). O grupo "sem data" (raro, de
   // lançamentos antigos) não tem como aparecer numa célula do calendário — vira uma lista à parte.
-  // O calendário usa o dízimo detalhado por devolução (1 entrada por devolução, no dia certo dela)
-  // em vez do agregado por forma de pagamento (`receitasDizimoDaCompetencia`, usado no total do
-  // topo/relatórios) — senão todo o dízimo do mês apareceria empilhado no dia 1.
-  const receitasParaCalendario = [...controle.entradas, ...receitasDizimoPorDia(controle.competencia, todasDevolucoes)].sort(
-    (a, b) => (a.data < b.data ? 1 : a.data > b.data ? -1 : 0),
-  )
+  // Usa o dízimo detalhado por dia (`receitasDizimoParaCalendario`, com a exceção de agosto/2026
+  // embutida nela) em vez do agregado usado no total do topo/relatórios (`receitasDizimo`).
+  const receitasParaCalendario = [
+    ...controle.entradas,
+    ...receitasDizimoParaCalendario(controle.competencia, todasDevolucoes),
+  ].sort((a, b) => (a.data < b.data ? 1 : a.data > b.data ? -1 : 0))
   const gruposReceitasPorDia = agruparPorDia(receitasParaCalendario, (e) => e.data ?? '')
   const resumosReceitasPorDia = new Map<string, ResumoDia>(
     gruposReceitasPorDia

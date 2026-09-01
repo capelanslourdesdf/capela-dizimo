@@ -27,11 +27,20 @@ export function ehReceitaCalculada(entradaId: string): boolean {
   return entradaId.startsWith(PREFIXO_RECEITA_CALCULADA)
 }
 
+/** Último dia ("aaaa-mm-dd") da competência informada. */
+function ultimoDiaDoMes(competencia: string): string {
+  const [ano, mes] = competencia.split('-').map(Number)
+  const ultimoDia = new Date(ano, mes, 0).getDate()
+  return `${competencia}-${String(ultimoDia).padStart(2, '0')}`
+}
+
 /**
  * Até 3 receitas "dízimo" (uma por forma de pagamento, só quando houve algo naquela forma),
  * somando as devoluções de dízimo que a Pastoral lançou pra essa competência. Não é um lançamento
  * manual da Tesouraria — é recalculado toda vez a partir da fonte real (as devoluções), então
- * nunca sai de sincronia nem duplica se uma devolução for editada ou removida depois.
+ * nunca sai de sincronia nem duplica se uma devolução for editada ou removida depois. Datada do
+ * último dia do mês (fechamento), já que é um valor agregado do mês inteiro — não tem como
+ * representar um dia específico de verdade.
  */
 export function receitasDizimoDaCompetencia(competencia: string, todasDevolucoes: Devolucao[]): EntradaTesouraria[] {
   const doMes = todasDevolucoes.filter((d) => competenciaDaDevolucao(d) === competencia)
@@ -43,7 +52,7 @@ export function receitasDizimoDaCompetencia(competencia: string, todasDevolucoes
 
     const entrada: EntradaTesouraria = {
       id: `${PREFIXO_RECEITA_CALCULADA}${forma}`,
-      data: `${competencia}-01`,
+      data: ultimoDiaDoMes(competencia),
       categoria: 'dizimo',
       valor: total,
       formaPagamento: forma,
@@ -54,20 +63,23 @@ export function receitasDizimoDaCompetencia(competencia: string, todasDevolucoes
 }
 
 /**
- * Uma receita "dízimo" por devolução (não agrupada por forma de pagamento), datada do dia real da
- * devolução — usada só no calendário do Controle Mensal, pra distribuir o dízimo nos dias certos
- * em vez de tudo empilhado no dia 1 (que é o que `receitasDizimoDaCompetencia` faz de propósito,
- * pros totais/relatórios, que não precisam do detalhe por dia). Usa `data` quando a devolução tem
- * (lançamentos antigos), senão o dia em que foi lançada (`criadoEm`) — não é necessariamente o dia
- * exato em que a pessoa pagou, mas é o melhor dado disponível pra devoluções mais recentes, que já
- * não guardam mais `data`.
+ * Mesma soma de `receitasDizimoDaCompetencia`, mas usada só pelo calendário do Controle Mensal:
+ * uma entrada por devolução (não agrupada por forma de pagamento), datada do dia real dela — o
+ * dia começou a ser coletado no lançamento a partir de set/2026 (`DevolucaoForm`); antes disso
+ * (agosto/2026, mês em que a Tesouraria passou a existir, sem controle de dia) não tem como saber
+ * o dia certo, então esse mês continua com o comportamento antigo (tudo agregado no fim do mês).
+ * Uma devolução sem dia salvo (rara, ex.: lançada em lote) também cai no fim do mês, pra nunca
+ * sumir do calendário.
  */
-export function receitasDizimoPorDia(competencia: string, todasDevolucoes: Devolucao[]): EntradaTesouraria[] {
-  const doMes = todasDevolucoes.filter((d) => competenciaDaDevolucao(d) === competencia)
+export function receitasDizimoParaCalendario(competencia: string, todasDevolucoes: Devolucao[]): EntradaTesouraria[] {
+  if (competencia <= COMPETENCIA_INICIAL_TESOURARIA) {
+    return receitasDizimoDaCompetencia(competencia, todasDevolucoes)
+  }
 
+  const doMes = todasDevolucoes.filter((d) => competenciaDaDevolucao(d) === competencia)
   return doMes.map((d) => ({
     id: `${PREFIXO_RECEITA_CALCULADA}${d.id}`,
-    data: d.data || d.criadoEm.slice(0, 10),
+    data: d.data || ultimoDiaDoMes(competencia),
     categoria: 'dizimo',
     valor: d.valor,
     formaPagamento: d.formaPagamento,

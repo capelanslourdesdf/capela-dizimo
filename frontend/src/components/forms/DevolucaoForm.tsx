@@ -17,12 +17,12 @@ import { listarMembrosPastoral } from '@/services/membroPastoralService'
 import type { Devolucao, MembroPastoral } from '@/types'
 import {
   competenciaAtual,
-  competenciaParaMesAno,
+  dataBrEhValida,
+  dataBrParaIso,
+  dataIsoParaBr,
   finalizarMoeda,
-  maskMesAno,
+  maskDataBr,
   maskMoeda,
-  mesAnoEhValido,
-  mesAnoParaCompetencia,
   moedaParaNumero,
   numeroParaMoeda,
 } from '@/utils/format'
@@ -32,10 +32,10 @@ import { ROUTES } from '@/constants/routes'
 const schema = z.object({
   valor: z.string().min(1, 'Informe o valor.'),
   formaPagamento: z.enum(['pix', 'cartao', 'dinheiro']),
-  competencia: z
+  data: z
     .string()
-    .regex(/^\d{2}\/\d{4}$/, 'Use o formato mm/aaaa.')
-    .refine((valor) => mesAnoEhValido(valor), 'Informe um mês/ano válido.'),
+    .regex(/^\d{2}\/\d{2}\/\d{4}$/, 'Use o formato dd/mm/aaaa.')
+    .refine((valor) => dataBrEhValida(valor), 'Informe uma data válida.'),
   lancadoPor: z.string().min(1, 'Informe quem está lançando.'),
   observacao: z.string().optional(),
 })
@@ -45,7 +45,11 @@ type FormValues = z.infer<typeof schema>
 interface DevolucaoFormProps {
   /** Presente só na edição — quando ausente, o form lança uma devolução nova. */
   devolucao?: Devolucao
-  /** Competência ("aaaa-mm") sugerida ao lançar uma devolução nova — padrão é o mês atual. */
+  /**
+   * Competência ("aaaa-mm") sugerida ao lançar uma devolução nova — quando informada e diferente
+   * do mês atual (ex.: navegando um mês passado na Lista de devoluções), o campo de data já vem
+   * preenchido com o dia 1 desse mês em vez de hoje.
+   */
   competenciaPadrao?: string
   onSalvar: (dados: DadosDevolucao) => Promise<void>
   onCancelar: () => void
@@ -67,9 +71,18 @@ export function DevolucaoForm({ devolucao, competenciaPadrao, onSalvar, onCancel
     defaultValues: {
       valor: devolucao ? numeroParaMoeda(devolucao.valor) : '',
       formaPagamento: devolucao?.formaPagamento ?? 'pix',
-      competencia: devolucao
-        ? competenciaParaMesAno(competenciaDaDevolucao(devolucao))
-        : competenciaParaMesAno(competenciaPadrao ?? competenciaAtual()),
+      // Devolução já lançada, com dia gravado: usa ele. Lançamento antigo sem dia (de antes de
+      // set/2026): cai no 1º dia do mês dela, só pra não inventar uma data de hoje sem sentido.
+      // Devolução nova: hoje é o padrão mais comum (a maioria é lançada no mesmo dia) — a não ser
+      // que quem chamou o form já sugira outro mês (`competenciaPadrao`, ex.: navegando um mês
+      // passado na Lista de devoluções), caso em que o padrão vai pro dia 1 daquele mês.
+      data: devolucao
+        ? dataIsoParaBr(devolucao.data || `${competenciaDaDevolucao(devolucao)}-01`)
+        : dataIsoParaBr(
+            competenciaPadrao && competenciaPadrao !== competenciaAtual()
+              ? `${competenciaPadrao}-01`
+              : new Date().toISOString().slice(0, 10),
+          ),
       lancadoPor: devolucao?.lancadoPor ?? '',
       observacao: devolucao?.observacao ?? '',
     },
@@ -90,10 +103,15 @@ export function DevolucaoForm({ devolucao, competenciaPadrao, onSalvar, onCancel
     }
 
     try {
+      const dataIso = dataBrParaIso(values.data)
       await onSalvar({
         valor,
         formaPagamento: values.formaPagamento,
-        competencia: mesAnoParaCompetencia(values.competencia),
+        // A competência (mês de referência, usada no status do dizimista) vem do mês/ano da
+        // própria data — não existe mais como campo separado, pra nunca ficar inconsistente com
+        // ela (ex.: dia 05/07 marcado como competência de agosto).
+        competencia: dataIso.slice(0, 7),
+        data: dataIso,
         lancadoPor: values.lancadoPor,
         observacao: values.observacao,
       })
@@ -139,25 +157,21 @@ export function DevolucaoForm({ devolucao, competenciaPadrao, onSalvar, onCancel
           {errors.valor && <p className="text-xs text-destructive">{errors.valor.message}</p>}
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="competencia">Mês/ano da devolução</Label>
+          <Label htmlFor="data">Data da devolução</Label>
           <Controller
             control={control}
-            name="competencia"
+            name="data"
             render={({ field }) => (
               <Input
-                id="competencia"
+                id="data"
                 inputMode="numeric"
-                placeholder="mm/aaaa"
+                placeholder="dd/mm/aaaa"
                 value={field.value ?? ''}
-                onChange={(e) => field.onChange(maskMesAno(e.target.value))}
+                onChange={(e) => field.onChange(maskDataBr(e.target.value))}
               />
             )}
           />
-          {errors.competencia ? (
-            <p className="text-xs text-destructive">{errors.competencia.message}</p>
-          ) : (
-            <></>
-          )}
+          {errors.data && <p className="text-xs text-destructive">{errors.data.message}</p>}
         </div>
       </div>
 

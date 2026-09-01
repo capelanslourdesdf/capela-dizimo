@@ -23,6 +23,12 @@ export interface ContagemStatus {
   inativos: number
 }
 
+/** `StatusDizimista` ('ativo'/'inativo', singular) -> nome do campo no agregado (plural) — os nomes são diferentes de propósito, então nunca usar o status como chave direto. */
+const CAMPO_POR_STATUS: Record<StatusDizimista, keyof ContagemStatus> = {
+  ativo: 'ativos',
+  inativo: 'inativos',
+}
+
 export async function obterContagemStatusAgregada(): Promise<ContagemStatus> {
   return comCache(CHAVE_CACHE, async () => {
     const snap = await getDoc(REF)
@@ -42,9 +48,9 @@ export async function registrarMudancaStatus(
 ): Promise<void> {
   if (statusAnterior === statusNovo) return
 
-  const ajustes: Record<string, FieldValue> = {}
-  if (statusAnterior) ajustes[statusAnterior] = increment(-1)
-  if (statusNovo) ajustes[statusNovo] = increment(1)
+  const ajustes: Partial<Record<keyof ContagemStatus, FieldValue>> = {}
+  if (statusAnterior) ajustes[CAMPO_POR_STATUS[statusAnterior]] = increment(-1)
+  if (statusNovo) ajustes[CAMPO_POR_STATUS[statusNovo]] = increment(1)
   if (Object.keys(ajustes).length === 0) return
 
   await setDoc(REF, ajustes, { merge: true })

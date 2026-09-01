@@ -193,6 +193,12 @@ export interface DadosDevolucao {
   /** Membro da Pastoral responsável pelo lançamento. */
   lancadoPor: string
   observacao?: string
+  /**
+   * Dia exato da devolução ("aaaa-mm-dd"), coletado a partir de set/2026 — não influencia o status
+   * do dizimista (que continua olhando só pra `competencia`); serve apenas para o calendário de
+   * receitas da Tesouraria mostrar o dízimo no dia certo, em vez de tudo agregado no fim do mês.
+   */
+  data?: string
 }
 
 export interface GrupoDevolucoesPorMes {
@@ -234,12 +240,13 @@ export function agruparDevolucoesPorCompetencia(devolucoes: Devolucao[]): GrupoD
 export async function lancarDevolucao(numeroCarne: string, dados: DadosDevolucao): Promise<Devolucao> {
   const ref = collection(db, 'dizimistas', normalizarNumeroCarne(numeroCarne), 'devolucoes')
   const observacao = dados.observacao?.trim() || null
+  const data = dados.data || null
   const criadoEm = new Date().toISOString()
-  const novoDoc = await addDoc(ref, { ...dados, observacao, criadoEm })
+  const novoDoc = await addDoc(ref, { ...dados, observacao, data, criadoEm })
   await ajustarTotais({ [dados.competencia]: dados.valor })
   invalidarCache('devolucoes')
   await recomputarStatusAposDevolucao(numeroCarne)
-  return { id: novoDoc.id, ...dados, observacao: observacao ?? undefined, criadoEm }
+  return { id: novoDoc.id, ...dados, observacao: observacao ?? undefined, data: data ?? undefined, criadoEm }
 }
 
 /**
@@ -261,6 +268,7 @@ export async function atualizarDevolucao(
   await updateDoc(ref, {
     ...dados,
     observacao: dados.observacao?.trim() || null,
+    data: dados.data || null,
   })
 
   if (dadosAnteriores) {

@@ -23,10 +23,9 @@ import {
   dataBrEhValida,
   dataBrParaIso,
   dataIsoParaBr,
-  finalizarMoeda,
   formatCurrency,
   hojeIso,
-  maskMoeda,
+  maskMoedaCentavos,
   moedaParaNumero,
 } from '@/utils/format'
 import { CARNE_AVULSO, FORMAS_PAGAMENTO_DEVOLUCAO } from '@/constants/devolucao'
@@ -351,7 +350,7 @@ export function LancamentoLotePage() {
                             checked={f.value === CARNE_AVULSO}
                             onCheckedChange={(v) => f.onChange(v ? CARNE_AVULSO : '')}
                           />
-                          Avulsa (sem dizimista cadastrado)
+                          Avulso (marque se for sem carnê cadastrado)
                         </label>
                       )}
                     />
@@ -393,8 +392,7 @@ export function LancamentoLotePage() {
                               placeholder="0,00"
                               className="pl-9"
                               value={f.value}
-                              onChange={(e) => f.onChange(maskMoeda(e.target.value))}
-                              onBlur={() => f.onChange(finalizarMoeda(f.value ?? ''))}
+                              onChange={(e) => f.onChange(maskMoedaCentavos(e.target.value))}
                             />
                           )}
                         />

@@ -21,9 +21,8 @@ import {
   dataBrEhValida,
   dataBrParaIso,
   dataIsoParaBr,
-  finalizarMoeda,
   hojeIso,
-  maskMoeda,
+  maskMoedaCentavos,
   moedaParaNumero,
   numeroParaMoeda,
 } from '@/utils/format'
@@ -149,8 +148,7 @@ export function DevolucaoForm({ devolucao, competenciaPadrao, onSalvar, onCancel
                   placeholder="0,00"
                   className="pl-9"
                   value={field.value ?? ''}
-                  onChange={(e) => field.onChange(maskMoeda(e.target.value))}
-                  onBlur={() => field.onChange(finalizarMoeda(field.value ?? ''))}
+                  onChange={(e) => field.onChange(maskMoedaCentavos(e.target.value))}
                 />
               )}
             />

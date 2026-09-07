@@ -41,7 +41,7 @@ const schema = z.object({
     .string()
     .regex(/^\d{2}\/\d{2}\/\d{4}$/, 'Use o formato dd/mm/aaaa.')
     .refine((valor) => dataBrEhValida(valor), 'Informe uma data válida.'),
-  formaPagamento: z.enum(['pix', 'cartao', 'dinheiro']),
+  formaPagamento: z.enum(['pix', 'cartao', 'dinheiro'], { message: 'Selecione a forma de pagamento.' }),
   lancadoPor: z.string().min(1, 'Informe quem está lançando.'),
   linhas: z.array(linhaSchema).min(1),
 })
@@ -53,12 +53,14 @@ const linhaVazia = { numeroCarne: '', valor: '' }
 /** Limite defensivo para o "adicionar N linhas de uma vez", evitando travar a tela por engano. */
 const MAX_LINHAS_POR_VEZ = 50
 
-function valoresIniciais(): FormValues {
+function valoresIniciais() {
   return {
     // Mesma competência (mês de referência) pra todo o lote, derivada dessa data — a maioria dos
     // lotes é lançada no mesmo dia, por isso o padrão já vem preenchido com hoje.
     data: dataIsoParaBr(hojeIso()),
-    formaPagamento: 'pix',
+    // Sem valor padrão — obriga escolher em vez de deixar "Pix" marcado sem ninguém ter decidido
+    // isso de propósito num lote inteiro.
+    formaPagamento: undefined,
     lancadoPor: '',
     linhas: [{ ...linhaVazia }],
   }
@@ -245,7 +247,7 @@ export function LancamentoLotePage() {
                   render={({ field }) => (
                     <Select value={field.value} onValueChange={field.onChange}>
                       <SelectTrigger id="formaPagamento">
-                        <SelectValue />
+                        <SelectValue placeholder="Selecione" />
                       </SelectTrigger>
                       <SelectContent>
                         {FORMAS_PAGAMENTO_DEVOLUCAO.map((op) => (
@@ -257,6 +259,7 @@ export function LancamentoLotePage() {
                     </Select>
                   )}
                 />
+                {errors.formaPagamento && <p className="text-xs text-destructive">{errors.formaPagamento.message}</p>}
               </div>
 
               <div className="space-y-1.5">
@@ -313,9 +316,27 @@ export function LancamentoLotePage() {
               {fields.map((field, index) => (
                 <div
                   key={field.id}
-                  className="space-y-1.5"
+                  className="space-y-1.5 rounded-lg border border-border p-3 sm:border-0 sm:p-0"
                   onFocus={(e) => e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'center' })}
                 >
+                  {/* No mobile as linhas empilham (grid-cols-1), então sem esse cabeçalho o botão de
+                      remover acabava isolado embaixo do valor, longe do que ele remove — aqui fica
+                      junto do número da linha, no topo, como um card. No desktop some (sm:hidden):
+                      o botão de remover já aparece alinhado na 3ª coluna do grid logo abaixo. */}
+                  <div className="flex items-center justify-between sm:hidden">
+                    <span className="text-xs font-semibold text-muted-foreground">Dizimista {index + 1}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      disabled={fields.length <= 1}
+                      onClick={() => remove(index)}
+                      aria-label="Remover linha"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                   {/* Linha só do checkbox, no mesmo grid-template da linha de baixo, pra ficar acima
                       do campo Nº do carnê sem empurrar o input dele — o input de Valor, que não tem
                       nada acima, continua alinhado com ele. */}
@@ -379,7 +400,7 @@ export function LancamentoLotePage() {
                         />
                       </div>
                     </div>
-                    <div className="flex items-start justify-end sm:justify-center">
+                    <div className="hidden items-start justify-center sm:flex">
                       <Button
                         type="button"
                         variant="ghost"

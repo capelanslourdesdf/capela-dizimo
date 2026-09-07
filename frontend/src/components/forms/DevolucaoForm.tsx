@@ -32,7 +32,7 @@ import { ROUTES } from '@/constants/routes'
 
 const schema = z.object({
   valor: z.string().min(1, 'Informe o valor.'),
-  formaPagamento: z.enum(['pix', 'cartao', 'dinheiro']),
+  formaPagamento: z.enum(['pix', 'cartao', 'dinheiro'], { message: 'Selecione a forma de pagamento.' }),
   data: z
     .string()
     .regex(/^\d{2}\/\d{2}\/\d{4}$/, 'Use o formato dd/mm/aaaa.')
@@ -71,7 +71,9 @@ export function DevolucaoForm({ devolucao, competenciaPadrao, onSalvar, onCancel
     resolver: zodResolver(schema),
     defaultValues: {
       valor: devolucao ? numeroParaMoeda(devolucao.valor) : '',
-      formaPagamento: devolucao?.formaPagamento ?? 'pix',
+      // Sem valor padrão na devolução nova — obriga escolher em vez de deixar "Pix" marcado sem
+      // ninguém ter decidido isso de propósito. Na edição, mantém a forma já lançada.
+      formaPagamento: devolucao?.formaPagamento,
       // Devolução já lançada, com dia gravado: usa ele. Lançamento antigo sem dia (de antes de
       // set/2026): cai no 1º dia do mês dela, só pra não inventar uma data de hoje sem sentido.
       // Devolução nova: hoje é o padrão mais comum (a maioria é lançada no mesmo dia) — a não ser
@@ -174,7 +176,7 @@ export function DevolucaoForm({ devolucao, competenciaPadrao, onSalvar, onCancel
           render={({ field }) => (
             <Select value={field.value} onValueChange={field.onChange}>
               <SelectTrigger id="formaPagamento">
-                <SelectValue />
+                <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
                 {FORMAS_PAGAMENTO_DEVOLUCAO.map((op) => (
@@ -186,6 +188,7 @@ export function DevolucaoForm({ devolucao, competenciaPadrao, onSalvar, onCancel
             </Select>
           )}
         />
+        {errors.formaPagamento && <p className="text-xs text-destructive">{errors.formaPagamento.message}</p>}
       </div>
 
       <div className="space-y-1.5">

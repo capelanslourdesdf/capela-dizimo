@@ -365,7 +365,7 @@ export function ControleMensalPage() {
     return (
       <div key={s.id} className="flex flex-col gap-2 rounded-lg border border-border px-4 py-3">
         <div className="flex items-start justify-between gap-2">
-          <div className="flex min-w-0 items-start gap-2.5">
+          <div className="flex min-w-0 flex-1 items-start gap-2.5">
             {podeEditar && !s.quitado && (
               <Checkbox
                 className="mt-1"
@@ -380,32 +380,34 @@ export function ControleMensalPage() {
               {s.observacao && <p className="mt-0.5 whitespace-pre-wrap text-xs text-muted-foreground">{s.observacao}</p>}
             </div>
           </div>
-          <div className="flex shrink-0 items-center">
-            <Button variant="ghost" size="icon" onClick={() => setDespesaEmVisualizacao(s)} aria-label="Ver detalhes da despesa">
-              <Eye className="h-4 w-4" />
-            </Button>
-            {podeEditar && (
-              <>
-                <Button variant="ghost" size="icon" onClick={() => handleEditarDespesa(s)} aria-label="Editar despesa">
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                  onClick={() => setDespesaParaRemover(s)}
-                  aria-label="Remover despesa"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </>
-            )}
+          <div className="flex shrink-0 flex-col items-end gap-1.5">
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <StatusBadge label={s.quitado ? 'Quitada' : 'Pendente'} variant={s.quitado ? 'success' : 'warning'} />
+              {s.possuiNfe && <StatusBadge label="Possui NF-e" variant="outline" />}
+            </div>
+            <p className="font-medium text-destructive">{formatCurrency(s.valor)}</p>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <StatusBadge label={s.quitado ? 'Quitada' : 'Pendente'} variant={s.quitado ? 'success' : 'warning'} />
-          {s.possuiNfe && <StatusBadge label="Possui NF-e" variant="outline" />}
-          <p className="ml-auto font-medium text-destructive">{formatCurrency(s.valor)}</p>
+        <div className="flex items-center justify-end">
+          <Button variant="ghost" size="icon" onClick={() => setDespesaEmVisualizacao(s)} aria-label="Ver detalhes da despesa">
+            <Eye className="h-4 w-4" />
+          </Button>
+          {podeEditar && (
+            <>
+              <Button variant="ghost" size="icon" onClick={() => handleEditarDespesa(s)} aria-label="Editar despesa">
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => setDespesaParaRemover(s)}
+                aria-label="Remover despesa"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </>
+          )}
         </div>
       </div>
     )
@@ -475,6 +477,12 @@ export function ControleMensalPage() {
   // Todas as despesas pendentes do mês, sem depender da busca — é o que sustenta o aviso fixo no
   // topo da página, então precisa continuar contando certo mesmo com a busca de despesas preenchida.
   const despesasPendentes = despesasOrdenadas.filter((s) => !s.quitado)
+  // Soma de `controle.saidas` (não da lista filtrada/paginada) — a seleção pode abranger despesas
+  // de dias ou buscas diferentes, então o total precisa bater com a seleção real, não com o que
+  // está visível na tela no momento.
+  const totalSelecionadas = controle.saidas
+    .filter((s) => despesasSelecionadas.has(s.id))
+    .reduce((soma, s) => soma + s.valor, 0)
 
   return (
     <div>
@@ -668,7 +676,7 @@ export function ControleMensalPage() {
                           onCheckedChange={() => handleAlternarSelecionarTodasPendentes(pendentesFiltradas)}
                         />
                         {despesasSelecionadas.size > 0
-                          ? `${despesasSelecionadas.size} selecionada(s)`
+                          ? `${despesasSelecionadas.size} selecionada(s) · ${formatCurrency(totalSelecionadas)}`
                           : `Selecionar todas as pendentes (${pendentesFiltradas.length})`}
                       </label>
                       <div className="flex items-center gap-2">
@@ -746,7 +754,9 @@ export function ControleMensalPage() {
                   checked={despesasPendentes.every((s) => despesasSelecionadas.has(s.id))}
                   onCheckedChange={() => handleAlternarSelecionarTodasPendentes(despesasPendentes)}
                 />
-                {despesasSelecionadas.size > 0 ? `${despesasSelecionadas.size} selecionada(s)` : 'Selecionar todas'}
+                {despesasSelecionadas.size > 0
+                  ? `${despesasSelecionadas.size} selecionada(s) · ${formatCurrency(totalSelecionadas)}`
+                  : 'Selecionar todas'}
               </label>
               {despesasSelecionadas.size > 0 && (
                 <Button size="sm" onClick={handleMarcarSelecionadasComoQuitadas}>

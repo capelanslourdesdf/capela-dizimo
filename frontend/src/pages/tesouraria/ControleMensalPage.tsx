@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
   CheckCheck,
+  ChevronRight,
   Eye,
   ExternalLink,
   FileDown,
@@ -10,6 +11,7 @@ import {
   Lock,
   Pencil,
   Plus,
+  TriangleAlert,
   TrendingDown,
   TrendingUp,
   Trash2,
@@ -177,6 +179,7 @@ export function ControleMensalPage() {
   const [despesasSelecionadas, setDespesasSelecionadas] = React.useState<Set<string>>(new Set())
   const [diaSelecionadoReceita, setDiaSelecionadoReceita] = React.useState<string | null>(null)
   const [diaSelecionadoDespesa, setDiaSelecionadoDespesa] = React.useState<string | null>(null)
+  const [modalPendentes, setModalPendentes] = React.useState(false)
 
   const carregar = React.useCallback(async () => {
     if (!competencia) return
@@ -469,12 +472,33 @@ export function ControleMensalPage() {
   const grupoDespesaSelecionado = gruposDespesasPorDia.find((g) => g.dia === diaSelecionadoDespesa) ?? null
   const despesasSemData = gruposDespesasPorDia.find((g) => g.chave === CHAVE_SEM_DATA)?.itens ?? []
 
+  // Todas as despesas pendentes do mês, sem depender da busca — é o que sustenta o aviso fixo no
+  // topo da página, então precisa continuar contando certo mesmo com a busca de despesas preenchida.
+  const despesasPendentes = despesasOrdenadas.filter((s) => !s.quitado)
+
   return (
     <div>
       <Button variant="ghost" size="sm" className="mb-3 -ml-2" onClick={() => navigate(ROUTES.pastoral.tesouraria.root)}>
         <ArrowLeft className="h-4 w-4" />
         Voltar ao painel
       </Button>
+
+      {despesasPendentes.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setModalPendentes(true)}
+          className="mb-6 flex w-full items-center gap-3 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-left transition-colors hover:bg-warning/20"
+        >
+          <TriangleAlert className="h-4 w-4 shrink-0 text-warning" />
+          <span className="flex-1 text-sm font-medium text-foreground">
+            {despesasPendentes.length} despesa(s) pendente(s) · {formatCurrency(despesasPendentes.reduce((s, d) => s + d.valor, 0))}
+          </span>
+          <span className="flex shrink-0 items-center gap-0.5 text-sm text-warning">
+            Clique para ver
+            <ChevronRight className="h-4 w-4" />
+          </span>
+        </button>
+      )}
 
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -647,12 +671,17 @@ export function ControleMensalPage() {
                           ? `${despesasSelecionadas.size} selecionada(s)`
                           : `Selecionar todas as pendentes (${pendentesFiltradas.length})`}
                       </label>
-                      {despesasSelecionadas.size > 0 && (
-                        <Button size="sm" onClick={handleMarcarSelecionadasComoQuitadas}>
-                          <CheckCheck className="h-3.5 w-3.5" />
-                          Marcar como quitada(s)
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setModalPendentes(true)}>
+                          Detalhar pendentes
                         </Button>
-                      )}
+                        {despesasSelecionadas.size > 0 && (
+                          <Button size="sm" onClick={handleMarcarSelecionadasComoQuitadas}>
+                            <CheckCheck className="h-3.5 w-3.5" />
+                            Marcar como quitada(s)
+                          </Button>
+                        )}
+                      </div>
                     </div>
                     {/* Lista de conferência: mostra exatamente quais despesas serão quitadas — a
                         seleção pode vir de dias diferentes do calendário, então sem isso não dá pra
@@ -704,6 +733,32 @@ export function ControleMensalPage() {
           </Accordion>
         </Card>
       </div>
+
+      <Dialog open={modalPendentes} onOpenChange={setModalPendentes}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Despesas pendentes ({despesasPendentes.length})</DialogTitle>
+          </DialogHeader>
+          {podeEditar && despesasPendentes.length > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-muted/30 p-3.5">
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
+                <Checkbox
+                  checked={despesasPendentes.every((s) => despesasSelecionadas.has(s.id))}
+                  onCheckedChange={() => handleAlternarSelecionarTodasPendentes(despesasPendentes)}
+                />
+                {despesasSelecionadas.size > 0 ? `${despesasSelecionadas.size} selecionada(s)` : 'Selecionar todas'}
+              </label>
+              {despesasSelecionadas.size > 0 && (
+                <Button size="sm" onClick={handleMarcarSelecionadasComoQuitadas}>
+                  <CheckCheck className="h-3.5 w-3.5" />
+                  Marcar como quitada(s)
+                </Button>
+              )}
+            </div>
+          )}
+          <div className="space-y-2.5">{despesasPendentes.map(renderDespesa)}</div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!grupoReceitaSelecionado} onOpenChange={(open) => !open && setDiaSelecionadoReceita(null)}>
         <DialogContent className="max-h-[85vh] overflow-y-auto">

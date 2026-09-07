@@ -313,26 +313,37 @@ export function LancamentoLotePage() {
               {fields.map((field, index) => (
                 <div
                   key={field.id}
-                  className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-start"
+                  className="space-y-1.5"
                   onFocus={(e) => e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'center' })}
                 >
-                  <div className="flex flex-col gap-1.5">
-                    <Label htmlFor={`linhas.${index}.numeroCarne`} className="sm:hidden">
-                      Nº do carnê
-                    </Label>
+                  {/* Linha só do checkbox, no mesmo grid-template da linha de baixo, pra ficar acima
+                      do campo Nº do carnê sem empurrar o input dele — o input de Valor, que não tem
+                      nada acima, continua alinhado com ele. */}
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_auto]">
                     <Controller
                       control={control}
                       name={`linhas.${index}.numeroCarne`}
                       render={({ field: f }) => (
-                        <>
-                          <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <Checkbox
-                              className="h-3.5 w-3.5"
-                              checked={f.value === CARNE_AVULSO}
-                              onCheckedChange={(v) => f.onChange(v ? CARNE_AVULSO : '')}
-                            />
-                            Avulsa (sem dizimista cadastrado)
-                          </label>
+                        <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <Checkbox
+                            className="h-3.5 w-3.5"
+                            checked={f.value === CARNE_AVULSO}
+                            onCheckedChange={(v) => f.onChange(v ? CARNE_AVULSO : '')}
+                          />
+                          Avulsa (sem dizimista cadastrado)
+                        </label>
+                      )}
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-start">
+                    <div className="flex flex-col gap-1.5">
+                      <Label htmlFor={`linhas.${index}.numeroCarne`} className="sm:hidden">
+                        Nº do carnê
+                      </Label>
+                      <Controller
+                        control={control}
+                        name={`linhas.${index}.numeroCarne`}
+                        render={({ field: f }) => (
                           <Input
                             id={`linhas.${index}.numeroCarne`}
                             inputMode="numeric"
@@ -340,46 +351,46 @@ export function LancamentoLotePage() {
                             disabled={f.value === CARNE_AVULSO}
                             {...f}
                           />
-                        </>
-                      )}
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <Label htmlFor={`linhas.${index}.valor`} className="sm:hidden">
-                      Valor
-                    </Label>
-                    <div className="relative">
-                      <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                        R$
-                      </span>
-                      <Controller
-                        control={control}
-                        name={`linhas.${index}.valor`}
-                        render={({ field: f }) => (
-                          <Input
-                            id={`linhas.${index}.valor`}
-                            inputMode="decimal"
-                            placeholder="0,00"
-                            className="pl-9"
-                            value={f.value}
-                            onChange={(e) => f.onChange(maskMoeda(e.target.value))}
-                            onBlur={() => f.onChange(finalizarMoeda(f.value ?? ''))}
-                          />
                         )}
                       />
                     </div>
-                  </div>
-                  <div className="flex items-start justify-end sm:justify-center">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      disabled={fields.length <= 1}
-                      onClick={() => remove(index)}
-                      aria-label="Remover linha"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex flex-col gap-1.5">
+                      <Label htmlFor={`linhas.${index}.valor`} className="sm:hidden">
+                        Valor
+                      </Label>
+                      <div className="relative">
+                        <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                          R$
+                        </span>
+                        <Controller
+                          control={control}
+                          name={`linhas.${index}.valor`}
+                          render={({ field: f }) => (
+                            <Input
+                              id={`linhas.${index}.valor`}
+                              inputMode="decimal"
+                              placeholder="0,00"
+                              className="pl-9"
+                              value={f.value}
+                              onChange={(e) => f.onChange(maskMoeda(e.target.value))}
+                              onBlur={() => f.onChange(finalizarMoeda(f.value ?? ''))}
+                            />
+                          )}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-start justify-end sm:justify-center">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        disabled={fields.length <= 1}
+                        onClick={() => remove(index)}
+                        aria-label="Remover linha"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}

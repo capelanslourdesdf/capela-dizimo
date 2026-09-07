@@ -37,7 +37,7 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
         dropdown: 'absolute inset-0 opacity-0 cursor-pointer',
         months_dropdown: '',
         years_dropdown: '',
-        nav: 'flex items-center justify-between absolute inset-x-1 top-1',
+        nav: 'flex items-center justify-between absolute inset-x-1 top-5',
         button_previous: cn(
           buttonVariants({ variant: 'outline' }),
           'h-7 w-7 bg-transparent p-0 opacity-70 hover:opacity-100',

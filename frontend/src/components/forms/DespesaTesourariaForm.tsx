@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { CampoData } from '@/components/forms/CampoData'
 import type { SaidaTesouraria } from '@/types'
 import {
   chaveNfeEhValida,
@@ -18,7 +19,6 @@ import {
   dataBrParaIso,
   dataIsoParaBr,
   maskChaveNfe,
-  maskDataBr,
   maskMoedaCentavos,
   moedaParaNumero,
   numeroParaMoeda,
@@ -140,15 +140,7 @@ export function DespesaTesourariaForm({ despesa, onSalvar, onCancelar }: Despesa
           <Controller
             control={control}
             name="dia"
-            render={({ field }) => (
-              <Input
-                id="dia"
-                inputMode="numeric"
-                placeholder="dd/mm/aaaa"
-                value={field.value ?? ''}
-                onChange={(e) => field.onChange(maskDataBr(e.target.value))}
-              />
-            )}
+            render={({ field }) => <CampoData id="dia" value={field.value ?? ''} onChange={field.onChange} />}
           />
           {errors.dia && <p className="text-xs text-destructive">{errors.dia.message}</p>}
         </div>

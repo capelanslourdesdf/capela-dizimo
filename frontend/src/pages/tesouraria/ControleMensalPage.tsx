@@ -360,32 +360,24 @@ export function ControleMensalPage() {
   /** Uma linha de despesa — usada tanto na lista do dia selecionado no calendário quanto no grupo "sem data". */
   function renderDespesa(s: SaidaTesouraria) {
     return (
-      <div
-        key={s.id}
-        className="flex flex-col gap-2 rounded-lg border border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-      >
-        <div className="flex min-w-0 items-start gap-2.5">
-          {podeEditar && !s.quitado && (
-            <Checkbox
-              className="mt-1"
-              checked={despesasSelecionadas.has(s.id)}
-              onCheckedChange={() => handleAlternarSelecaoDespesa(s.id)}
-              aria-label={`Selecionar despesa de ${s.prestador}`}
-            />
-          )}
-          <div className="min-w-0">
-            <p className="font-medium text-foreground">{s.prestador}</p>
-            <p className="text-xs text-muted-foreground">Solicitado por {s.solicitante}</p>
-            {s.observacao && <p className="mt-0.5 whitespace-pre-wrap text-xs text-muted-foreground">{s.observacao}</p>}
+      <div key={s.id} className="flex flex-col gap-2 rounded-lg border border-border px-4 py-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex min-w-0 items-start gap-2.5">
+            {podeEditar && !s.quitado && (
+              <Checkbox
+                className="mt-1"
+                checked={despesasSelecionadas.has(s.id)}
+                onCheckedChange={() => handleAlternarSelecaoDespesa(s.id)}
+                aria-label={`Selecionar despesa de ${s.prestador}`}
+              />
+            )}
+            <div className="min-w-0">
+              <p className="font-medium text-foreground">{s.prestador}</p>
+              <p className="text-xs text-muted-foreground">Solicitado por {s.solicitante}</p>
+              {s.observacao && <p className="mt-0.5 whitespace-pre-wrap text-xs text-muted-foreground">{s.observacao}</p>}
+            </div>
           </div>
-        </div>
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 sm:justify-end">
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge label={s.quitado ? 'Quitada' : 'Pendente'} variant={s.quitado ? 'success' : 'warning'} />
-            {s.possuiNfe && <StatusBadge label="Possui NF-e" variant="outline" />}
-            <p className="font-medium text-destructive">{formatCurrency(s.valor)}</p>
-          </div>
-          <div className="flex items-center">
+          <div className="flex shrink-0 items-center">
             <Button variant="ghost" size="icon" onClick={() => setDespesaEmVisualizacao(s)} aria-label="Ver detalhes da despesa">
               <Eye className="h-4 w-4" />
             </Button>
@@ -406,6 +398,11 @@ export function ControleMensalPage() {
               </>
             )}
           </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <StatusBadge label={s.quitado ? 'Quitada' : 'Pendente'} variant={s.quitado ? 'success' : 'warning'} />
+          {s.possuiNfe && <StatusBadge label="Possui NF-e" variant="outline" />}
+          <p className="ml-auto font-medium text-destructive">{formatCurrency(s.valor)}</p>
         </div>
       </div>
     )

@@ -47,7 +47,7 @@ export function LancamentoUnicoPage() {
 
   return (
     <div>
-      <PageHeader title="Lançar devolução" description="Lance a devolução de um único dizimista." />
+      <PageHeader title="Lançar devolução" description="Lance a devolução de um dizimista." />
 
       <Card className="max-w-2xl">
         <CardContent className="space-y-4">

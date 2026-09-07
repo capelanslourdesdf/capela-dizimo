@@ -324,3 +324,16 @@ export function dataIsoParaBr(valorIso?: string): string {
   const [, ano, mes, dia] = match
   return `${dia}/${mes}/${ano}`
 }
+
+/**
+ * Data de hoje em "aaaa-mm-dd", usando os componentes LOCAIS do relógio do navegador —
+ * nunca `new Date().toISOString().slice(0, 10)`, que usa o dia em UTC e por isso já mostra o dia
+ * seguinte sempre que o horário local (Brasil, UTC-3) estiver depois das 21h.
+ */
+export function hojeIso(): string {
+  const agora = new Date()
+  const ano = agora.getFullYear()
+  const mes = String(agora.getMonth() + 1).padStart(2, '0')
+  const dia = String(agora.getDate()).padStart(2, '0')
+  return `${ano}-${mes}-${dia}`
+}

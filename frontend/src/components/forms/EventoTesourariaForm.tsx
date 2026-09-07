@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { CampoData } from '@/components/forms/CampoData'
 import type { DadosEventoTesouraria } from '@/services/tesourariaService'
 import type { EventoTesouraria } from '@/types'
 import { ANO_INICIAL_EVENTOS_TESOURARIA } from '@/constants/tesouraria'
@@ -18,7 +19,7 @@ import {
   dataBrParaIso,
   dataIsoParaBr,
   finalizarMoeda,
-  maskDataBr,
+  hojeIso,
   maskMoeda,
   moedaParaNumero,
   numeroParaMoeda,
@@ -60,7 +61,7 @@ export function EventoTesourariaForm({ evento, onSalvar, onCancelar }: EventoTes
     resolver: zodResolver(schema),
     defaultValues: {
       nome: evento?.nome ?? '',
-      data: evento ? dataIsoParaBr(evento.data) : dataIsoParaBr(new Date().toISOString().slice(0, 10)),
+      data: evento ? dataIsoParaBr(evento.data) : dataIsoParaBr(hojeIso()),
       arrecadado: evento ? numeroParaMoeda(evento.arrecadado) : '',
       despesa: evento ? numeroParaMoeda(evento.despesa) : '',
       observacao: evento?.observacao ?? '',
@@ -107,14 +108,7 @@ export function EventoTesourariaForm({ evento, onSalvar, onCancelar }: EventoTes
           control={control}
           name="data"
           render={({ field }) => (
-            <Input
-              id="data"
-              inputMode="numeric"
-              placeholder="dd/mm/aaaa"
-              className="max-w-[10rem]"
-              value={field.value ?? ''}
-              onChange={(e) => field.onChange(maskDataBr(e.target.value))}
-            />
+            <CampoData id="data" value={field.value ?? ''} onChange={field.onChange} className="max-w-[10rem]" />
           )}
         />
         {errors.data && <p className="text-xs text-destructive">{errors.data.message}</p>}

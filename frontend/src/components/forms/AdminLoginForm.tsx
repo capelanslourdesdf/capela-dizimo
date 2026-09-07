@@ -2,7 +2,7 @@ import * as React from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate, type Location } from 'react-router-dom'
 import { Eye, EyeOff, LogIn } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -24,6 +24,7 @@ type FormValues = z.infer<typeof schema>
 export function AdminLoginForm() {
   const { entrar } = useAdminSessao()
   const navigate = useNavigate()
+  const location = useLocation()
   const [erro, setErro] = React.useState<string | null>(null)
   const [mostrarSenha, setMostrarSenha] = React.useState(false)
 
@@ -37,7 +38,11 @@ export function AdminLoginForm() {
     setErro(null)
     try {
       await entrar(values.papel, values.senha)
-      navigate(ROUTES.pastoral.root)
+      // Quem chegou aqui redirecionado de uma página específica (ex.: um link direto pra uma
+      // tela da Pastoral, acessado sem estar logado) volta pra ela — ver `state: { from }` em
+      // `ProtectedAdminRoute`. Sem isso, cai no início da Pastoral por padrão.
+      const destino = (location.state as { from?: Location } | null)?.from
+      navigate(destino ? `${destino.pathname}${destino.search}` : ROUTES.pastoral.root, { replace: true })
     } catch (err) {
       setErro(err instanceof Error ? err.message : 'Não foi possível entrar. Tente novamente.')
     }

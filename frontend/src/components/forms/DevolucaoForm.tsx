@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { CampoData } from '@/components/forms/CampoData'
 import { competenciaDaDevolucao, type DadosDevolucao } from '@/services/devolucaoService'
 import { listarMembrosPastoral } from '@/services/membroPastoralService'
 import type { Devolucao, MembroPastoral } from '@/types'
@@ -21,7 +22,7 @@ import {
   dataBrParaIso,
   dataIsoParaBr,
   finalizarMoeda,
-  maskDataBr,
+  hojeIso,
   maskMoeda,
   moedaParaNumero,
   numeroParaMoeda,
@@ -79,9 +80,7 @@ export function DevolucaoForm({ devolucao, competenciaPadrao, onSalvar, onCancel
       data: devolucao
         ? dataIsoParaBr(devolucao.data || `${competenciaDaDevolucao(devolucao)}-01`)
         : dataIsoParaBr(
-            competenciaPadrao && competenciaPadrao !== competenciaAtual()
-              ? `${competenciaPadrao}-01`
-              : new Date().toISOString().slice(0, 10),
+            competenciaPadrao && competenciaPadrao !== competenciaAtual() ? `${competenciaPadrao}-01` : hojeIso(),
           ),
       lancadoPor: devolucao?.lancadoPor ?? '',
       observacao: devolucao?.observacao ?? '',
@@ -161,15 +160,7 @@ export function DevolucaoForm({ devolucao, competenciaPadrao, onSalvar, onCancel
           <Controller
             control={control}
             name="data"
-            render={({ field }) => (
-              <Input
-                id="data"
-                inputMode="numeric"
-                placeholder="dd/mm/aaaa"
-                value={field.value ?? ''}
-                onChange={(e) => field.onChange(maskDataBr(e.target.value))}
-              />
-            )}
+            render={({ field }) => <CampoData id="data" value={field.value ?? ''} onChange={field.onChange} />}
           />
           {errors.data && <p className="text-xs text-destructive">{errors.data.message}</p>}
         </div>

@@ -13,6 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { CampoData } from '@/components/forms/CampoData'
 
 import { buscarDizimistaPorCarne } from '@/services/dizimistaService'
 import { lancarDevolucao } from '@/services/devolucaoService'
@@ -24,7 +25,7 @@ import {
   dataIsoParaBr,
   finalizarMoeda,
   formatCurrency,
-  maskDataBr,
+  hojeIso,
   maskMoeda,
   moedaParaNumero,
 } from '@/utils/format'
@@ -56,7 +57,7 @@ function valoresIniciais(): FormValues {
   return {
     // Mesma competência (mês de referência) pra todo o lote, derivada dessa data — a maioria dos
     // lotes é lançada no mesmo dia, por isso o padrão já vem preenchido com hoje.
-    data: dataIsoParaBr(new Date().toISOString().slice(0, 10)),
+    data: dataIsoParaBr(hojeIso()),
     formaPagamento: 'pix',
     lancadoPor: '',
     linhas: [{ ...linhaVazia }],
@@ -231,15 +232,7 @@ export function LancamentoLotePage() {
                 <Controller
                   control={control}
                   name="data"
-                  render={({ field }) => (
-                    <Input
-                      id="data"
-                      inputMode="numeric"
-                      placeholder="dd/mm/aaaa"
-                      value={field.value}
-                      onChange={(e) => field.onChange(maskDataBr(e.target.value))}
-                    />
-                  )}
+                  render={({ field }) => <CampoData id="data" value={field.value} onChange={field.onChange} />}
                 />
                 {errors.data && <p className="text-xs text-destructive">{errors.data.message}</p>}
               </div>
@@ -311,27 +304,28 @@ export function LancamentoLotePage() {
                 </div>
               </div>
 
+              <div className="hidden gap-3 sm:grid sm:grid-cols-[1fr_1fr_auto]">
+                <Label>Nº do carnê</Label>
+                <Label>Valor</Label>
+                <span aria-hidden="true" />
+              </div>
+
               {fields.map((field, index) => (
                 <div
                   key={field.id}
                   className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-start"
                   onFocus={(e) => e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'center' })}
                 >
-                  <div className="space-y-1.5">
-                    {index === 0 && <Label htmlFor={`linhas.${index}.numeroCarne`}>Nº do carnê</Label>}
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor={`linhas.${index}.numeroCarne`} className="sm:hidden">
+                      Nº do carnê
+                    </Label>
                     <Controller
                       control={control}
                       name={`linhas.${index}.numeroCarne`}
                       render={({ field: f }) => (
                         <>
-                          <Input
-                            id={`linhas.${index}.numeroCarne`}
-                            inputMode="numeric"
-                            placeholder="Nº do carnê"
-                            disabled={f.value === CARNE_AVULSO}
-                            {...f}
-                          />
-                          <label className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
                             <Checkbox
                               className="h-3.5 w-3.5"
                               checked={f.value === CARNE_AVULSO}
@@ -339,12 +333,21 @@ export function LancamentoLotePage() {
                             />
                             Avulsa (sem dizimista cadastrado)
                           </label>
+                          <Input
+                            id={`linhas.${index}.numeroCarne`}
+                            inputMode="numeric"
+                            placeholder="Nº do carnê"
+                            disabled={f.value === CARNE_AVULSO}
+                            {...f}
+                          />
                         </>
                       )}
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    {index === 0 && <Label htmlFor={`linhas.${index}.valor`}>Valor</Label>}
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor={`linhas.${index}.valor`} className="sm:hidden">
+                      Valor
+                    </Label>
                     <div className="relative">
                       <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
                         R$
@@ -366,14 +369,11 @@ export function LancamentoLotePage() {
                       />
                     </div>
                   </div>
-                  <div className="space-y-1.5">
-                    {/* Espaço invisível do tamanho do rótulo, só na 1ª linha — mantém o botão alinhado com os campos, não com o rótulo. */}
-                    {index === 0 && <Label className="invisible hidden sm:block">Remover</Label>}
+                  <div className="flex items-start justify-end sm:justify-center">
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="justify-self-end sm:justify-self-auto"
                       disabled={fields.length <= 1}
                       onClick={() => remove(index)}
                       aria-label="Remover linha"

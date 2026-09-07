@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { CampoData } from '@/components/forms/CampoData'
 import type { EntradaTesouraria, FormaPagamentoDevolucao } from '@/types'
 import { CATEGORIAS_ENTRADA_TESOURARIA } from '@/constants/tesouraria'
 import { FORMAS_PAGAMENTO_DEVOLUCAO } from '@/constants/devolucao'
@@ -18,7 +19,6 @@ import {
   dataBrEhValida,
   dataBrParaIso,
   dataIsoParaBr,
-  maskDataBr,
   maskMoedaCentavos,
   moedaParaNumero,
   numeroParaMoeda,
@@ -109,15 +109,7 @@ export function ReceitaTesourariaForm({ receita, onSalvar, onCancelar }: Receita
           <Controller
             control={control}
             name="data"
-            render={({ field }) => (
-              <Input
-                id="data"
-                inputMode="numeric"
-                placeholder="dd/mm/aaaa"
-                value={field.value ?? ''}
-                onChange={(e) => field.onChange(maskDataBr(e.target.value))}
-              />
-            )}
+            render={({ field }) => <CampoData id="data" value={field.value ?? ''} onChange={field.onChange} />}
           />
           {errors.data && <p className="text-xs text-destructive">{errors.data.message}</p>}
         </div>

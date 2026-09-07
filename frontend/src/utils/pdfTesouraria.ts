@@ -4,7 +4,7 @@ import autoTable from 'jspdf-autotable'
 import type { ControleTesouraria } from '@/types'
 import { CATEGORIAS_ENTRADA_TESOURARIA, STATUS_CONTROLE_TESOURARIA, URL_CONSULTA_NFE, categoriaEntradaLabel } from '@/constants/tesouraria'
 import { FORMAS_PAGAMENTO_DEVOLUCAO, formaPagamentoLabel } from '@/constants/devolucao'
-import { formatCompetencia, formatCurrency, formatDate, formatDateLong, maskChaveNfe } from '@/utils/format'
+import { formatCompetencia, formatCurrency, formatDate, formatDateLong, hojeIso, maskChaveNfe } from '@/utils/format'
 
 /** Azul de Nossa Senhora de Lourdes — o mesmo azul usado como cor primária no site (--primary, em index.css), convertido pra RGB. */
 const AZUL_NOSSA_SENHORA_LOURDES: [number, number, number] = [11, 146, 218]
@@ -87,7 +87,7 @@ export function gerarPdfControleTesouraria(controle: ControleTesouraria): void {
   doc.setFontSize(9)
   doc.setTextColor(110)
   doc.text(
-    `Status: ${STATUS_CONTROLE_TESOURARIA[controle.status]}  ·  Gerado em ${formatDateLong(new Date().toISOString().slice(0, 10))}`,
+    `Status: ${STATUS_CONTROLE_TESOURARIA[controle.status]}  ·  Gerado em ${formatDateLong(hojeIso())}`,
     margemEsquerda,
     32,
   )

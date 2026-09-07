@@ -37,7 +37,7 @@ import { lancarDevolucao, obterTotaisDevolucaoPorAno, obterTotaisDevolucaoPorMes
 import { obterContagemStatusAgregada, type ContagemStatus } from '@/services/statusAgregadoService'
 import type { DadosCadastraisDizimista, Dizimista } from '@/types'
 import { CARNE_AVULSO } from '@/constants/devolucao'
-import { formatarNumeroCarne, formatCurrency, getIniciais } from '@/utils/format'
+import { formatarNumeroCarne, formatCurrency, getIniciais, hojeIso } from '@/utils/format'
 import { aguardarPeloMenos } from '@/utils/async'
 import { baixarArquivoTexto } from '@/utils/download'
 import type { StatusDizimista } from '@/utils/statusDizimista'
@@ -273,7 +273,7 @@ export function DizimistasPage() {
         return
       }
       const conteudo = carnes.map(formatarNumeroCarne).join('\n')
-      const hoje = new Date().toISOString().slice(0, 10)
+      const hoje = hojeIso()
       baixarArquivoTexto(`carnes-ativos-${hoje}.txt`, conteudo)
       toast.success(`${carnes.length} carnê(s) exportado(s).`)
     } finally {

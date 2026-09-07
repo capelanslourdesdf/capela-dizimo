@@ -10,9 +10,10 @@ import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
+import { CampoData } from '@/components/forms/CampoData'
 import type { DadosCadastraisDizimista, Dizimista } from '@/types'
 import { buscarDizimistaPorCarne, gerarNumeroCarneDisponivel } from '@/services/dizimistaService'
-import { dataBrEhValida, dataBrParaIso, dataIsoParaBr, maskDataBr, maskTelefone } from '@/utils/format'
+import { dataBrEhValida, dataBrParaIso, dataIsoParaBr, maskTelefone } from '@/utils/format'
 import { aguardarPeloMenos } from '@/utils/async'
 
 /** Tempo mínimo (ms) que um spinner de busca fica visível, para não parecer estático. */
@@ -243,12 +244,11 @@ export function RecadastramentoForm({
         control={control}
         name="dataNascimento"
         render={({ field }) => (
-          <Input
+          <CampoData
             id="dataNascimento"
-            inputMode="numeric"
-            placeholder="dd/mm/aaaa"
             value={field.value}
-            onChange={(e) => field.onChange(maskDataBr(e.target.value))}
+            onChange={field.onChange}
+            diasDesabilitados={(data) => data > new Date()}
           />
         )}
       />

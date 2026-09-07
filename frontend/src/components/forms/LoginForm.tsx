@@ -2,7 +2,7 @@ import * as React from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate, type Location } from 'react-router-dom'
 import { LogIn } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -10,9 +10,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { CampoData } from '@/components/forms/CampoData'
 import { useDizimistaSessao } from '@/hooks/useDizimistaSessao'
 import { ROUTES } from '@/constants/routes'
-import { dataBrEhValida, maskDataBr } from '@/utils/format'
+import { dataBrEhValida } from '@/utils/format'
 
 const schema = z.object({
   numeroCarne: z.string().trim().min(1, 'Informe o número do carnê.'),
@@ -27,6 +28,7 @@ type FormValues = z.infer<typeof schema>
 export function LoginForm() {
   const { entrar } = useDizimistaSessao()
   const navigate = useNavigate()
+  const location = useLocation()
   const [erro, setErro] = React.useState<string | null>(null)
 
   const {
@@ -41,7 +43,11 @@ export function LoginForm() {
     try {
       const dizimista = await entrar(values.numeroCarne, values.dataNascimento)
       toast.success(`Bem-vindo(a), ${dizimista.nomeCompleto.split(' ')[0]}!`)
-      navigate(ROUTES.dizimista.root)
+      // Quem chegou aqui redirecionado de uma página específica (ex.: um link direto pra "Devolver
+      // meu dízimo", acessado sem estar logado) volta pra ela — ver `state: { from }` em
+      // `ProtectedDizimistaRoute`. Sem isso, cai no Início por padrão.
+      const destino = (location.state as { from?: Location } | null)?.from
+      navigate(destino ? `${destino.pathname}${destino.search}` : ROUTES.dizimista.root, { replace: true })
     } catch (err) {
       setErro(err instanceof Error ? err.message : 'Não foi possível entrar. Tente novamente.')
     }
@@ -67,12 +73,11 @@ export function LoginForm() {
           control={control}
           name="dataNascimento"
           render={({ field }) => (
-            <Input
+            <CampoData
               id="dataNascimento"
-              inputMode="numeric"
-              placeholder="dd/mm/aaaa"
               value={field.value ?? ''}
-              onChange={(e) => field.onChange(maskDataBr(e.target.value))}
+              onChange={field.onChange}
+              diasDesabilitados={(data) => data > new Date()}
             />
           )}
         />

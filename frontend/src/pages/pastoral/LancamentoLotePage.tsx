@@ -214,7 +214,7 @@ export function LancamentoLotePage() {
   return (
     <div>
       <PageHeader
-        title="Lançamento de devoluções em lote"
+        title="Lançar devoluções em lote"
         description="Lance a devolução de vários dizimistas de uma vez, todas na mesma data."
       />
 

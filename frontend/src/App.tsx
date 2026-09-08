@@ -32,6 +32,7 @@ import { DizimistaDevolucoesPage } from '@/pages/dizimista/DevolucoesPage'
 import { FazerDevolucaoPage } from '@/pages/dizimista/FazerDevolucaoPage'
 
 import { DizimistasPage } from '@/pages/pastoral/DizimistasPage'
+import { CadastrarDizimistaPage } from '@/pages/pastoral/CadastrarDizimistaPage'
 import { DizimistaDetalhePage } from '@/pages/pastoral/DizimistaDetalhePage'
 import { RecadastramentosPage } from '@/pages/pastoral/RecadastramentosPage'
 import { ConfiguracoesPage } from '@/pages/pastoral/ConfiguracoesPage'
@@ -85,6 +86,7 @@ function App() {
                         — ver `podeAcessarRotaPastoral` em constants/papeisAcesso.ts. */}
                     <Route element={<ProtegerRotaPastoral />}>
                       <Route path={ROUTES.pastoral.root} element={<DizimistasPage />} />
+                      <Route path={ROUTES.pastoral.cadastrarDizimista} element={<CadastrarDizimistaPage />} />
                       <Route path="/pastoral/dizimistas/:numeroCarne" element={<DizimistaDetalhePage />} />
                       <Route path={ROUTES.pastoral.recadastramentos} element={<RecadastramentosPage />} />
                       <Route path={ROUTES.pastoral.lancamentoUnico} element={<LancamentoUnicoPage />} />

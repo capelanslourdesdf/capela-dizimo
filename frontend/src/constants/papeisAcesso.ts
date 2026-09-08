@@ -30,7 +30,12 @@ export function podeVerTotalArrecadado(papel: PapelAcesso | null): boolean {
 }
 
 /** Rotas da área da Pastoral que a "Pastoral do Dízimo" pode usar — só o dia a dia de dizimistas/devoluções. */
-const ROTAS_PASTORAL_DIZIMO: string[] = [ROUTES.pastoral.root, ROUTES.pastoral.lancamentoUnico, ROUTES.pastoral.lancamentoLote]
+const ROTAS_PASTORAL_DIZIMO: string[] = [
+  ROUTES.pastoral.root,
+  ROUTES.pastoral.cadastrarDizimista,
+  ROUTES.pastoral.lancamentoUnico,
+  ROUTES.pastoral.lancamentoLote,
+]
 
 /** Rotas da área da Pastoral que a Coordenadora pode usar — só acompanha a lista de Dizimistas (Tesouraria é login/rota à parte). */
 const ROTAS_COORDENADORA: string[] = [ROUTES.pastoral.root]

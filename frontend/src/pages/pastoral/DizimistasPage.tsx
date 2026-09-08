@@ -11,7 +11,6 @@ import { EmptyState } from '@/components/dashboard/EmptyState'
 import { StatCard } from '@/components/dashboard/StatCard'
 import { StatusBadge } from '@/components/dashboard/StatusBadge'
 import { GraficoEvolucaoMensal } from '@/components/dashboard/GraficoEvolucaoMensal'
-import { RecadastramentoForm } from '@/components/forms/RecadastramentoForm'
 import { DevolucaoForm } from '@/components/forms/DevolucaoForm'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -25,7 +24,6 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
   buscarDizimistaPorCarne,
   contarDizimistas,
-  criarDizimistaAdmin,
   diaMesDoRegistro,
   excluirDizimista,
   listarAniversariantesDoMes,
@@ -35,7 +33,7 @@ import {
 } from '@/services/dizimistaService'
 import { lancarDevolucao, obterTotaisDevolucaoPorAno, obterTotaisDevolucaoPorMes, type DadosDevolucao } from '@/services/devolucaoService'
 import { obterContagemStatusAgregada, type ContagemStatus } from '@/services/statusAgregadoService'
-import type { DadosCadastraisDizimista, Dizimista } from '@/types'
+import type { Dizimista } from '@/types'
 import { CARNE_AVULSO } from '@/constants/devolucao'
 import { formatarNumeroCarne, formatCurrency, getIniciais, hojeIso } from '@/utils/format'
 import { aguardarPeloMenos } from '@/utils/async'
@@ -80,7 +78,6 @@ export function DizimistasPage() {
   const [totaisPorMesAgregado, setTotaisPorMesAgregado] = React.useState<Record<string, number>>({})
   const [aniversariantesDoMes, setAniversariantesDoMes] = React.useState<Dizimista[]>([])
 
-  const [modalAberto, setModalAberto] = React.useState(false)
   const [dizimistaParaExcluir, setDizimistaParaExcluir] = React.useState<Dizimista | null>(null)
   const [modalNovaDevolucao, setModalNovaDevolucao] = React.useState(false)
   const [carneNovaDevolucao, setCarneNovaDevolucao] = React.useState('')
@@ -214,13 +211,6 @@ export function DizimistasPage() {
     return nome.charAt(0).toUpperCase() + nome.slice(1)
   }, [])
 
-  async function handleCadastrar(dados: DadosCadastraisDizimista) {
-    const numeroCarne = await criarDizimistaAdmin(dados)
-    setModalAberto(false)
-    toast.success(`Dizimista cadastrado(a) com o carnê nº ${formatarNumeroCarne(numeroCarne)}.`)
-    navigate(ROUTES.pastoral.dizimistaDetalhe(numeroCarne))
-  }
-
   async function handleExcluir() {
     if (!dizimistaParaExcluir) return
     try {
@@ -306,9 +296,9 @@ export function DizimistasPage() {
               <ArrowLeftRight className="h-4 w-4" />
               Lançar devolução
             </Button>
-            <Button onClick={() => setModalAberto(true)}>
+            <Button onClick={() => navigate(ROUTES.pastoral.cadastrarDizimista)}>
               <UserPlus className="h-4 w-4" />
-              Novo dizimista
+              Cadastrar dizimista
             </Button>
           </>
         }
@@ -560,15 +550,6 @@ export function DizimistasPage() {
           </div>
         </>
       )}
-
-      <Dialog open={modalAberto} onOpenChange={setModalAberto}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Cadastrar novo dizimista</DialogTitle>
-          </DialogHeader>
-          <RecadastramentoForm exibirCarne={false} onSalvar={handleCadastrar} />
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={modalNovaDevolucao} onOpenChange={setModalNovaDevolucao}>
         <DialogContent className="max-h-[85vh] overflow-y-auto">

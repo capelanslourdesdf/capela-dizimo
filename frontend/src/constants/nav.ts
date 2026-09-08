@@ -11,6 +11,7 @@ import {
   QrCode,
   Settings,
   TrendingUp,
+  UserPlus,
   Users,
   type LucideIcon,
 } from 'lucide-react'
@@ -34,6 +35,7 @@ export const dizimistaNav: NavItem[] = [
 
 export const pastoralNav: NavItem[] = [
   { label: 'Dizimistas', href: ROUTES.pastoral.root, icon: Users, end: true },
+  { label: 'Cadastrar dizimista', href: ROUTES.pastoral.cadastrarDizimista, icon: UserPlus },
   { label: 'Lançar devolução', href: ROUTES.pastoral.lancamentoUnico, icon: Plus },
   { label: 'Lançar devoluções em lote', href: ROUTES.pastoral.lancamentoLote, icon: Layers },
   { label: 'Lista de devoluções', href: ROUTES.pastoral.listaDevolucoes, icon: ArrowLeftRight },
@@ -54,7 +56,12 @@ export const pastoralNav: NavItem[] = [
  */
 const ITENS_POR_PAPEL: Record<PapelAcesso, 'todos' | string[]> = {
   tesoureiro: 'todos',
-  pastoral_dizimo: [ROUTES.pastoral.root, ROUTES.pastoral.lancamentoUnico, ROUTES.pastoral.lancamentoLote],
+  pastoral_dizimo: [
+    ROUTES.pastoral.root,
+    ROUTES.pastoral.cadastrarDizimista,
+    ROUTES.pastoral.lancamentoUnico,
+    ROUTES.pastoral.lancamentoLote,
+  ],
   coordenadora: [ROUTES.pastoral.root, ROUTES.pastoral.tesouraria.root],
   // Não é um papel da área da Pastoral (só de Tesouraria) — por segurança, não mostra nada aqui.
   secretaria_paroquial: [],

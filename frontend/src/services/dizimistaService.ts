@@ -360,12 +360,6 @@ export async function contarDizimistas(): Promise<number> {
   })
 }
 
-/** Números de carnê de todos os dizimistas Ativos — usado só para exportar (ação explícita da Pastoral), não no carregamento normal da tela. */
-export async function listarNumerosCarneAtivos(): Promise<string[]> {
-  const snap = await getDocs(query(collection(db, COLECAO), where('status', '==', 'ativo')))
-  return snap.docs.map((d) => d.id)
-}
-
 /**
  * Dizimistas que fazem aniversário no mês informado (1-12) — filtro direto no Firestore pelo campo
  * `mesNascimento`, em vez de ler a coleção inteira e filtrar no navegador. Sem `orderBy` de

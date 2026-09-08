@@ -27,8 +27,8 @@ import {
   diaMesDoRegistro,
   excluirDizimista,
   listarAniversariantesDoMes,
+  listarDizimistas,
   listarDizimistasPaginado,
-  listarNumerosCarneAtivos,
   type CursorDizimistas,
 } from '@/services/dizimistaService'
 import { lancarDevolucao, obterTotaisDevolucaoPorAno, obterTotaisDevolucaoPorMes, type DadosDevolucao } from '@/services/devolucaoService'
@@ -83,7 +83,7 @@ export function DizimistasPage() {
   const [carneNovaDevolucao, setCarneNovaDevolucao] = React.useState('')
   const [devolucaoAvulsa, setDevolucaoAvulsa] = React.useState(false)
   const [formularioNovaDevolucaoKey, setFormularioNovaDevolucaoKey] = React.useState(0)
-  const [exportandoAtivos, setExportandoAtivos] = React.useState(false)
+  const [exportando, setExportando] = React.useState(false)
 
   const buscarPagina = React.useCallback(
     async (indice: number, cursor: CursorDizimistas | null) => {
@@ -254,20 +254,20 @@ export function DizimistasPage() {
     setFormularioNovaDevolucaoKey((k) => k + 1)
   }
 
-  async function handleExportarAtivos() {
-    setExportandoAtivos(true)
+  async function handleExportar() {
+    setExportando(true)
     try {
-      const carnes = await listarNumerosCarneAtivos()
-      if (carnes.length === 0) {
-        toast.info('Nenhum dizimista ativo para exportar.')
+      const dizimistas = await listarDizimistas()
+      if (dizimistas.length === 0) {
+        toast.info('Nenhum dizimista para exportar.')
         return
       }
-      const conteudo = carnes.map(formatarNumeroCarne).join('\n')
+      const conteudo = dizimistas.map((d) => formatarNumeroCarne(d.numeroCarne)).join('\n')
       const hoje = hojeIso()
-      baixarArquivoTexto(`carnes-ativos-${hoje}.txt`, conteudo)
-      toast.success(`${carnes.length} carnê(s) exportado(s).`)
+      baixarArquivoTexto(`carnes-${hoje}.txt`, conteudo)
+      toast.success(`${dizimistas.length} carnê(s) exportado(s).`)
     } finally {
-      setExportandoAtivos(false)
+      setExportando(false)
     }
   }
 
@@ -281,9 +281,9 @@ export function DizimistasPage() {
         description={`${totalDizimistas} dizimista(s) cadastrado(s)`}
         actions={
           <>
-            <Button variant="outline" onClick={handleExportarAtivos} disabled={exportandoAtivos}>
-              {exportandoAtivos ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-              Exportar ativos
+            <Button variant="outline" onClick={handleExportar} disabled={exportando}>
+              {exportando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+              Exportar dizimistas
             </Button>
             <Button
               variant="outline"

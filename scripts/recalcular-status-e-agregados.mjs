@@ -187,8 +187,10 @@ function competenciasEntre(inicio, fim) {
 }
 
 function competenciaDeRegistro(d) {
-  if (d.recadastradoEm) return d.recadastradoEm.slice(0, 7)
+  // Quem veio de importação sempre volta vazio, mesmo com recadastradoEm — ver o comentário
+  // completo em frontend/src/utils/statusDizimista.ts (mesma regra, corrigida pelo mesmo bug).
   if (d.origem === 'importacao_planilha') return ''
+  if (d.recadastradoEm) return d.recadastradoEm.slice(0, 7)
   return (d.criadoEm || '').slice(0, 7)
 }
 

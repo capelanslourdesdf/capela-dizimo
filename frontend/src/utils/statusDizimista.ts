@@ -14,18 +14,21 @@ export const MINIMO_MESES_ATIVOS_PADRAO = 3
  * Competência ("aaaa-mm") a partir da qual passamos a cobrar/acompanhar as devoluções — ou vazia,
  * quando não há um marco confiável e a janela deve valer por inteiro (ver abaixo).
  *
- * `recadastradoEm` é sempre o marco certo: é o momento real em que a pessoa passou a ser
- * acompanhada digitalmente. Na ausência dele, `criadoEm` só serve de marco pra quem foi cadastrado
- * direto pelo admin (`cadastro_admin`) — ali a criação É o início real. Pra quem veio da
- * importação da planilha antiga (`importacao_planilha`) sem nunca ter se recadastrado, `criadoEm`
- * é só a data em que o script de importação rodou (a mesma pra centenas de registros de uma vez) —
- * não diz nada sobre desde quando a pessoa é dizimista. Usá-la como marco cortaria fora devoluções
- * antigas e legítimas dessas pessoas; por isso devolve vazio, o que remove o limite inferior da
- * janela — deixa contar todo o histórico de devolução que já existir.
+ * Quem veio da importação da planilha antiga (`importacao_planilha`) sempre volta vazio, MESMO
+ * que tenha se recadastrado depois — pra essas pessoas o import já trouxe devoluções reais e
+ * antigas (de antes de qualquer recadastramento), então usar `recadastradoEm` como marco cortaria
+ * fora contribuições antigas e legítimas só porque a pessoa atualizou o cadastro depois. Foi
+ * exatamente esse bug: um dizimista importado, com devolução de meses antes do recadastramento,
+ * aparecia como inativo porque a janela de 6 meses virava só os 1-2 meses desde que recadastrou.
+ *
+ * Pra quem NÃO veio de importação, `recadastradoEm` é o marco certo (é o momento real em que a
+ * pessoa passou a ser acompanhada digitalmente, sem devolução anterior legítima pra considerar).
+ * Na ausência dele, `criadoEm` serve de marco pra quem foi cadastrado direto pelo admin
+ * (`cadastro_admin`) — ali a criação É o início real.
  */
 export function competenciaDeRegistro(dizimista: Pick<Dizimista, 'recadastradoEm' | 'criadoEm' | 'origem'>): string {
-  if (dizimista.recadastradoEm) return dizimista.recadastradoEm.slice(0, 7)
   if (dizimista.origem === 'importacao_planilha') return ''
+  if (dizimista.recadastradoEm) return dizimista.recadastradoEm.slice(0, 7)
   return (dizimista.criadoEm || '').slice(0, 7)
 }
 

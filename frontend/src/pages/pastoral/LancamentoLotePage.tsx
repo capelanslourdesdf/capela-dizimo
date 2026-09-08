@@ -312,97 +312,24 @@ export function LancamentoLotePage() {
                 <span aria-hidden="true" />
               </div>
 
-              {fields.map((field, index) => (
-                <div
-                  key={field.id}
-                  className="space-y-1.5 rounded-lg border border-border p-3 sm:border-0 sm:p-0"
-                  onFocus={(e) => e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'center' })}
-                >
-                  {/* No mobile as linhas empilham (grid-cols-1), então sem esse cabeçalho o botão de
-                      remover acabava isolado embaixo do valor, longe do que ele remove — aqui fica
-                      junto do número da linha, no topo, como um card. No desktop some (sm:hidden):
-                      o botão de remover já aparece alinhado na 3ª coluna do grid logo abaixo. */}
-                  <div className="flex items-center justify-between sm:hidden">
-                    <span className="text-xs font-semibold text-muted-foreground">Dizimista {index + 1}</span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      disabled={fields.length <= 1}
-                      onClick={() => remove(index)}
-                      aria-label="Remover linha"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  {/* Linha só do checkbox, no mesmo grid-template da linha de baixo, pra ficar acima
-                      do campo Nº do carnê sem empurrar o input dele — o input de Valor, que não tem
-                      nada acima, continua alinhado com ele. */}
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_auto]">
-                    <Controller
-                      control={control}
-                      name={`linhas.${index}.numeroCarne`}
-                      render={({ field: f }) => (
-                        <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <Checkbox
-                            className="h-3.5 w-3.5"
-                            checked={f.value === CARNE_AVULSO}
-                            onCheckedChange={(v) => f.onChange(v ? CARNE_AVULSO : '')}
-                          />
-                          Avulso (marque se for sem carnê cadastrado)
-                        </label>
-                      )}
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-start">
-                    <div className="flex flex-col gap-1.5">
-                      <Label htmlFor={`linhas.${index}.numeroCarne`} className="sm:hidden">
-                        Nº do carnê
-                      </Label>
-                      <Controller
-                        control={control}
-                        name={`linhas.${index}.numeroCarne`}
-                        render={({ field: f }) => (
-                          <Input
-                            id={`linhas.${index}.numeroCarne`}
-                            inputMode="numeric"
-                            placeholder="Nº do carnê"
-                            disabled={f.value === CARNE_AVULSO}
-                            {...f}
-                          />
-                        )}
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <Label htmlFor={`linhas.${index}.valor`} className="sm:hidden">
-                        Valor
-                      </Label>
-                      <div className="relative">
-                        <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                          R$
-                        </span>
-                        <Controller
-                          control={control}
-                          name={`linhas.${index}.valor`}
-                          render={({ field: f }) => (
-                            <Input
-                              id={`linhas.${index}.valor`}
-                              inputMode="decimal"
-                              placeholder="0,00"
-                              className="pl-9"
-                              value={f.value}
-                              onChange={(e) => f.onChange(maskMoedaCentavos(e.target.value))}
-                            />
-                          )}
-                        />
-                      </div>
-                    </div>
-                    <div className="hidden items-start justify-center sm:flex">
+              <div className="space-y-5">
+                {fields.map((field, index) => (
+                  <div
+                    key={field.id}
+                    className="space-y-1.5 rounded-lg border border-border p-3 sm:border-0 sm:p-0"
+                    onFocus={(e) => e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+                  >
+                    {/* No mobile as linhas empilham (grid-cols-1), então sem esse cabeçalho o botão de
+                        remover acabava isolado embaixo do valor, longe do que ele remove — aqui fica
+                        junto do número da linha, no topo, como um card. No desktop some (sm:hidden):
+                        o botão de remover já aparece alinhado na 3ª coluna do grid logo abaixo. */}
+                    <div className="flex items-center justify-between sm:hidden">
+                      <span className="text-xs font-semibold text-muted-foreground">Dizimista {index + 1}</span>
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon"
+                        className="h-7 w-7 text-destructive hover:bg-destructive/10 hover:text-destructive"
                         disabled={fields.length <= 1}
                         onClick={() => remove(index)}
                         aria-label="Remover linha"
@@ -410,9 +337,84 @@ export function LancamentoLotePage() {
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
+                    {/* Linha só do checkbox, no mesmo grid-template da linha de baixo, pra ficar acima
+                        do campo Nº do carnê sem empurrar o input dele — o input de Valor, que não tem
+                        nada acima, continua alinhado com ele. */}
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_auto]">
+                      <Controller
+                        control={control}
+                        name={`linhas.${index}.numeroCarne`}
+                        render={({ field: f }) => (
+                          <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <Checkbox
+                              className="h-3.5 w-3.5"
+                              checked={f.value === CARNE_AVULSO}
+                              onCheckedChange={(v) => f.onChange(v ? CARNE_AVULSO : '')}
+                            />
+                            Avulso (marque se for sem carnê cadastrado)
+                          </label>
+                        )}
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-start">
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor={`linhas.${index}.numeroCarne`} className="sm:hidden">
+                          Nº do carnê
+                        </Label>
+                        <Controller
+                          control={control}
+                          name={`linhas.${index}.numeroCarne`}
+                          render={({ field: f }) => (
+                            <Input
+                              id={`linhas.${index}.numeroCarne`}
+                              inputMode="numeric"
+                              placeholder="Nº do carnê"
+                              disabled={f.value === CARNE_AVULSO}
+                              {...f}
+                            />
+                          )}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor={`linhas.${index}.valor`} className="sm:hidden">
+                          Valor
+                        </Label>
+                        <div className="relative">
+                          <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                            R$
+                          </span>
+                          <Controller
+                            control={control}
+                            name={`linhas.${index}.valor`}
+                            render={({ field: f }) => (
+                              <Input
+                                id={`linhas.${index}.valor`}
+                                inputMode="decimal"
+                                placeholder="0,00"
+                                className="pl-9"
+                                value={f.value}
+                                onChange={(e) => f.onChange(maskMoedaCentavos(e.target.value))}
+                              />
+                            )}
+                          />
+                        </div>
+                      </div>
+                      <div className="hidden items-start justify-center sm:flex">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          disabled={fields.length <= 1}
+                          onClick={() => remove(index)}
+                          aria-label="Remover linha"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
 
             <Button type="submit" size="lg" className="w-full" disabled={processando}>

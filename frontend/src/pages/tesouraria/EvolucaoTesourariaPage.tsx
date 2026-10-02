@@ -3,9 +3,7 @@ import { TrendingDown, TrendingUp } from 'lucide-react'
 
 import { PageHeader } from '@/components/layout/PageHeader'
 import { EmptyState } from '@/components/dashboard/EmptyState'
-import { GraficoEntradasSaidas } from '@/components/dashboard/GraficoEntradasSaidas'
-import { GraficoReceitaPorCategoria } from '@/components/dashboard/GraficoReceitaPorCategoria'
-import { GraficoBarraPorMes } from '@/components/dashboard/GraficoBarraPorMes'
+import { GraficoLinhaMultiSerie, type SerieGraficoLinha } from '@/components/dashboard/GraficoLinhaMultiSerie'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -13,6 +11,24 @@ import { listarControlesTesouraria, receitasDizimoDaCompetencia } from '@/servic
 import { listarTodasDevolucoesPorCarne } from '@/services/devolucaoService'
 import type { ControleTesouraria, Devolucao } from '@/types'
 import { CATEGORIAS_ENTRADA_TESOURARIA, COMPETENCIA_INICIAL_TESOURARIA } from '@/constants/tesouraria'
+
+/**
+ * Paleta categórica fixa pra receita por categoria (ver --chart-1..7 em index.css) — a cor de uma
+ * categoria nunca muda, mesmo que outra sem nenhum lançamento no período fique de fora do gráfico.
+ *
+ * As classes vêm escritas por extenso (nunca `` `stroke-${cor}` ``) de propósito: o Tailwind
+ * descobre quais classes existem varrendo o código-fonte por strings literais — uma classe só
+ * montada em tempo de execução não aparece nesse texto e é removida do CSS final.
+ */
+const CLASSES_CATEGORIA = [
+  { stroke: 'stroke-chart-1', fill: 'fill-chart-1' },
+  { stroke: 'stroke-chart-2', fill: 'fill-chart-2' },
+  { stroke: 'stroke-chart-3', fill: 'fill-chart-3' },
+  { stroke: 'stroke-chart-4', fill: 'fill-chart-4' },
+  { stroke: 'stroke-chart-5', fill: 'fill-chart-5' },
+  { stroke: 'stroke-chart-6', fill: 'fill-chart-6' },
+  { stroke: 'stroke-chart-7', fill: 'fill-chart-7' },
+]
 
 export function EvolucaoTesourariaPage() {
   const [controles, setControles] = React.useState<ControleTesouraria[]>([])
@@ -34,11 +50,11 @@ export function EvolucaoTesourariaPage() {
     () => [...controles].sort((a, b) => (a.competencia > b.competencia ? 1 : -1)),
     [controles],
   )
+  const competencias = React.useMemo(() => controlesOrdenados.map((c) => c.competencia), [controlesOrdenados])
 
-  const dadosGrafico = React.useMemo(
+  const totaisPorCompetencia = React.useMemo(
     () =>
       controlesOrdenados.map((c) => ({
-        competencia: c.competencia,
         entradas:
           c.entradas.reduce((s, e) => s + e.valor, 0) +
           receitasDizimoDaCompetencia(c.competencia, todasDevolucoes).reduce((s, e) => s + e.valor, 0),
@@ -47,25 +63,43 @@ export function EvolucaoTesourariaPage() {
     [controlesOrdenados, todasDevolucoes],
   )
 
-  const dadosReceitaPorCategoria = React.useMemo(
-    () =>
-      controlesOrdenados.map((c) => {
-        const todasReceitas = [...c.entradas, ...receitasDizimoDaCompetencia(c.competencia, todasDevolucoes)]
-        const porCategoria: Record<string, number> = {}
-        for (const cat of CATEGORIAS_ENTRADA_TESOURARIA) {
-          porCategoria[cat.value] = todasReceitas
-            .filter((e) => e.categoria === cat.value)
-            .reduce((s, e) => s + e.valor, 0)
-        }
-        return { competencia: c.competencia, porCategoria }
-      }),
-    [controlesOrdenados, todasDevolucoes],
-  )
+  const seriesEntradasSaidas: SerieGraficoLinha[] = [
+    {
+      id: 'entradas',
+      label: 'Entradas',
+      valores: totaisPorCompetencia.map((t) => t.entradas),
+      classeStroke: 'stroke-success',
+      classeFill: 'fill-success',
+    },
+    {
+      id: 'saidas',
+      label: 'Saídas',
+      valores: totaisPorCompetencia.map((t) => t.saidas),
+      classeStroke: 'stroke-destructive',
+      classeFill: 'fill-destructive',
+    },
+  ]
 
-  const dadosDespesasPorMes = React.useMemo(
-    () => dadosGrafico.map((d) => ({ competencia: d.competencia, valor: d.saidas })),
-    [dadosGrafico],
-  )
+  const seriesReceitaPorCategoria: SerieGraficoLinha[] = CATEGORIAS_ENTRADA_TESOURARIA.map((cat, indice) => ({
+    id: cat.value,
+    label: cat.label,
+    valores: controlesOrdenados.map((c) => {
+      const todasReceitas = [...c.entradas, ...receitasDizimoDaCompetencia(c.competencia, todasDevolucoes)]
+      return todasReceitas.filter((e) => e.categoria === cat.value).reduce((s, e) => s + e.valor, 0)
+    }),
+    classeStroke: CLASSES_CATEGORIA[indice % CLASSES_CATEGORIA.length].stroke,
+    classeFill: CLASSES_CATEGORIA[indice % CLASSES_CATEGORIA.length].fill,
+  }))
+
+  const seriesDespesas: SerieGraficoLinha[] = [
+    {
+      id: 'despesas',
+      label: 'Despesas',
+      valores: totaisPorCompetencia.map((t) => t.saidas),
+      classeStroke: 'stroke-destructive',
+      classeFill: 'fill-destructive',
+    },
+  ]
 
   return (
     <div>
@@ -77,13 +111,16 @@ export function EvolucaoTesourariaPage() {
           <Skeleton className="h-72 w-full rounded-xl" />
           <Skeleton className="h-72 w-full rounded-xl" />
         </div>
-      ) : dadosGrafico.length === 0 ? (
+      ) : competencias.length === 0 ? (
         <EmptyState icon={TrendingUp} title="Nenhum controle mensal ainda" />
       ) : (
         <div className="space-y-6">
           <Card>
-            <CardContent className="pt-6">
-              <GraficoEntradasSaidas dados={dadosGrafico} />
+            <CardHeader>
+              <CardTitle className="text-base">Entradas e saídas</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <GraficoLinhaMultiSerie competencias={competencias} series={seriesEntradasSaidas} />
             </CardContent>
           </Card>
 
@@ -95,7 +132,7 @@ export function EvolucaoTesourariaPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <GraficoReceitaPorCategoria dados={dadosReceitaPorCategoria} categorias={CATEGORIAS_ENTRADA_TESOURARIA} />
+              <GraficoLinhaMultiSerie competencias={competencias} series={seriesReceitaPorCategoria} />
             </CardContent>
           </Card>
 
@@ -107,7 +144,7 @@ export function EvolucaoTesourariaPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <GraficoBarraPorMes dados={dadosDespesasPorMes} tom="destructive" />
+              <GraficoLinhaMultiSerie competencias={competencias} series={seriesDespesas} />
             </CardContent>
           </Card>
         </div>

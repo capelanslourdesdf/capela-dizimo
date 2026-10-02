@@ -47,11 +47,16 @@
     --input: 214 20% 88%;
     --ring: 201 90% 45%;
 
+    /* Paleta categórica para gráficos com várias séries (ex.: receita por categoria) — ordem fixa,
+       validada p/ distinção em daltonismo (ver node_modules/.claude ou a skill "dataviz"): todos os
+       7 tons passam lightness band, chroma floor e contraste >= 3:1 contra o fundo. */
     --chart-1: 201 90% 45%;
     --chart-2: 152 55% 42%;
-    --chart-3: 38 92% 55%;
+    --chart-3: 32 90% 45%;
     --chart-4: 262 60% 62%;
-    --chart-5: 340 70% 60%;
+    --chart-5: 340 70% 55%;
+    --chart-6: 180 65% 38%;
+    --chart-7: 0 65% 50%;
   }
 }
 

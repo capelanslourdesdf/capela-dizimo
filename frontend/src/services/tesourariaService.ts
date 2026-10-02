@@ -63,13 +63,15 @@ export function receitasDizimoDaCompetencia(competencia: string, todasDevolucoes
 }
 
 /**
- * Mesma soma de `receitasDizimoDaCompetencia`, mas usada só pelo calendário do Controle Mensal:
- * uma entrada por devolução (não agrupada por forma de pagamento), datada do dia real dela — o
- * dia começou a ser coletado no lançamento a partir de set/2026 (`DevolucaoForm`); antes disso
- * (agosto/2026, mês em que a Tesouraria passou a existir, sem controle de dia) não tem como saber
- * o dia certo, então esse mês continua com o comportamento antigo (tudo agregado no fim do mês).
- * Uma devolução sem dia salvo (rara, ex.: lançada em lote) também cai no fim do mês, pra nunca
- * sumir do calendário.
+ * Mesma ideia de `receitasDizimoDaCompetencia` (até 3 receitas por forma de pagamento), mas usada
+ * pelo calendário do Controle Mensal: aqui o agrupamento é por DIA — até 3 receitas de dízimo por
+ * dia (soma de cartão, soma de pix, soma de dinheiro daquele dia), não uma por devolução, pra não
+ * lotar a lista do dia com dezenas de linhas iguais. Cada entrada é datada do dia real da
+ * devolução — o dia começou a ser coletado no lançamento a partir de set/2026 (`DevolucaoForm`);
+ * antes disso (agosto/2026, mês em que a Tesouraria passou a existir, sem controle de dia) não tem
+ * como saber o dia certo, então esse mês continua com o comportamento antigo (tudo agregado no fim
+ * do mês). Uma devolução sem dia salvo (rara, ex.: lançada em lote) também cai no fim do mês, pra
+ * nunca sumir do calendário.
  */
 export function receitasDizimoParaCalendario(competencia: string, todasDevolucoes: Devolucao[]): EntradaTesouraria[] {
   if (competencia <= COMPETENCIA_INICIAL_TESOURARIA) {
@@ -77,14 +79,32 @@ export function receitasDizimoParaCalendario(competencia: string, todasDevolucoe
   }
 
   const doMes = todasDevolucoes.filter((d) => competenciaDaDevolucao(d) === competencia)
-  return doMes.map((d) => ({
-    id: `${PREFIXO_RECEITA_CALCULADA}${d.id}`,
-    data: d.data || ultimoDiaDoMes(competencia),
-    categoria: 'dizimo',
-    valor: d.valor,
-    formaPagamento: d.formaPagamento,
-    observacao: 'Dízimo — devolução lançada no Administrativo.',
-  }))
+  const porDia = new Map<string, Devolucao[]>()
+  for (const d of doMes) {
+    const dia = d.data || ultimoDiaDoMes(competencia)
+    const devolucoesDoDia = porDia.get(dia) ?? []
+    devolucoesDoDia.push(d)
+    porDia.set(dia, devolucoesDoDia)
+  }
+
+  const entradas: EntradaTesouraria[] = []
+  for (const [dia, devolucoesDoDia] of porDia) {
+    for (const forma of ORDEM_FORMAS_DIZIMO) {
+      const naForma = devolucoesDoDia.filter((d) => d.formaPagamento === forma)
+      const total = naForma.reduce((soma, d) => soma + d.valor, 0)
+      if (total <= 0) continue
+
+      entradas.push({
+        id: `${PREFIXO_RECEITA_CALCULADA}${dia}-${forma}`,
+        data: dia,
+        categoria: 'dizimo',
+        valor: total,
+        formaPagamento: forma,
+        observacao: `Calculado a partir de ${naForma.length} devolução(ões) de dízimo lançada(s) no Administrativo.`,
+      })
+    }
+  }
+  return entradas
 }
 
 /** Competências ("aaaa-mm") controladas pela Tesouraria: de `COMPETENCIA_INICIAL_TESOURARIA` até o mês vigente. */

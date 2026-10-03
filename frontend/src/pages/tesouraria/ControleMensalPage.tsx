@@ -521,7 +521,7 @@ export function ControleMensalPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Button onClick={() => gerarPdfControleTesouraria({ ...controle, entradas: todasReceitas })}>
+          <Button onClick={() => gerarPdfControleTesouraria({ ...controle, entradas: receitasParaCalendario })}>
             <FileDown className="h-4 w-4" />
             Gerar PDF
           </Button>

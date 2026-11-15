@@ -33,13 +33,12 @@ export function podeVerTotalArrecadado(papel: PapelAcesso | null): boolean {
 const ROTAS_PASTORAL_DIZIMO: string[] = [
   ROUTES.pastoral.root,
   ROUTES.pastoral.cadastrarDizimista,
-  ROUTES.pastoral.aniversariantes,
   ROUTES.pastoral.lancamentoUnico,
   ROUTES.pastoral.lancamentoLote,
 ]
 
-/** Rotas da área da Pastoral que a Coordenadora pode usar — acompanha Dizimistas e Aniversariantes (Tesouraria é login/rota à parte). */
-const ROTAS_COORDENADORA: string[] = [ROUTES.pastoral.root, ROUTES.pastoral.aniversariantes]
+/** Rotas da área da Pastoral que a Coordenadora pode usar — só acompanha a lista de Dizimistas (Tesouraria é login/rota à parte). */
+const ROTAS_COORDENADORA: string[] = [ROUTES.pastoral.root]
 
 /**
  * Confere se o papel pode acessar a rota `pathname` dentro da área da Pastoral — bloqueia

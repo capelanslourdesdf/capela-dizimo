@@ -4,6 +4,8 @@ export const ROUTES = {
   recadastramento: '/recadastramento',
   /** Busca pública (sem login) de dizimistas por nome ou nº do carnê — mostra só nome + carnê. */
   consultar: '/consultar',
+  /** Lista pública (sem login) de aniversariantes do mês — mostra nome, carnê e dia/mês, nunca o ano de nascimento. */
+  aniversariantes: '/aniversariantes',
   /**
    * Área do dizimista (login + painel) habilitada, mas sem nenhum botão/link visível apontando
    * pra cá em páginas públicas — só é alcançada por quem já tem o link direto. Ver PublicHeader,
@@ -27,7 +29,6 @@ export const ROUTES = {
     // Fora do prefixo "/pastoral/dizimistas/" de propósito — esse prefixo já é liberado pra
     // Coordenadora (ver `podeAcessarRotaPastoral`), e cadastrar dizimista novo não deve ser.
     cadastrarDizimista: '/pastoral/novo-dizimista',
-    aniversariantes: '/aniversariantes',
     recadastramentos: '/pastoral/recadastramentos',
     configuracoes: '/pastoral/configuracoes',
     lancamentoUnico: '/pastoral/devolucoes/nova',

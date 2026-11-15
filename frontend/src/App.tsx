@@ -22,6 +22,7 @@ import { HomePage } from '@/pages/public/HomePage'
 import { ComoFuncionaPage } from '@/pages/public/ComoFuncionaPage'
 import { RecadastramentoPage } from '@/pages/public/RecadastramentoPage'
 import { ConsultarPage } from '@/pages/public/ConsultarPage'
+import { AniversariantesPage } from '@/pages/public/AniversariantesPage'
 import { AdminLoginPage } from '@/pages/auth/AdminLoginPage'
 import { TesourariaLoginPage } from '@/pages/auth/TesourariaLoginPage'
 import { LoginPage } from '@/pages/auth/LoginPage'
@@ -34,7 +35,6 @@ import { FazerDevolucaoPage } from '@/pages/dizimista/FazerDevolucaoPage'
 
 import { DizimistasPage } from '@/pages/pastoral/DizimistasPage'
 import { CadastrarDizimistaPage } from '@/pages/pastoral/CadastrarDizimistaPage'
-import { AniversariantesPage } from '@/pages/pastoral/AniversariantesPage'
 import { DizimistaDetalhePage } from '@/pages/pastoral/DizimistaDetalhePage'
 import { RecadastramentosPage } from '@/pages/pastoral/RecadastramentosPage'
 import { ConfiguracoesPage } from '@/pages/pastoral/ConfiguracoesPage'
@@ -65,6 +65,9 @@ function App() {
                       link visível em nenhuma página pública (mesmo padrão da área do dizimista
                       logo abaixo); só é alcançada por quem já tem o link direto. */}
                   <Route path={ROUTES.consultar} element={<ConsultarPage />} />
+                  {/* Também sem login de propósito — só nome, carnê e dia/mês de nascimento
+                      aparecem, nunca o ano (usado na senha do login do dizimista). */}
+                  <Route path={ROUTES.aniversariantes} element={<AniversariantesPage />} />
                 </Route>
 
                 <Route element={<AuthLayout />}>
@@ -93,7 +96,6 @@ function App() {
                     <Route element={<ProtegerRotaPastoral />}>
                       <Route path={ROUTES.pastoral.root} element={<DizimistasPage />} />
                       <Route path={ROUTES.pastoral.cadastrarDizimista} element={<CadastrarDizimistaPage />} />
-                      <Route path={ROUTES.pastoral.aniversariantes} element={<AniversariantesPage />} />
                       <Route path="/pastoral/dizimistas/:numeroCarne" element={<DizimistaDetalhePage />} />
                       <Route path={ROUTES.pastoral.recadastramentos} element={<RecadastramentosPage />} />
                       <Route path={ROUTES.pastoral.lancamentoUnico} element={<LancamentoUnicoPage />} />

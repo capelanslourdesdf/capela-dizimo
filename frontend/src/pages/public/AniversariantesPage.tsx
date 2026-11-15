@@ -29,11 +29,10 @@ interface BadgeDestaque {
 /** `null` quando o aniversário está fora da janela de destaque (mais de 7 dias de distância). */
 function badgeDoDelta(delta: number): BadgeDestaque | null {
   if (delta === 0) return { label: 'Hoje', variant: 'default' }
-  if (delta > 0 && delta <= JANELA_DIAS) return { label: `Daqui ${delta} dia${delta > 1 ? 's' : ''}`, variant: 'success' }
-  if (delta < 0 && delta >= -JANELA_DIAS) {
-    const dias = Math.abs(delta)
-    return { label: `${dias} dia${dias > 1 ? 's' : ''} atrás`, variant: 'muted' }
-  }
+  if (delta === 1) return { label: 'Amanhã', variant: 'success' }
+  if (delta === -1) return { label: 'Ontem', variant: 'muted' }
+  if (delta > 0 && delta <= JANELA_DIAS) return { label: `Daqui ${delta} dias`, variant: 'success' }
+  if (delta < 0 && delta >= -JANELA_DIAS) return { label: `${Math.abs(delta)} dias atrás`, variant: 'muted' }
   return null
 }
 
@@ -49,10 +48,14 @@ export function AniversariantesPage() {
   const mesAtual = hoje.getMonth() + 1
   const diaHoje = hoje.getDate()
 
-  const nomeMesAtual = React.useMemo(() => {
-    const nome = hoje.toLocaleDateString('pt-BR', { month: 'long' })
-    return nome.charAt(0).toUpperCase() + nome.slice(1)
-  }, [hoje])
+  // Minúsculo de propósito — usado no meio da frase ("15 de novembro"), diferente de `nomeMesAtual`
+  // (capitalizado, usado nos títulos "Aniversariantes de Novembro").
+  const nomeMesExtenso = React.useMemo(() => hoje.toLocaleDateString('pt-BR', { month: 'long' }), [hoje])
+
+  const nomeMesAtual = React.useMemo(
+    () => nomeMesExtenso.charAt(0).toUpperCase() + nomeMesExtenso.slice(1),
+    [nomeMesExtenso],
+  )
 
   React.useEffect(() => {
     listarAniversariantesDoMes(mesAtual)
@@ -127,7 +130,9 @@ export function AniversariantesPage() {
                             </span>
                             <div className="min-w-0 flex-1">
                               <p className="truncate text-sm font-medium text-foreground">{d.nomeCompleto}</p>
-                              <p className="truncate text-xs text-muted-foreground">Carnê nº {formatarNumeroCarne(d.numeroCarne)}</p>
+                              <p className="truncate text-xs text-muted-foreground">
+                                {dia} de {nomeMesExtenso} · Carnê nº {formatarNumeroCarne(d.numeroCarne)}
+                              </p>
                             </div>
                           </div>
                           <StatusBadge label={badge.label} variant={badge.variant} />
@@ -153,7 +158,9 @@ export function AniversariantesPage() {
                           </span>
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-medium text-foreground">{d.nomeCompleto}</p>
-                            <p className="truncate text-xs text-muted-foreground">Carnê nº {formatarNumeroCarne(d.numeroCarne)}</p>
+                            <p className="truncate text-xs text-muted-foreground">
+                              {dia} de {nomeMesExtenso} · Carnê nº {formatarNumeroCarne(d.numeroCarne)}
+                            </p>
                           </div>
                           {badge && <StatusBadge label={badge.label} variant={badge.variant} />}
                         </li>

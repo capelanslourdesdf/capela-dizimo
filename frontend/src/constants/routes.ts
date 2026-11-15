@@ -27,6 +27,7 @@ export const ROUTES = {
     // Fora do prefixo "/pastoral/dizimistas/" de propósito — esse prefixo já é liberado pra
     // Coordenadora (ver `podeAcessarRotaPastoral`), e cadastrar dizimista novo não deve ser.
     cadastrarDizimista: '/pastoral/novo-dizimista',
+    aniversariantes: '/aniversariantes',
     recadastramentos: '/pastoral/recadastramentos',
     configuracoes: '/pastoral/configuracoes',
     lancamentoUnico: '/pastoral/devolucoes/nova',

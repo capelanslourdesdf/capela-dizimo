@@ -1,5 +1,6 @@
 import {
   ArrowLeftRight,
+  Cake,
   ClipboardList,
   Home,
   IdCard,
@@ -36,6 +37,7 @@ export const dizimistaNav: NavItem[] = [
 export const pastoralNav: NavItem[] = [
   { label: 'Dizimistas', href: ROUTES.pastoral.root, icon: Users, end: true },
   { label: 'Cadastrar dizimista', href: ROUTES.pastoral.cadastrarDizimista, icon: UserPlus },
+  { label: 'Aniversariantes', href: ROUTES.pastoral.aniversariantes, icon: Cake },
   { label: 'Lançar devolução', href: ROUTES.pastoral.lancamentoUnico, icon: Plus },
   { label: 'Lançar devoluções em lote', href: ROUTES.pastoral.lancamentoLote, icon: Layers },
   { label: 'Lista de devoluções', href: ROUTES.pastoral.listaDevolucoes, icon: ArrowLeftRight },
@@ -49,7 +51,7 @@ export const pastoralNav: NavItem[] = [
  * já que cada papel tem um recorte bem diferente:
  * - Tesoureiro: tudo.
  * - Pastoral do Dízimo: só o dia a dia de dizimistas/devoluções, nada de Tesouraria/Recadastramentos/Configurações.
- * - Coordenadora: só acompanha Dizimistas e Tesouraria — "Tesouraria" aqui é o mesmo item de sempre,
+ * - Coordenadora: só acompanha Dizimistas, Aniversariantes e Tesouraria — "Tesouraria" aqui é o mesmo item de sempre,
  *   que leva pro login dela (decoupled, ver useTesourariaSessao) caso ainda não esteja logada lá.
  * "Tesouraria" leva pra fora desta área (rota própria, sessão própria) — por isso não conta como
  * algo que a Pastoral do Dízimo "usa": ela nem tem acesso a esse login separado.
@@ -59,10 +61,11 @@ const ITENS_POR_PAPEL: Record<PapelAcesso, 'todos' | string[]> = {
   pastoral_dizimo: [
     ROUTES.pastoral.root,
     ROUTES.pastoral.cadastrarDizimista,
+    ROUTES.pastoral.aniversariantes,
     ROUTES.pastoral.lancamentoUnico,
     ROUTES.pastoral.lancamentoLote,
   ],
-  coordenadora: [ROUTES.pastoral.root, ROUTES.pastoral.tesouraria.root],
+  coordenadora: [ROUTES.pastoral.root, ROUTES.pastoral.aniversariantes, ROUTES.pastoral.tesouraria.root],
   // Não é um papel da área da Pastoral (só de Tesouraria) — por segurança, não mostra nada aqui.
   secretaria_paroquial: [],
 }

@@ -1,6 +1,21 @@
 import * as React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeftRight, Cake, ChevronLeft, ChevronRight, Download, IdCard, Loader2, Pencil, Phone, Trash2, UserPlus, Users, Wallet } from 'lucide-react'
+import {
+  ArrowLeftRight,
+  Cake,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  FileSpreadsheet,
+  IdCard,
+  Loader2,
+  Pencil,
+  Phone,
+  Trash2,
+  UserPlus,
+  Users,
+  Wallet,
+} from 'lucide-react'
 import { toast } from 'sonner'
 
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -38,6 +53,7 @@ import { CARNE_AVULSO } from '@/constants/devolucao'
 import { formatarNumeroCarne, formatCurrency, getIniciais, hojeIso } from '@/utils/format'
 import { aguardarPeloMenos } from '@/utils/async'
 import { baixarArquivoTexto } from '@/utils/download'
+import { gerarExcelDizimistas } from '@/utils/excelDizimistas'
 import type { StatusDizimista } from '@/utils/statusDizimista'
 import { ROUTES } from '@/constants/routes'
 import { useAdminSessao } from '@/hooks/useAdminSessao'
@@ -84,6 +100,7 @@ export function DizimistasPage() {
   const [devolucaoAvulsa, setDevolucaoAvulsa] = React.useState(false)
   const [formularioNovaDevolucaoKey, setFormularioNovaDevolucaoKey] = React.useState(0)
   const [exportando, setExportando] = React.useState(false)
+  const [exportandoExcel, setExportandoExcel] = React.useState(false)
 
   const buscarPagina = React.useCallback(
     async (indice: number, cursor: CursorDizimistas | null) => {
@@ -271,6 +288,21 @@ export function DizimistasPage() {
     }
   }
 
+  async function handleExportarExcel() {
+    setExportandoExcel(true)
+    try {
+      const dizimistas = await listarDizimistas()
+      if (dizimistas.length === 0) {
+        toast.info('Nenhum dizimista para exportar.')
+        return
+      }
+      gerarExcelDizimistas(dizimistas, `dizimistas-${hojeIso()}.xlsx`)
+      toast.success(`${dizimistas.length} dizimista(s) exportado(s).`)
+    } finally {
+      setExportandoExcel(false)
+    }
+  }
+
   const paginaVazia = !carregandoTabela && dizimistasDaPagina.length === 0
   const semResultadoNenhum = paginaVazia && indicePagina === 0
 
@@ -284,6 +316,10 @@ export function DizimistasPage() {
             <Button variant="outline" onClick={handleExportar} disabled={exportando}>
               {exportando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
               Exportar dizimistas
+            </Button>
+            <Button variant="outline" onClick={handleExportarExcel} disabled={exportandoExcel}>
+              {exportandoExcel ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />}
+              Exportar Excel
             </Button>
             <Button
               variant="outline"
